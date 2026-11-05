@@ -1055,9 +1055,14 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('\n  ☁️  TÂY DU KÝ MOBILE – máy chủ nội bộ đã chạy');
   console.log(`  • Trên máy tính:  http://localhost:${PORT}`);
   for (const ip of lanIPs()) console.log(`  • Trên iPhone:    http://${ip}:${PORT}`);
-  console.log(`  • Dữ liệu:        data/db.json   (${Object.keys(db.chars).length} nhân vật)`);
+  console.log(`  • Dữ liệu:        data/db.json${DB.CLOUD ? ' + Supabase' : ''}   (${Object.keys(db.chars).length} nhân vật)`);
   console.log('  Nhấn Ctrl+C để tắt.\n');
 });
-function shutdown() { try { DB.saveNow(); } catch {} process.exit(0); }
+let closing = false;
+function shutdown() {
+  if (closing) return; closing = true;
+  setTimeout(() => process.exit(0), 8000).unref();
+  DB.flush().catch(() => {}).finally(() => process.exit(0));
+}
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

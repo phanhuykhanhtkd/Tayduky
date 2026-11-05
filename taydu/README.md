@@ -74,6 +74,24 @@ Muốn thay hình pixel bằng tranh vẽ riêng, đặt file **PNG nền trong 
 
 Mã đầy đủ xem trong `game/data.js` (mục `FORMS`, `BOSSES`, `npcs`). Tải lại trang là game tự nhận tranh mới.
 
+## Đưa lên mạng – chơi 24/24 không cần bật máy tính (miễn phí)
+
+Máy chủ game chạy trên **Render.com** (gói Free). Dữ liệu người chơi được lưu trên **Supabase** (gói Free), vì ổ đĩa của Render miễn phí bị xoá mỗi lần khởi động lại.
+
+1. **Supabase** (https://supabase.com): đăng nhập bằng GitHub → *New project* (đặt mật khẩu database tuỳ ý, vùng *Singapore*).
+   - Vào *SQL Editor* → *New query* → dán nội dung file `supabase.sql` → *Run*.
+   - Vào *Project Settings* → lấy **Project URL** (dạng `https://xxxx.supabase.co`) và **Secret key** (`sb_secret_...`; dự án cũ thì dùng khoá `service_role`).
+2. **Render** (https://render.com): đăng nhập bằng GitHub → *New* → *Web Service* → chọn kho `Tayduky`.
+   - *Root Directory*: `taydu` · *Runtime*: Node · *Build Command*: `echo ok` · *Start Command*: `node start.js` · *Instance Type*: **Free**.
+   - *Environment Variables*: thêm `SUPABASE_URL` = Project URL và `SUPABASE_KEY` = Secret key.
+   - Bấm *Deploy*. Xong sẽ có địa chỉ dạng `https://tayduky.onrender.com` – mở bằng Safari trên iPhone → *Thêm vào MH chính*.
+
+Lưu ý gói miễn phí:
+- Không ai chơi 15 phút thì máy chủ ngủ; lần vào sau chờ khoảng 1 phút để nó thức dậy.
+- Supabase tạm dừng dự án nếu cả tuần không ai chơi (dữ liệu vẫn giữ) – vào trang Supabase bấm *Restore* là chạy lại.
+- Mỗi lần tải file mới lên GitHub, Render tự cập nhật game sau vài phút.
+- Khoá `SUPABASE_KEY` là khoá bí mật: chỉ dán vào Render, không đưa lên GitHub hay gửi cho người khác.
+
 ## Quản lý dữ liệu
 
 - Mọi thứ lưu ở `data/db.json` (tài khoản, nhân vật, túi đồ, Tiên sủng, môn phái).

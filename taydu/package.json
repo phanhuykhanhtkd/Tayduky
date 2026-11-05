@@ -5,7 +5,8 @@
   "main": "server.js",
   "private": true,
   "scripts": {
-    "start": "node server.js",
+    "start": "node start.js",
+    "local": "node server.js",
     "test": "node tools/smoke-test.js"
   },
   "engines": {
