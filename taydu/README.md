@@ -64,7 +64,7 @@ Người chơi khác trong cùng Wi-Fi chỉ cần mở cùng địa chỉ là v
 
 ## Hình ảnh & âm thanh
 
-- **Âm thanh**: nhạc nền ngũ cung (đàn tranh, sáo trúc, trống, cồng) riêng cho từng chương, trận thường và trận boss, cùng hiệu ứng cho mọi chiêu thức và thao tác. Tất cả được tổng hợp trực tiếp trong trình duyệt – không cần file nhạc. Trên iPhone, âm thanh bật sau khi chạm **Chạm để bắt đầu** (vẫn nghe được cả khi gạt nút im lặng). Nếu không nghe: tăng âm lượng bằng nút bên hông khi đang ở trong game, rồi vào Cài đặt → **Phát thử**.
+- **Âm thanh**: nhạc nền ngũ cung (đàn tranh, sáo trúc, trống, cồng) riêng cho từng chương, trận thường và trận boss, cùng hiệu ứng cho mọi chiêu thức và thao tác. Tất cả được tổng hợp trực tiếp trong trình duyệt – không cần file nhạc. Trên iPhone, âm thanh bật sau khi chạm nút **VÀO** (hoặc Đăng ký / Đăng nhập / Khôi phục) ở màn chào (vẫn nghe được cả khi gạt nút im lặng). Nếu không nghe: tăng âm lượng bằng nút bên hông khi đang ở trong game, rồi vào Cài đặt → **Phát thử**.
 - **Cài đặt** (nút bánh răng góc trên phải): âm lượng nhạc / hiệu ứng, *Hiệu ứng nhẹ* cho máy yếu, *Tránh quái*.
 - **Đồ hoạ HD-2D** (`public/js/hd2d.js`, bộ dựng WebGL tự viết): bản đồ dựng 3D có phối cảnh, nhân vật/nhà/cây đứng như tấm bìa có bóng đổ theo mặt trời, sương xa, đèn lồng chiếu sáng thật về đêm, mờ hai đầu kiểu ống kính tilt-shift. Tắt/bật trong Cài đặt (máy không hỗ trợ WebGL tự dùng bản 2D). Trang bị (vũ khí, viền giáp theo phẩm, mũ, áo choàng, hào quang khi cường hoá +7) và thú cưỡi hiện trên người nhân vật.
 - **Bản đồ pixel art** (`public/js/tiles.js`): nền vẽ từng điểm ảnh theo từng vùng – gạch ngọc Thiên Cung, đá cuội Trường An, đường đất, cỏ có ngọn và hoa dại, cát gợn, đất nứt Hỏa Diệm Sơn, rêu hang động, tuyết; mép cỏ và bờ nước tự nhiên, nước / sông sao / dung nham chuyển động. Nhà mái cong lợp ngói, tường thành có lỗ châu mai, cột son, cây theo vùng (liễu, thông tuyết, nấm hang, cây khô), đá nhiều dạng. Đổi ngày – hoàng hôn – đêm theo giờ thật, có đèn lồng, đom đóm, lá rơi, tàn lửa tuỳ chương.
@@ -73,7 +73,12 @@ Người chơi khác trong cùng Wi-Fi chỉ cần mở cùng địa chỉ là v
 - **Âm thanh môi trường**: gió trời mây và chuông gió (Thiên Cung), chuông chùa và chim (Trường An), chim hót ban ngày, dế và cú đêm (rừng), nước chảy (sông), lửa lách tách (Hỏa Diệm Sơn), giọt nước rơi trong hang, gió rít (núi tuyết). Tiếng bước chân đổi theo mặt đất: cỏ, đá, gạch ngọc, cát, tuyết. Nhạc riêng cho sông nước, hang động, núi tuyết.
 - **Âm thanh chiến đấu**: tiếng đòn đánh có lực dội trầm, chém gió, sấm rền, lửa nổ lách tách, băng vỡ leng keng, đá rơi rung đất, tiếng tụ khí khi niệm chú, trống và cồng khi cắt cảnh, tiếng gầm khi boss xuất hiện, tiếng nổ liên hoàn khi boss chết, pháo hoa lúc thắng.
 
-- **Nhân vật pixel art**: toàn bộ 6 nhân vật người chơi, ~30 NPC, 13 boss, lính Thiên binh/Sơn tặc/Hoả yêu và 28 hình thái Tiên sủng được vẽ bằng điểm ảnh (tự đổ bóng khối, viền màu), màu Tiên sủng đổi theo ngũ hành. Mã nguồn hình nằm trong `public/js/pixel.js` – có thể chỉnh màu áo, vũ khí, kiểu tóc… ở các bảng `HEROES`, `NPCS`, `FORMS`.
+- **Nhân vật dáng cao (≈7 đầu, khung 72×140 điểm ảnh)**: 6 nhân vật người chơi, ~90 NPC/boss, lính và các Tiên sủng dạng người: áo giao lĩnh có nếp vải, tay áo rộng, đai lưng có ngọc bội và tua, giáp vảy cá có hộ tâm kính, thiên y bay, mắt có tròng màu và đốm sáng, viền sáng ánh trăng. Có **biểu cảm**: bình thường, vui (thắng trận, được hồi máu), giận (khi ra đòn, boss), đau (trúng đòn, máu thấp), nhắm mắt vận công (tung chiêu); **chớp mắt** và **thở** khi đứng yên. Tiên sủng dạng thú giữ kiểu cũ, màu đổi theo ngũ hành.
+- **Màn chào**: nền lửa thần thoại động (pixel), trăng máu, núi Hoa Quả, mây cát tường; logo thư pháp *Tây Du Ký* tự thiết kế; Tôn Ngộ Không cưỡi Cân Đẩu Vân ở góc trên; vòng Bát Quái xoay với nút **VÀO** và ba nút tròn **Đăng ký · Đăng nhập · Khôi phục**.
+- **Tạo nhân vật**: thẻ chân dung khung vàng cho từng chủng tộc, hiển thị *Chủng tộc* + *Môn phái* (Thiên Đình / Ma Giới / Yêu Giới), la bàn chỉ số kèm kiểu hình (Pháp sư hình, Lực sĩ hình, Mẫn tiệp hình…), nút tên ngẫu nhiên 🎲.
+- **Bảng nhân vật**: thanh Khí huyết / Pháp lực, bảng Công · Pháp công · Thủ · Kháng · Tốc · Né · Bạo · Sức chứa, nút [+]/[−] nổi khối, la bàn có nhãn kiểu hình.
+- **Chiến đấu**: lệnh xếp thành **vòng hình thoi bao quanh nhân vật** (Tấn công, Kỹ năng, Phòng thủ, Đạo cụ, Bắt pet, Chạy), tự thu lại khi chờ lượt.
+- **Thanh dưới**: Túi đồ · Nhân vật · Tiên sủng · Nhiệm vụ · Cưỡi · Hoạt động; nút *Giao lưu* nằm cạnh thanh chat. Kênh chat có thẻ **Tất cả** (gộp mọi kênh, chọn kênh để gửi). Mã nguồn hình nằm trong `public/js/pixel.js` – có thể chỉnh màu áo, vũ khí, kiểu tóc… ở các bảng `HEROES`, `NPCS`, `FORMS`.
 
 ### Thay bằng tranh vẽ của riêng bạn
 
@@ -108,6 +113,7 @@ Lưu ý gói miễn phí:
 ## Bảo mật & chống spam
 
 - Mật khẩu băm scrypt có muối; đổi mật khẩu là các thiết bị cũ bị đăng xuất.
+- **Mã khôi phục** (dạng `XXXX-XXXX`) hiện một lần khi đăng ký – dùng ở mục *Khôi phục* để đặt lại mật khẩu khi quên. Máy chủ chỉ lưu bản băm; dùng xong mã cũ hết hiệu lực và có mã mới. Tài khoản cũ (tạo trước bản này) vào **Cài đặt → Mã khôi phục → Tạo mã**. Nhập sai mã cũng bị tính vào giới hạn khoá tạm như sai mật khẩu.
 - Sai mật khẩu 8 lần / 10 phút → khoá tài khoản 5 phút; một địa chỉ mạng sai 40 lần → khoá 5 phút. Tối đa 6 tài khoản mới / giờ / địa chỉ mạng, 12 kết nối / địa chỉ.
 - Giới hạn 25 lệnh/giây mỗi kết nối, gói tin tối đa 64KB; chat chặn gửi dồn dập và lặp lại.
 - Mọi số liệu người chơi gửi lên (số lượng, giá, tiền cược…) đều được kiểm tra; mã vật phẩm/bản đồ/phái chỉ nhận đúng mã có thật (chống "prototype pollution").
@@ -121,7 +127,7 @@ TDK_TEST=1 TDK_REG_LIMIT=1000 TDK_CONN_LIMIT=100 TDK_EVENT=tet node server.js
 node tools/full-test.js
 ```
 
-73 ca kiểm thử: HTTP, tài khoản, dò mật khẩu, dữ liệu bẩn/gian lận, spam, hằng ngày, tháp, thú cưỡi, chế tạo, Tiên sủng, chợ (2 người, mua tranh nhau), tổ đội, sự kiện, 12 người chơi cùng lúc. **`TDK_TEST=1` chỉ dùng khi thử – không đặt biến này trên Render.**
+81 ca kiểm thử: HTTP, tài khoản, mã khôi phục, dò mật khẩu, dữ liệu bẩn/gian lận, spam, hằng ngày, tháp, thú cưỡi, chế tạo, Tiên sủng, chợ (2 người, mua tranh nhau), tổ đội, sự kiện, 12 người chơi cùng lúc. **`TDK_TEST=1` chỉ dùng khi thử – không đặt biến này trên Render.**
 
 ## Quản lý dữ liệu
 

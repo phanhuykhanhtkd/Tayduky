@@ -21,15 +21,20 @@
 
   <!-- ===== Màn chào (mở khoá âm thanh trên iPhone) ===== -->
   <section id="scr-splash" class="screen">
-    <div class="scene" id="splash-bg"></div>
-    <div class="mist-layer m1"></div><div class="mist-layer m2"></div>
-    <div class="cranes" aria-hidden="true"><i></i><i></i><i></i></div>
-    <div class="splash-body">
-      <h1 class="logo"><span class="logo-a">Tây Du</span><span class="logo-b">Ký</span></h1>
+    <canvas id="fire-bg" aria-hidden="true"></canvas>
+    <div class="sp-hero" aria-hidden="true"><div class="sp-glow"></div><img id="sp-wukong" alt=""><img id="sp-cloud" alt=""></div>
+    <div class="sp-top">
+      <div class="sp-logo" id="sp-logo" role="img" aria-label="Tây Du Ký"></div>
       <p class="logo-sub">Tám mươi mốt kiếp nạn · Tây Thiên thỉnh kinh</p>
-      <button class="tap-start" id="tap-start">Chạm để bắt đầu</button>
-      <p class="splash-note" id="splash-note">Đang kết nối máy chủ…</p>
     </div>
+    <div class="sp-ring" id="sp-ring">
+      <svg class="sp-ring-art" viewBox="0 0 300 300" aria-hidden="true"></svg>
+      <button class="sp-orb o-reg" data-go="register"><i>✍</i><span>Đăng ký</span></button>
+      <button class="sp-orb o-login" data-go="login"><i>⛩</i><span>Đăng nhập</span></button>
+      <button class="sp-orb o-rec" data-go="recover"><i>🗝</i><span>Khôi phục</span></button>
+      <button class="sp-go tap-start" id="tap-start"><b>VÀO</b><small>Bắt đầu</small></button>
+    </div>
+    <p class="splash-note" id="splash-note">Đang kết nối máy chủ…</p>
   </section>
 
   <!-- ===== Màn hình đăng nhập ===== -->
@@ -39,13 +44,16 @@
     <div class="login-body">
       <h1 class="logo small"><span class="logo-a">Tây Du</span><span class="logo-b">Ký</span></h1>
       <form id="f-login" class="scroll-card ornate" autocomplete="on">
-        <div class="seg">
+        <div class="seg seg3">
           <button type="button" class="seg-b on" data-mode="login">Đăng nhập</button>
-          <button type="button" class="seg-b" data-mode="register">Tạo tài khoản</button>
+          <button type="button" class="seg-b" data-mode="register">Đăng ký</button>
+          <button type="button" class="seg-b" data-mode="recover">Khôi phục</button>
         </div>
         <label>Tên đăng nhập<input name="user" autocomplete="username" autocapitalize="off" spellcheck="false" required></label>
-        <label>Mật khẩu<input name="pass" type="password" autocomplete="current-password" required></label>
+        <label class="rc-only" hidden>Mã khôi phục<input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX" maxlength="9"></label>
+        <label><span id="pass-lbl">Mật khẩu</span><input name="pass" type="password" autocomplete="current-password" required></label>
         <button class="btn-seal wide" type="submit" id="b-login">Vào game</button>
+        <button type="button" class="link-back" id="b-back">‹ Trở về màn chính</button>
         <p class="form-err" id="login-err" role="alert"></p>
       </form>
       <p class="install-hint" id="install-hint" hidden>Chơi toàn màn hình: bấm <b>Chia sẻ</b> rồi chọn <b>Thêm vào MH chính</b>.</p>
@@ -56,15 +64,21 @@
   <section id="scr-create" class="screen" hidden>
     <div class="scene dim" id="create-bg"></div>
     <div class="create-wrap">
-      <h2 class="title-gilt">Chọn con đường tu luyện</h2>
-      <div class="create-stage"><img id="create-hero" alt=""><div class="create-circle"></div></div>
-      <div id="race-list" class="race-list"></div>
-      <div class="create-foot scroll-card ornate">
-        <div class="seg gender">
-          <button type="button" class="seg-b on" data-g="m">Nam</button>
-          <button type="button" class="seg-b" data-g="f">Nữ</button>
+      <h2 class="title-gilt">Tạo Nhân Vật</h2>
+      <div class="cr-stage">
+        <div class="cr-aura" id="cr-aura"></div>
+        <svg class="cr-circle" viewBox="0 0 200 60" aria-hidden="true"><ellipse cx="100" cy="30" rx="96" ry="26" fill="none" stroke="#ffd76a" stroke-width="1.6"/><ellipse cx="100" cy="30" rx="80" ry="20" fill="none" stroke="#ffd76a" stroke-width=".8" stroke-dasharray="3 4"/><ellipse cx="100" cy="30" rx="60" ry="14" fill="rgba(255,215,106,.18)"/></svg>
+        <img id="create-hero" alt="">
+        <div class="cr-gender seg gender" role="group" aria-label="Giới tính">
+          <button type="button" class="seg-b on" data-g="m" aria-label="Nam">♂<small>Nam</small></button>
+          <button type="button" class="seg-b" data-g="f" aria-label="Nữ">♀<small>Nữ</small></button>
         </div>
-        <label>Đạo hiệu<input id="c-name" maxlength="12" placeholder="2–12 ký tự" autocomplete="off"></label>
+        <div class="cr-type" id="cr-type"></div>
+      </div>
+      <div id="race-list" class="race-list"></div>
+      <div class="cr-info ornate-gold" id="cr-info"></div>
+      <div class="create-foot scroll-card ornate">
+        <label>Đạo hiệu<span class="cr-name"><input id="c-name" maxlength="12" placeholder="2–12 ký tự" autocomplete="off"><button type="button" class="cr-dice" id="c-dice" aria-label="Tên ngẫu nhiên">🎲</button></span></label>
         <button class="btn-seal wide" id="b-create">Bước vào Tam Giới</button>
         <p class="form-err" id="create-err" role="alert"></p>
       </div>
@@ -99,15 +113,15 @@
       <div class="pt-badge" id="pt-badge" hidden></div>
     </div>
 
-    <button class="ticker" id="ticker" aria-label="Mở kênh chat"></button>
+    <div class="ticker-row"><button class="soc-btn" id="soc-btn" aria-label="Giao lưu"><span data-i="social"></span><small>Giao lưu</small></button><button class="ticker" id="ticker" aria-label="Mở kênh chat"></button></div>
 
     <nav class="nav">
+      <button data-p="bag"><span class="ni" data-i="bag"></span>Túi đồ</button>
       <button data-p="char"><span class="ni" data-i="char"></span>Nhân vật</button>
       <button data-p="pet"><span class="ni" data-i="pet"></span>Tiên sủng</button>
-      <button data-p="bag"><span class="ni" data-i="bag"></span>Hành trang</button>
       <button data-p="quest"><span class="ni" data-i="quest"></span>Nhiệm vụ</button>
+      <button data-p="mounts"><span class="ni" data-i="mount"></span>Cưỡi</button>
       <button data-p="act"><span class="ni" data-i="act"></span>Hoạt động</button>
-      <button data-p="social"><span class="ni" data-i="social"></span>Giao lưu</button>
     </nav>
   </section>
 
@@ -132,12 +146,12 @@
     </div>
     <div class="b-log" id="b-log"></div>
     <div class="b-hint" id="b-hint"></div>
-    <div class="b-cmds" id="b-cmds">
-      <button class="seal" data-c="attack"><i data-i="attack"></i><span>Đánh</span></button>
-      <button class="seal" data-c="skill"><i data-i="skill"></i><span>Pháp</span></button>
-      <button class="seal" data-c="defend"><i data-i="defend"></i><span>Thủ</span></button>
-      <button class="seal" data-c="item"><i data-i="item"></i><span>Đồ</span></button>
-      <button class="seal" data-c="catch"><i data-i="catch"></i><span>Bắt</span></button>
+    <div class="b-cmds ring" id="b-cmds">
+      <button class="seal" data-c="attack"><i data-i="attack"></i><span>Tấn công</span></button>
+      <button class="seal" data-c="skill"><i data-i="skill"></i><span>Kỹ năng</span></button>
+      <button class="seal" data-c="defend"><i data-i="defend"></i><span>Phòng thủ</span></button>
+      <button class="seal" data-c="item"><i data-i="item"></i><span>Đạo cụ</span></button>
+      <button class="seal" data-c="catch"><i data-i="catch"></i><span>Bắt pet</span></button>
       <button class="seal" data-c="flee"><i data-i="flee"></i><span>Chạy</span></button>
     </div>
   </section>
@@ -183,6 +197,7 @@
 <script src="js/panels.js"></script>
 <script src="js/panels2.js"></script>
 <script src="js/tutorial.js"></script>
+<script src="js/title.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

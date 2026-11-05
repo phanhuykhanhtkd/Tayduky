@@ -81,12 +81,13 @@ ${sideLocks}${mark}${lash}
 
   // nhân vật dùng bản pixel art (pixel.js)
   function heroURL(race, gender, frame = 0, gear) { return Art.hero(race, gender, frame, 4, gear).url; }
-  function heroImg(race, gender, frame = 0, gear) { return Art.hero(race, gender, frame, 4, gear && gear.gear ? gear.gear : gear).cv; }
+  function heroImg(race, gender, frame = 0, gear, expr) { return Art.hero(race, gender, frame, 4, gear && gear.gear ? gear.gear : gear, expr).cv; }
+  function faceURL(race, gender, gear, expr) { return Art.face(race, gender, gear && gear.gear ? gear.gear : gear, expr).url; }
   // ảnh của một đơn vị bất kỳ (trận đấu / tiên sủng): <img> pixel, tranh tuỳ chỉnh, hoặc emoji dự phòng
-  function unitImg(u, cls = '') {
+  function unitImg(u, cls = '', expr) {
     const custom = creatureSrc(u);
     if (custom) return `<img class="art ${cls}" src="${custom}" alt="">`;
-    const a = Art.unit(u);
+    const a = Art.unit(u, 0, expr);
     if (a) return `<img class="px ${a.cv.width / a.cv.height < 0.9 ? 'hum' : 'beast'} ${cls}" src="${a.url}" alt="">`;
     return `<span class="emo ${cls}">${u.icon || '❔'}</span>`;
   }
@@ -103,6 +104,7 @@ ${sideLocks}${mark}${lash}
   // ---------- biểu tượng giao diện (nét vàng) ----------
   const I = (d, extra = '') => `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d}${extra}</svg>`;
   const ICONS = {
+    mount: I('<path d="M7 27c0-6 2.4-10.4 6.4-13.2L10.6 8l5 2.2c3.2-2 7.2-1.6 10 1.2l2 5-3 1.2-2-2c-1 3-3.2 5-6.2 6V27"/><circle cx="21" cy="11" r="1.1" fill="currentColor"/><path d="M5 27h22"/>'),
     char: I('<circle cx="16" cy="12" r="5.5"/><path d="M16 3.6v2.2M12.4 5.2 16 6.6l3.6-1.4"/><path d="M6 28c1-6 5-9 10-9s9 3 10 9"/><path d="M13 19l3 4 3-4"/>'),
     pet: I('<path d="M8 25c-2-5 1-10 8-10s10 5 8 10c-1 3-15 3-16 0z"/><circle cx="9" cy="10" r="2.6"/><circle cx="15" cy="6.5" r="2.6"/><circle cx="21" cy="7" r="2.6"/><circle cx="25.5" cy="11.5" r="2.4"/>'),
     bag: I('<path d="M11 9c-4 3-6 8-6 12 0 5 4 7 11 7s11-2 11-7c0-4-2-9-6-12"/><path d="M10 9h12M12 5.5 16 9l4-3.5"/><path d="M12 18h8"/><circle cx="16" cy="18" r="2" fill="currentColor"/>'),
@@ -287,5 +289,5 @@ ${sideLocks}${mark}${lash}
     return `hue-rotate(${elements[el].hue}deg) saturate(1.15)`;
   }
 
-  return { hero, heroURL, heroImg, unitImg, petImg, gourd, ICONS, cornerURL, corners, circle, battleBG, paperTexture, itemIcon, elemFilter, setAssets, creatureSrc, npcSrc, LOOK };
+  return { hero, heroURL, heroImg, faceURL, unitImg, petImg, gourd, ICONS, cornerURL, corners, circle, battleBG, paperTexture, itemIcon, elemFilter, setAssets, creatureSrc, npcSrc, LOOK };
 })();

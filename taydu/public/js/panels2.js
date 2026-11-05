@@ -181,14 +181,14 @@ const Panels2 = (() => {
     if (!el) { el = document.createElement('div'); el.id = 'party-bar'; $('#map').parentElement.appendChild(el); el.onclick = () => partyPanel(); }
     if (!party || !G.me) { el.hidden = true; return; }
     el.hidden = false;
-    el.innerHTML = party.members.filter((m) => m.id !== G.me.id).map((m) => `<div class="pm ${m.online ? '' : 'off'} ${m.map === G.me.map ? 'near' : ''}"><img src="${Sprites.heroURL(m.race, m.gender, 0, m.gear)}" alt=""><small>${esc(m.name)}</small></div>`).join('');
+    el.innerHTML = party.members.filter((m) => m.id !== G.me.id).map((m) => `<div class="pm ${m.online ? '' : 'off'} ${m.map === G.me.map ? 'near' : ''}"><img src="${Sprites.faceURL(m.race, m.gender, m.gear)}" alt=""><small>${esc(m.name)}</small></div>`).join('');
   }
   function partyPanel() {
     sub('party', 'Tổ đội', async (body) => {
       if (!party) { const r = await Net.emit('party:info'); party = r.party; }
       const lead = party && party.leader === G.me.id;
       body.innerHTML = `<p class="muted">Tổ đội tối đa 3 người. Khi đánh quái, boss hoặc leo tháp, đồng đội <b>đang online và cùng bản đồ</b> sẽ cùng xuất trận (tự đánh). Cả đội đều nhận thưởng, người dẫn được thêm 10% tu vi cho mỗi đồng đội. Có kênh chat riêng <b>Đội</b>.</p>
-        ${party ? `<div class="list">${party.members.map((m) => `<div class="li"><img src="${Sprites.heroURL(m.race, m.gender, 0, m.gear)}" style="width:36px" alt=""><div class="grow"><div class="t">${esc(m.name)} ${m.id === party.leader ? '<span class="tag">Đội trưởng</span>' : ''}</div><div class="s">${m.online ? '🟢 Online' : '⚪ Ngoại tuyến'} · Cấp ${m.lvl} · ${esc(M().MAPS[m.map]?.name || '')}</div></div>${lead && m.id !== G.me.id ? `<button class="btn-seal sm ghost" data-kick="${m.id}">Mời ra</button>` : ''}</div>`).join('')}</div>` : '<p>Bạn chưa có tổ đội.</p>'}
+        ${party ? `<div class="list">${party.members.map((m) => `<div class="li"><img src="${Sprites.faceURL(m.race, m.gender, m.gear)}" style="width:36px" alt=""><div class="grow"><div class="t">${esc(m.name)} ${m.id === party.leader ? '<span class="tag">Đội trưởng</span>' : ''}</div><div class="s">${m.online ? '🟢 Online' : '⚪ Ngoại tuyến'} · Cấp ${m.lvl} · ${esc(M().MAPS[m.map]?.name || '')}</div></div>${lead && m.id !== G.me.id ? `<button class="btn-seal sm ghost" data-kick="${m.id}">Mời ra</button>` : ''}</div>`).join('')}</div>` : '<p>Bạn chưa có tổ đội.</p>'}
         ${!party || (lead && party.members.length < 3) ? `<div class="row" style="gap:6px;margin-top:8px"><input id="pt-name" placeholder="Tên người chơi đang online" maxlength="12" style="flex:1"><button class="btn-seal sm" id="pt-inv">Mời</button></div>` : ''}
         ${party ? '<div class="btns"><button class="btn-seal ghost" id="pt-leave">Rời tổ đội</button></div>' : ''}`;
       const inv = $('#pt-inv'); if (inv) inv.onclick = async () => { const n = $('#pt-name').value.trim(); if (n) await G.call('party:invite', { name: n }); };

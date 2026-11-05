@@ -33,11 +33,11 @@ const G = {
   $$('[data-i]').forEach((el) => (el.innerHTML = Sprites.ICONS[el.dataset.i] || ''));
   $('#hud-gear').innerHTML = Sprites.ICONS.gear;
   const bg = `url("${Sprites.battleBG('login')}")`;
-  ['#splash-bg', '#login-bg', '#create-bg'].forEach((s) => ($(s).style.backgroundImage = bg));
+  ['#login-bg', '#create-bg'].forEach((s) => $(s) && ($(s).style.backgroundImage = bg));
 })();
 
 // ---------------- màn hình ----------------
-function show(id) { ['#scr-splash', '#scr-login', '#scr-create', '#scr-game'].forEach((s) => ($(s).hidden = s !== id)); }
+function show(id) { ['#scr-splash', '#scr-login', '#scr-create', '#scr-game'].forEach((s) => ($(s).hidden = s !== id)); if (id === '#scr-splash') Title.resume(); else Title.stop(); }
 
 async function loadMeta() {
   if (G.meta) return;
@@ -46,65 +46,96 @@ async function loadMeta() {
 }
 
 // ---------------- màn chào ----------------
-let started = false, connectedOnce = false;
-$('#tap-start').onclick = () => {
+let started = false, connectedOnce = false, startMode = null;
+Title.init();
+function begin(mode) {
   Sound.unlock();
   Sound.sfx('gong');
-  started = true;
-  $('#tap-start').disabled = true;
+  started = true; startMode = mode;
+  $$('#sp-ring button').forEach((b) => (b.disabled = true));
   if (connectedOnce) boot();
-};
+}
+$('#tap-start').onclick = () => begin(null);
+$$('.sp-orb').forEach((b) => (b.onclick = () => begin(b.dataset.go)));
+$('#b-back').onclick = () => { started = false; $$('#sp-ring button').forEach((b) => (b.disabled = false)); show('#scr-splash'); };
 function setSplashNote(t) { $('#splash-note').textContent = t; }
 
 async function boot() {
   if (G.kicked) return;
-  const tok = localStorage.getItem('tdk_token');
+  const tok = !startMode && localStorage.getItem('tdk_token');
   if (tok) {
     const r = await Net.emit('auth:token', { token: tok });
     if (r.ok) return r.hasChar ? enter() : showCreate();
     localStorage.removeItem('tdk_token');
   }
   Sound.play('login');
+  setLoginMode(startMode || 'login');
   show('#scr-login');
 }
 
 // ---------------- đăng nhập ----------------
 let loginMode = 'login';
-$$('#f-login .seg-b').forEach((b) => (b.onclick = () => {
-  loginMode = b.dataset.mode;
-  $$('#f-login .seg-b').forEach((x) => x.classList.toggle('on', x === b));
-  $('#b-login').textContent = loginMode === 'login' ? 'Vào game' : 'Tạo tài khoản';
-  $('#f-login [name=pass]').autocomplete = loginMode === 'login' ? 'current-password' : 'new-password';
-}));
+function setLoginMode(m) {
+  loginMode = m;
+  $$('#f-login .seg-b').forEach((x) => x.classList.toggle('on', x.dataset.mode === m));
+  $('#b-login').textContent = { login: 'Vào game', register: 'Tạo tài khoản', recover: 'Đặt lại mật khẩu' }[m];
+  $('#pass-lbl').textContent = m === 'recover' ? 'Mật khẩu mới' : 'Mật khẩu';
+  $('#f-login .rc-only').hidden = m !== 'recover';
+  $('#f-login [name=code]').required = m === 'recover';
+  $('#f-login [name=pass]').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('#login-err').textContent = '';
+}
+$$('#f-login .seg-b').forEach((b) => (b.onclick = () => setLoginMode(b.dataset.mode)));
+// mã khôi phục: hiện một lần, người chơi tự chép lại
+async function showRecovery(code, first) {
+  await UI.modal(`<h3 style="font-size:20px">🗝 Mã khôi phục</h3>
+    <p>${first ? 'Tài khoản đã được tạo.' : 'Mã mới đã được tạo, mã cũ hết hiệu lực.'} Hãy <b>chép lại hoặc chụp màn hình</b> mã dưới đây – dùng để đặt lại mật khẩu khi quên.</p>
+    <div class="rc-code" id="rc-code">${code}</div>
+    <p class="muted">Mã chỉ hiện một lần. Không đưa mã cho người khác.</p>`, [{ id: 'ok', label: 'Tôi đã lưu mã' }]);
+}
 $('#f-login').onsubmit = async (e) => {
   e.preventDefault();
   const f = e.target;
   $('#login-err').textContent = '';
-  const r = await Net.emit(loginMode === 'login' ? 'auth:login' : 'auth:register', { user: f.user.value, pass: f.pass.value });
+  const ev = { login: 'auth:login', register: 'auth:register', recover: 'auth:recover' }[loginMode];
+  const r = await Net.emit(ev, { user: f.user.value, pass: f.pass.value, code: f.code.value });
   if (!r.ok) { $('#login-err').textContent = r.msg; Sound.sfx('error'); return; }
   localStorage.setItem('tdk_token', r.token);
+  if (r.recovery) await showRecovery(r.recovery, loginMode === 'register');
   r.hasChar ? enter() : showCreate();
 };
 if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone) $('#install-hint').hidden = false;
 
 // ---------------- tạo nhân vật ----------------
 let cRace = 'than', cGender = 'm';
+const FACTION = {
+  than: { sect: 'Thiên Đình', icon: '☁', hall: 'Lăng Tiêu Bảo Điện', role: 'Pháp sư · Hồi phục', aura: 'rgba(255,226,140,.75)', pros: ['Pháp lực dồi dào', 'Lôi pháp, hồi máu đồng đội', 'Hợp đánh lâu dài'] },
+  ma: { sect: 'Ma Giới', icon: '🔥', hall: 'Hắc Phong Ma Vực', role: 'Đấu sĩ · Vật công', aura: 'rgba(255,90,60,.75)', pros: ['Sức mạnh và khí huyết cao', 'Chém mạnh, hút máu', 'Đứng hàng đầu chịu đòn'] },
+  yeu: { sect: 'Yêu Giới', icon: '🌙', hall: 'Thanh Khâu Yêu Sơn', role: 'Mẫn tiệp · Khống chế', aura: 'rgba(170,140,255,.75)', pros: ['Tốc độ ra đòn nhanh nhất', 'Độc, choáng, né tránh', 'Bắt Tiên sủng dễ hơn'] },
+};
+const NAME_A = ['Thanh', 'Huyền', 'Lăng', 'Vân', 'Phong', 'Hạo', 'Tử', 'Bạch', 'Kim', 'Ngọc', 'Thiên', 'Dạ', 'Linh', 'Tuyết', 'Hàn', 'Mộ'];
+const NAME_B = ['Phong', 'Vân', 'Nguyệt', 'Long', 'Hà', 'Thiên', 'Sương', 'Minh', 'Diệp', 'Kiếm', 'Hồ', 'Tâm', 'Dương', 'Lam', 'Tinh', 'Vũ'];
 function showCreate() {
   show('#scr-create');
   Sound.play('login');
   const R = G.meta.RACES;
   const draw = () => {
+    const F = FACTION[cRace] || FACTION.than, r = R[cRace];
     $('#create-hero').src = Sprites.heroURL(cRace, cGender);
-    $('#race-list').innerHTML = Object.entries(R).map(([k, r]) => `<button class="race ${k === cRace ? 'on' : ''}" data-r="${k}">
-      <img src="${Sprites.heroURL(k, cGender)}" alt=""><h4>${r.name}</h4>
-      <div class="rstats">Thể ${r.base.the} · Lực ${r.base.luc}<br>Pháp ${r.base.phap} · Nhanh ${r.base.nhanh}</div></button>`).join('');
-    let desc = $('#race-desc');
-    if (!desc) { desc = document.createElement('p'); desc.id = 'race-desc'; desc.className = 'race-desc'; $('#race-list').after(desc); }
-    desc.textContent = R[cRace].desc;
-    $$('#race-list .race').forEach((b) => (b.onclick = () => { cRace = b.dataset.r; Sound.sfx('buff'); draw(); }));
+    $('#create-hero').classList.remove('pop'); void $('#create-hero').offsetWidth; $('#create-hero').classList.add('pop');
+    $('#cr-aura').style.setProperty('--aura', F.aura);
+    $('#race-list').innerHTML = Object.entries(R).map(([k, x]) => `<button class="race ${k === cRace ? 'on' : ''}" data-r="${k}">
+      <span class="race-frame"><img src="${Sprites.faceURL(k, cGender)}" alt=""></span><h4>${x.name}</h4><small>${(FACTION[k] || {}).sect || ''}</small></button>`).join('');
+    const kind = ['the', 'luc', 'phap', 'nhanh'].reduce((a, b) => (r.base[b] > r.base[a] ? b : a), 'the');
+    $('#cr-type').textContent = { the: 'Khí huyết hình', luc: 'Lực sĩ hình', phap: 'Pháp sư hình', nhanh: 'Mẫn tiệp hình' }[kind];
+    $('#cr-info').innerHTML = `<div class="cr-row"><span>Chủng tộc</span><b style="color:${r.color}">${r.name}</b><span>Môn phái</span><b>${F.icon} ${F.sect}</b></div>
+      <div class="cr-body">${Panels.radar({ stats: r.base }, {})}
+      <div class="cr-desc"><p>${esc(r.desc)}</p><ul>${F.pros.map((p) => `<li>${p}</li>`).join('')}</ul><p class="muted">Xuất thân: ${F.hall} · ${F.role}</p></div></div>`;
+    $$('#race-list .race').forEach((b) => (b.onclick = () => { if (cRace === b.dataset.r) return; cRace = b.dataset.r; Sound.sfx('buff'); draw(); }));
   };
   draw();
-  $$('#scr-create .gender .seg-b').forEach((b) => (b.onclick = () => { cGender = b.dataset.g; $$('#scr-create .gender .seg-b').forEach((x) => x.classList.toggle('on', x === b)); draw(); }));
+  $$('#scr-create .gender .seg-b').forEach((b) => (b.onclick = () => { cGender = b.dataset.g; $$('#scr-create .gender .seg-b').forEach((x) => x.classList.toggle('on', x === b)); Sound.sfx('click'); draw(); }));
+  $('#c-dice').onclick = () => { const p = (l) => l[Math.floor(Math.random() * l.length)]; $('#c-name').value = p(NAME_A) + ' ' + p(NAME_B); Sound.sfx('coin'); };
 }
 $('#b-create').onclick = async () => {
   $('#create-err').textContent = '';
@@ -155,7 +186,7 @@ function mapTitle() {
 function updateHud() {
   const c = G.me; if (!c) return;
   const d = c.derived;
-  const src = Sprites.heroURL(c.race, c.gender, 0, c.gear);
+  const src = Sprites.faceURL(c.race, c.gender, c.gear);
   if ($('#hud-img').getAttribute('src') !== src) $('#hud-img').src = src;
   $('#hud-name').textContent = c.name;
   $('#hud-lv').textContent = c.lvl;
@@ -180,13 +211,13 @@ function updateHud() {
 function updateBadges() {
   if (!G.me) return;
   $('[data-p="char"]').classList.toggle('dot', G.me.points > 0);
-  $('[data-p="social"]').classList.toggle('dot', G.pending.length > 0);
+  $('#soc-btn').classList.toggle('dot', G.pending.length > 0);
   $('[data-p="act"]').classList.toggle('dot', !!G.me.dailyBadge);
 }
 
 function renderTicker() {
   const last = G.chat.slice(-2);
-  $('#ticker').innerHTML = last.map((m) => `<div><span class="chn ${m.ch}">[${{ khu: 'Khu', phai: 'Phái', shop: 'Shop', he: 'HT' }[m.ch]}]</span>${m.fromId ? `<b>${esc(m.from)}</b>: ` : ''}${esc(m.text)}</div>`).join('') || '<div style="opacity:.6">Kênh chat – chạm để mở</div>';
+  $('#ticker').innerHTML = last.map((m) => `<div><span class="chn ${m.ch}">[${{ khu: 'Khu', doi: 'Đội', phai: 'Phái', shop: 'Shop', he: 'HT' }[m.ch]}]</span>${m.fromId ? `<b>${esc(m.from)}</b>: ` : ''}${esc(m.text)}</div>`).join('') || '<div style="opacity:.6">Kênh chat – chạm để mở</div>';
 }
 
 $('#hud-ava').onclick = () => Panels.char();
@@ -195,7 +226,8 @@ $('#pt-badge').onclick = () => Panels.char('info');
 $('#map-chip').onclick = () => Panels.act('travel');
 $('#quest-track').onclick = () => { Tut.event('quest'); Panels.quest(); };
 $('#ticker').onclick = () => Panels.social('chat');
-$$('.nav button').forEach((b) => (b.onclick = () => { Tut.event('open_' + b.dataset.p); Panels[b.dataset.p](); }));
+$$('.nav button').forEach((b) => (b.onclick = () => { Tut.event('open_' + b.dataset.p); (Panels[b.dataset.p] || Panels2[b.dataset.p])(); }));
+$('#soc-btn').onclick = () => { Tut.event('open_social'); Panels.social('friend'); };
 document.addEventListener('click', (e) => { if (e.target.closest('button:not(.seal):not([data-close]):not(.tap-start)')) Sound.sfx('click'); });
 
 // ---------------- cài đặt ----------------
@@ -207,6 +239,7 @@ function settings() {
       <div class="set-row"><span class="ic">${Sprites.ICONS.skill}</span><label style="margin:0">Hiệu ứng âm thanh<input type="range" id="s-sfx" min="0" max="100" value="${Math.round(st.sfx * 100)}"></label><output id="o-sfx">${Math.round(st.sfx * 100)}</output></div>
       ${GameMap.hdSupported ? `<div class="set-row"><span class="ic">${Sprites.ICONS.act}</span><div><b>Đồ hoạ HD-2D (3D)</b><div class="muted">Bản đồ có chiều sâu, bóng đổ, ánh đèn. Tắt nếu máy nóng.</div></div><button class="toggle ${GameMap.hd ? 'on' : ''}" id="s-hd" aria-label="HD-2D"></button></div>` : ''}
       <div class="set-row"><span class="ic">${Sprites.ICONS.gear}</span><div><b>Hiệu ứng nhẹ</b><div class="muted">Bật trên iPhone đời cũ để mượt hơn.</div></div><button class="toggle ${FX.low ? 'on' : ''}" id="s-low" aria-label="Hiệu ứng nhẹ"></button></div>
+      <div class="set-row"><span class="ic">${Sprites.ICONS.gear}</span><div><b>Mã khôi phục</b><div class="muted">Tạo mã mới để lấy lại tài khoản khi quên mật khẩu.</div></div><button class="btn-seal sm ghost" id="s-rc">Tạo mã</button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.flee}</span><div><b>Tránh quái</b><div class="muted">Đi lại không gặp quái ngẫu nhiên.</div></div><button class="toggle ${G.me.peace ? 'on' : ''}" id="s-peace" aria-label="Tránh quái"></button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.sound}</span><div><b>Thử âm thanh</b><div class="muted" id="s-state">Trạng thái: ${Sound.state === 'running' ? 'đang phát' : Sound.state}</div></div><button class="btn-seal sm jade" id="s-test">Phát thử</button></div>
       <p class="muted" style="margin-top:10px">Không nghe thấy? Tăng âm lượng bằng nút bên hông iPhone khi đang ở trong game (âm lượng phương tiện), tắt chế độ Tập trung/Không làm phiền nếu có, rồi bấm Phát thử.</p>
@@ -231,6 +264,14 @@ function settings() {
       const r = await Net.emit('auth:changePass', { old: o, pass: n1 });
       if (r.ok) { localStorage.setItem('tdk_token', r.token); Sound.sfx('quest'); }
       UI.toast(r.msg, r.ok ? 'gold' : 'err');
+    };
+    $('#s-rc').onclick = async () => {
+      const ok = await UI.modal(`<h3 style="font-size:20px">Tạo mã khôi phục</h3><p class="muted">Mã cũ (nếu có) sẽ hết hiệu lực.</p><label>Mật khẩu hiện tại<input id="rc-pw" type="password" autocomplete="current-password"></label>`,
+        [{ id: 'no', label: 'Thôi', cls: 'ghost' }, { id: 'yes', label: 'Tạo mã' }]);
+      if (ok !== 'yes') return;
+      const r = await Net.emit('auth:recoveryNew', { pass: $('#rc-pw').value });
+      if (!r.ok) return UI.toast(r.msg, 'err');
+      showRecovery(r.recovery, false);
     };
     $('#s-all').onclick = async () => {
       if (!(await UI.confirm('<p>Đăng xuất tài khoản này khỏi mọi điện thoại / máy tính khác? Máy này vẫn giữ đăng nhập.</p>', 'Đăng xuất'))) return;
@@ -403,7 +444,7 @@ Net.on('chat', (m) => {
   renderTicker();
   if (G.me && m.fromId && m.fromId !== G.me.id) Sound.sfx('chat');
   const log = $('#chat-log');
-  if (log && UI.sheet.name === 'social' && UI.sheet.tab === 'chat' && $(`.seg-b.on[data-ch="${m.ch}"]`)) {
+  if (log && UI.sheet.name === 'social' && UI.sheet.tab === 'chat' && ($(`.seg-b.on[data-ch="${m.ch}"]`) || $('.seg-b.on[data-ch="all"]'))) {
     const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
     log.querySelector('.empty')?.remove();
     log.insertAdjacentHTML('beforeend', Panels.chatLine(m));

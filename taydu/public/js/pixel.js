@@ -133,6 +133,7 @@ const Art = (() => {
     const skin = o.skin || SKIN;
     b.ell(cx - 9.5, cy + 1, 1.8, 2.4, skin, 0.7); b.ell(cx + 9.5, cy + 1, 1.8, 2.4, skin, 0.7);
     b.ell(cx, cy, 9.5, 9, skin, 0.8);
+    if (o._face) { o._face(b, cx, cy); return; }
     // mắt
     const ey = cy + 1;
     const eye = o.eye || EYE;
@@ -685,6 +686,198 @@ const Art = (() => {
   // =====================================================================
   //  DANH MỤC
   // =====================================================================
+  // =====================================================================
+  //  DÁNG CAO THANH THOÁT (≈7 đầu) – khung 72×140 điểm ảnh
+  // =====================================================================
+  // bộ đệm "phóng to" để dùng lại hàm vẽ vũ khí cũ ở tỉ lệ người cao
+  function scaled(b, ox, oy, k) {
+    const X = (x) => ox + (x - ox) * k, Y = (y) => oy + (y - oy) * k;
+    const sb = {
+      line: (x0, y0, x1, y1, c, w = 1) => (b.line(X(x0), Y(y0), X(x1), Y(y1), c, Math.max(1, Math.round(w * k * 0.75))), sb),
+      rect: (x0, y0, w, h, c, sh) => (b.rect(X(x0), Y(y0), w * k, h * k, c, sh), sb),
+      ell: (cx, cy, rx, ry, c, sh) => (b.ell(X(cx), Y(cy), rx * k, ry * k, c, sh), sb),
+      poly: (pts, c, sh) => (b.poly(pts.map(([x, y]) => [X(x), Y(y)]), c, sh), sb),
+      curve: (pts, c, w, sh) => (b.curve(pts.map(([x, y]) => [X(x), Y(y)]), c, typeof w === 'function' ? (t) => w(t) * k : (w || 2) * k, sh), sb),
+      px: (x, y, c) => (b.rect(X(x), Y(y), Math.ceil(k), Math.ceil(k), c, 0), sb),
+      set: (x, y, c) => (b.rect(X(x), Y(y), Math.ceil(k), Math.ceil(k), c, 0), sb),
+      get: (x, y) => b.get(X(x), Y(y)), w: b.w, h: b.h,
+    };
+    return sb;
+  }
+  function weaponTall(b, x, y, o, k = 1.85) { weapon(scaled(b, x, y, k), x, y, o); }
+
+  // mặt có cảm xúc: calm · smile · angry · hurt · cast · blink
+  function faceFn(o, expr) {
+    return (b, cx, cy) => {
+      const eye = o.eye || EYE, iris = o.eyeColor || '#5a3a24', ey = cy + 1;
+      const brow = o.brows || drk(C(o.hair || '#2a1a10'), 0.1);
+      const L = cx - 4.5, R = cx + 2.5;
+      if (expr === 'hurt') { for (const [x, d] of [[L, 1], [R, -1]]) { b.line(x, ey - 1, x + 2, ey + (d > 0 ? 0.5 : 0.5), eye); b.line(x, ey + 2, x + 2, ey + 0.5, eye); } }
+      else if (expr === 'cast' || expr === 'blink' || o.closedEyes) { for (const x of [L, R]) { b.line(x, ey + 1, x + 2.5, ey + 1, eye); b.px(x - 0.5, ey, eye); b.px(x + 3, ey, eye); } }
+      else if (expr === 'smile') { for (const x of [L, R]) { b.line(x, ey + 1, x + 1.2, ey - 0.4, eye); b.line(x + 1.2, ey - 0.4, x + 2.5, ey + 1, eye); } }
+      else for (const x of [L, R]) { // mắt hạnh nhân: mi trên, tròng màu, đốm sáng
+        b.line(x - 0.5, ey - 1.2, x + 3, ey - 1.2, eye);
+        b.rect(x + 0.4, ey - 0.4, 2, 2.4, iris, 0); b.px(x + 0.9, ey + 0.4, eye);
+        b.px(x + 0.4, ey - 0.4, '#ffffff'); b.px(x + 2.4, ey + 1.4, lit(C(iris), 0.4));
+        if (o.lashes) { b.px(x - 0.8, ey - 1.8, eye); b.px(x + 3.2, ey - 1.8, eye); }
+      }
+      // lông mày theo cảm xúc
+      if (expr === 'angry') { b.line(L - 0.5, ey - 3.4, L + 3, ey - 2, brow, 1); b.line(R - 0.5, ey - 2, R + 3, ey - 3.4, brow, 1); }
+      else if (expr === 'hurt') { b.line(L - 0.5, ey - 2.4, L + 3, ey - 3.6, brow, 1); b.line(R - 0.5, ey - 3.6, R + 3, ey - 2.4, brow, 1); }
+      else { b.line(L - 0.5, ey - 3.2, L + 2.8, ey - 3.6, brow, 1); b.line(R - 0.3, ey - 3.6, R + 3, ey - 3.2, brow, 1); }
+      // mũi, má, miệng
+      b.px(cx - 0.2, cy + 3.6, drk(C(o.skin || SKIN), 0.22));
+      if (!o.noBlush) { b.px(cx - 6, ey + 3, '#f2a090'); b.px(cx - 5, ey + 3, '#f6b8a4'); b.px(cx + 5, ey + 3, '#f6b8a4'); b.px(cx + 6, ey + 3, '#f2a090'); }
+      const m = o.mouth || '#b0503a';
+      if (expr === 'smile' || o.smile) { b.px(cx - 1.6, cy + 5.6, m); b.line(cx - 0.8, cy + 6.4, cx + 1, cy + 6.4, m); b.px(cx + 1.8, cy + 5.6, m); }
+      else if (expr === 'angry') { b.line(cx - 1.6, cy + 6.4, cx + 1.8, cy + 6.4, drk(C(m), 0.3)); b.px(cx - 0.5, cy + 6.4, '#ffffff'); b.px(cx + 0.7, cy + 6.4, '#ffffff'); }
+      else if (expr === 'hurt') { b.ell(cx, cy + 6.4, 1.4, 1.1, '#5a1a14', 0); }
+      else b.line(cx - 0.8, cy + 6.2, cx + 1, cy + 6.2, m);
+      if (o.thirdEye) { b.px(cx, cy - 4, '#d42a2a').px(cx, cy - 3, '#ffd65a'); }
+      if (o.mark) { b.px(cx, cy - 4, o.mark); b.px(cx, cy - 5, o.mark); }
+    };
+  }
+
+  // viền sáng phía trên-trái (ánh trăng) cho khối rõ nét
+  function rimLight(b) {
+    const out = b.d.slice();
+    for (let y = 1; y < b.h; y++) for (let x = 1; x < b.w; x++) {
+      const c = b.d[y * b.w + x]; if (!c || c.noOutline) continue;
+      if (!b.d[(y - 1) * b.w + x] || !b.d[y * b.w + x - 1]) { const v = lit(c, 0.22); out[y * b.w + x] = v; }
+    }
+    b.d = out; return b;
+  }
+
+  function tallHumanoid(o, frame = 0, expr = 'calm') {
+    const W = 72, Hh = 140, b = new Buf(W, Hh);
+    const cx = 36, bob = frame ? -1 : 0, hy = 21 + bob, feet = 138;
+    const walk = frame === 1 ? 2 : frame === 2 ? -2 : 0;
+    const main = o.robe || '#b84a3a', trim = o.trim || '#e8c45a', inner = o.inner || drk(C(main), 0.28);
+    const style = o.body || 'robe', big = o.wide ? 3 : 0, fem = style === 'dress';
+    const sh = (fem ? 10 : 12) + big, waist = (fem ? 6.5 : 8.5) + big, t = 34 + bob;   // vai, eo, đường vai
+    const hemY = feet - 5, sway = walk * 0.8;
+    const skin = o.skin || SKIN, hand = o.hand || skin, sleeve = o.sleeve || main;
+    const fold = drk(C(main), 0.2), fold2 = lit(C(main), 0.16);
+
+    // ---------- lớp sau ----------
+    if (o.halo) { b.ell(cx, hy - 1, 15, 15, o.halo, 0); b.ell(cx, hy - 1, 13.4, 13.4, null); for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.283; b.px(cx + Math.cos(a) * 16.5, hy - 1 + Math.sin(a) * 16.5, lit(C(o.halo), 0.3)); } }
+    if (o.wings) { b.poly([[cx - 6, t + 4], [cx - 30, t - 18], [cx - 34, t + 6], [cx - 26, t + 30], [cx - 8, t + 22]], o.wings, 0.8); b.poly([[cx + 6, t + 4], [cx + 30, t - 18], [cx + 34, t + 6], [cx + 26, t + 30], [cx + 8, t + 22]], o.wings, 0.8);
+      for (const s2 of [-1, 1]) for (let i = 0; i < 4; i++) b.line(cx + s2 * 8, t + 8 + i * 4, cx + s2 * (30 - i * 2), t - 12 + i * 10, drk(C(o.wings), 0.25)); }
+    if (o.cape) { b.poly([[cx - sh + 1, t + 1], [cx + sh - 1, t + 1], [cx + sh + 7 + sway, feet - 12], [cx + sh + 2 + sway, feet - 8], [cx - sh - 2 + sway, feet - 8], [cx - sh - 7 + sway, feet - 12]], o.cape, 0.7);
+      for (let i = -2; i <= 2; i++) b.line(cx + i * 4, t + 10, cx + i * 6 + sway, feet - 12, drk(C(o.cape), 0.2)); }
+    if (o.hairBack || o.hairStyle === 'long' || o.hairStyle === 'twinlong') { const hb = o.hair || '#24160e';
+      b.poly([[cx - 10, hy - 2], [cx + 10, hy - 2], [cx + 11, hy + 18], [cx + 9 + sway, t + 40], [cx + 3 + sway, t + 46], [cx - 3 + sway, t + 46], [cx - 9 + sway, t + 40], [cx - 11, hy + 18]], hb, 0.7);
+      for (let i = -2; i <= 2; i++) b.line(cx + i * 3, hy + 10, cx + i * 3.6 + sway, t + 42, lit(C(hb), 0.12)); }
+    if (o.ribbon) for (const s2 of [-1, 1]) { // thiên y bay: từ sau vai vòng qua khuỷu, buông tới gối
+      b.curve([[cx + s2 * (sh - 4), t + 1], [cx + s2 * (sh + 13), t + 18], [cx + s2 * (sh + 8) + sway, t + 52]], o.ribbon, (k) => 3 - k * 0.8, 0.5);
+      b.curve([[cx + s2 * (sh + 8) + sway, t + 52], [cx + s2 * (sh + 4) + sway, t + 66], [cx + s2 * (sh + 10) + sway * 1.5, t + 80]], o.ribbon, (k) => 2.2 - k, 0.5);
+    }
+    if (o.tail) {
+      const ty = t + 40;
+      if (o.tail === 'fox') for (const a of [1, 0]) b.curve([[cx + 8, ty + 14], [cx + 24 + a * 4, ty + 22 - a * 4], [cx + 22 + a * 8, ty - 4 - a * 6]], o.tailc || '#f4eefe', (k) => 3 + Math.sin(k * 3.1) * 3.4, 0.9);
+      if (o.tail === 'monkey') b.curve([[cx + 6, ty + 4], [cx + 30, ty + 8], [cx + 26, ty - 20]], o.fur, 2.6, 0.8);
+      if (o.tail === 'pig') b.curve([[cx + 8, ty], [cx + 15, ty - 2], [cx + 12, ty - 7]], o.fur, 2, 0.5);
+      if (o.tail === 'bull' || o.tail === 'tiger' || o.tail === 'wolf' || o.tail === 'rat') b.curve([[cx + 8, ty + 4], [cx + 28, ty + 10], [cx + 27, ty - 10]], o.tail === 'wolf' ? o.fur : o.tailc || o.fur, o.tail === 'wolf' ? (k) => 2.6 + k * 4 : 2.2, 0.7);
+      if (o.tail === 'scorpion') { const seg = [[cx + 10, ty], [cx + 20, ty - 8], [cx + 25, ty - 22], [cx + 25, ty - 36], [cx + 20, ty - 48], [cx + 13, ty - 54]]; seg.forEach(([x, y], i) => b.ell(x, y, 4.5 - i * 0.35, 3.8, o.tailc || '#8a3a2a', 1)); b.poly([[cx + 13, ty - 58], [cx + 5, ty - 61], [cx + 9, ty - 53]], '#2a1010', 0.4); }
+    }
+    if (o.spiderLegs) for (const s2 of [-1, 1]) for (let i = 0; i < 3; i++) { b.line(cx + s2 * 6, t + 14, cx + s2 * (22 + i * 3), t + i * 10, o.spiderLegs, 3); b.line(cx + s2 * (22 + i * 3), t + i * 10, cx + s2 * (29 + i * 2), t + 16 + i * 10, o.spiderLegs, 2); }
+    if (o.flameAura) for (let i = 0; i < 9; i++) { const a = (i / 8) * Math.PI; b.ell(cx + Math.cos(a) * 24, t + 50 - Math.sin(a) * 40, 4, 6, i % 2 ? '#ff8a2a' : '#ffd04a', 0.4); }
+
+    // ---------- chân ----------
+    const boot = o.boot || '#3a2418', pants = o.pants || drk(C(main), 0.38);
+    if (style === 'short' || style === 'armor') {
+      for (const [x, d] of [[cx - 7, walk], [cx + 2, -walk]]) {
+        b.rect(x + d * 0.5, t + 46, 5.5, 44, pants, 0.8);
+        for (let yy = t + 74; yy < t + 92; yy += 4) b.line(x + d * 0.5, yy, x + 5 + d * 0.5, yy + 2, lit(C(pants), 0.2)); // xà cạp
+      }
+    }
+    for (const [x, d] of [[cx - 8, walk], [cx + 1.5, -walk]]) { b.rect(x + d, feet - 8, 7, 7, boot, 0.8); b.rect(x + d - 0.5, feet - 2, 8, 2, drk(C(boot), 0.3), 0); if (style === 'armor') b.rect(x + d, feet - 16, 7, 9, o.metal || '#8a96a8', 0.9); }
+    if (o.wheels) for (const x of [cx - 8, cx + 8]) { b.ell(x, feet - 1, 7, 2.6, '#ff8a2a', 0.5); b.ell(x, feet - 1, 3.6, 1.3, '#ffe04a', 0); }
+
+    // ---------- thân ----------
+    // cổ
+    b.rect(cx - 2.5, hy + 8, 5, t - hy - 7, skin, 0.6); b.line(cx - 2.5, t - 1, cx + 2.5, t - 1, drk(C(skin), 0.2));
+    if (style === 'robe' || style === 'monk' || style === 'dress') {
+      const flare = (fem ? 19 : 16) + big;
+      // áo trên tới eo
+      b.poly([[cx - sh, t + 5], [cx - sh + 4, t + 0.5], [cx - 4, t - 1.5], [cx + 4, t - 1.5], [cx + sh - 4, t + 0.5], [cx + sh, t + 5], [cx + waist + 1, t + (fem ? 18 : 24)], [cx - waist - 1, t + (fem ? 18 : 24)]], main, 1);
+      // váy / vạt dưới xoè
+      const sk = t + (fem ? 17 : 23);
+      b.poly([[cx - waist - 1, sk], [cx + waist + 1, sk], [cx + flare * 0.7 + sway, sk + 40], [cx + flare + sway, hemY], [cx - flare + sway, hemY], [cx - flare * 0.7 + sway, sk + 40]], main, 1);
+      for (let i = -3; i <= 3; i++) if (i) b.line(cx + i * 2.2, sk + 4, cx + i * (flare / 3.6) + sway, hemY - 2, i % 2 ? fold : fold2); // nếp vải
+      // vạt trong
+      b.poly([[cx - 2.5, sk], [cx + 2.5, sk], [cx + 5 + sway, hemY], [cx - 5 + sway, hemY]], inner, 0.4);
+      // viền gấu
+      b.rect(cx - flare + sway, hemY - 3, flare * 2, 3, trim, 0.4); b.line(cx - flare + sway, hemY - 4, cx + flare + sway, hemY - 4, drk(C(trim), 0.3));
+      if (fem) { b.rect(cx - flare + 3 + sway, hemY - 16, flare * 2 - 6, 1.6, lit(C(main), 0.32), 0); b.rect(cx - flare + 1 + sway, hemY - 9, flare * 2 - 2, 1, lit(C(main), 0.25), 0); }
+      // cổ áo giao lĩnh (chữ V chéo)
+      b.poly([[cx - 6, t - 1], [cx - 1, t - 1], [cx + 4, t + 12], [cx + 1, t + 14]], o.inner || lit(C(main), 0.35), 0.3);
+      b.line(cx - 6, t - 1, cx + 2, t + 14, trim); b.line(cx + 5, t - 1, cx + 2, t + 14, trim);
+      // đai lưng, nút thắt, ngọc bội + tua
+      const sy = t + (fem ? 14 : 20);
+      b.rect(cx - waist - 1.5, sy, (waist + 1.5) * 2, 4, o.sash || trim, 0.6); b.line(cx - waist - 1, sy, cx + waist + 1, sy, lit(C(o.sash || trim), 0.4));
+      b.ell(cx - 2, sy + 2, 2.4, 2, drk(C(o.sash || trim), 0.15), 0.6);
+      b.line(cx - 3, sy + 4, cx - 5 + sway, sy + 22, o.sash || trim, 2); b.line(cx - 1, sy + 4, cx - 1 + sway, sy + 20, o.sash || trim, 2);
+      if (o.jade !== false) { b.ell(cx + 3, sy + 9, 2.2, 2.6, '#4ac29a', 0.8); b.px(cx + 2.6, sy + 8, '#c8fff0'); b.line(cx + 3, sy + 12, cx + 3 + sway, sy + 20, '#c8302a'); b.line(cx + 4, sy + 12, cx + 4.5 + sway, sy + 19, '#e0402a'); }
+      if (style === 'monk') {
+        b.poly([[cx - sh + 1, t], [cx - sh + 6, t - 1], [cx + flare - 2 + sway, hemY - 18], [cx + flare - 6 + sway, hemY - 6], [cx - 4, t + 30]], o.kasaya || '#d4402a', 0.6);
+        for (let i = 0; i < 7; i++) b.line(cx - 7 + i * 3.4, t + 3 + i * 7, cx - 2 + i * 3.4, t + 3 + i * 7, '#ffd65a');
+        for (let i = 0; i < 4; i++) b.line(cx - 4 + i * 6, t + 4 + i * 8, cx + i * 6, t + 26 + i * 8, '#ffd65a');
+      }
+    } else if (style === 'short') {
+      b.poly([[cx - sh, t + 3], [cx - sh + 3, t - 1], [cx + sh - 3, t - 1], [cx + sh, t + 3], [cx + waist + 4, t + 48], [cx - waist - 4, t + 48]], main, 1);
+      for (let i = -2; i <= 2; i++) if (i) b.line(cx + i * 3, t + 26, cx + i * 4.4, t + 46, fold);
+      b.rect(cx - waist - 4, t + 45, (waist + 4) * 2, 3, trim, 0.4);
+      b.rect(cx - waist - 1, t + 22, (waist + 1) * 2, 3.5, o.sash || trim, 0.5);
+      b.line(cx - 5, t - 1, cx, t + 10, trim); b.line(cx + 5, t - 1, cx, t + 10, trim);
+    } else if (style === 'armor') {
+      const m = o.metal || '#8a96a8', pl = o.plate || '#e8c45a';
+      // giáp ngực + vảy cá
+      b.poly([[cx - sh, t + 3], [cx - sh + 3, t - 1], [cx + sh - 3, t - 1], [cx + sh, t + 3], [cx + waist + 2, t + 24], [cx - waist - 2, t + 24]], m, 1);
+      for (let r = 0; r < 6; r++) for (let k = -3; k <= 3; k++) { const yy = t + 4 + r * 3.4, xx = cx + k * 3.4 + (r % 2) * 1.7; if (Math.abs(xx - cx) < sh - 2 - r * 0.6) b.rect(xx - 1.4, yy, 2.8, 2.6, r % 2 ? drk(C(m), 0.12) : lit(C(m), 0.1), 0.5); }
+      b.ell(cx, t + 9, 4.5, 4, pl, 1); b.ell(cx - 0.8, t + 8, 1.4, 1.2, lit(C(pl), 0.5), 0);   // hộ tâm kính
+      // đai giáp, đầu thú
+      b.rect(cx - waist - 3, t + 23, (waist + 3) * 2, 4, trim, 0.6); b.ell(cx, t + 25, 3, 2.6, pl, 1); b.px(cx - 1, t + 24, '#ffffff');
+      // vạt giáp (tasset) + vải
+      b.poly([[cx - waist - 3, t + 27], [cx + waist + 3, t + 27], [cx + waist + 7 + sway, t + 50], [cx - waist - 7 + sway, t + 50]], main, 1);
+      for (let k = -2; k <= 2; k++) b.rect(cx + k * 5.2 - 2.4 + sway * 0.5, t + 29, 4.6, 15, k % 2 ? drk(C(m), 0.1) : m, 0.6);
+      b.line(cx - waist - 7 + sway, t + 50, cx + waist + 7 + sway, t + 50, trim);
+      // giáp vai
+      for (const s2 of [-1, 1]) { b.ell(cx + s2 * (sh + 1), t + 3, 6.5, 5, m, 1); b.ell(cx + s2 * (sh + 1), t + 5, 6, 2.2, pl, 0.4); b.line(cx + s2 * (sh - 4), t + 7, cx + s2 * (sh + 6), t + 7, trim); }
+    }
+    if (o.necklace) for (let i = 0; i < 9; i++) { const a = Math.PI * (0.12 + 0.76 * (i / 8)); b.ell(cx + Math.cos(a) * 8, t + 2 + Math.sin(a) * 7, 1.6, 1.6, o.necklace, 0.6); }
+
+    // ---------- tay (tay áo rộng kiểu cổ trang) ----------
+    const wideSleeve = style === 'robe' || style === 'monk' || style === 'dress';
+    const handL = [cx - sh - 3, t + 31], handR = [cx + sh + 3, t + 29];
+    for (const s2 of [-1, 1]) {
+      const [hx, hy2] = s2 < 0 ? handL : handR;
+      if (wideSleeve) {
+        b.poly([[cx + s2 * (sh - 3), t - 1], [cx + s2 * (sh + 3), t + 3], [cx + s2 * (sh + 7), t + 26], [hx + s2 * 4, hy2 + 3], [hx - s2 * 5, hy2 + 2], [cx + s2 * (sh - 2), t + 16]], sleeve, 1);
+        b.line(hx + s2 * 4, hy2 + 3, hx - s2 * 5, hy2 + 2, trim, 2);
+        b.line(cx + s2 * (sh + 1), t + 8, cx + s2 * (sh + 4), t + 24, drk(C(sleeve), 0.2));
+      } else {
+        b.curve([[cx + s2 * (sh - 1), t + 2], [cx + s2 * (sh + 4), t + 14], [hx, hy2 - 3]], sleeve, (k) => 7 - k * 2.4, 1);
+        if (style === 'armor') b.rect(hx - 3, hy2 - 9, 6, 6, o.metal || '#8a96a8', 0.8);
+      }
+      b.ell(hx, hy2, 2.8, 2.6, hand, 0.7); b.px(hx - s2, hy2 + 1, drk(C(hand), 0.2));
+    }
+    if (o.offhand) weaponTall(b, handL[0], handL[1], { weapon: o.offhand, fanc: o.fanc }, 1.6);
+
+    // ---------- đầu ----------
+    const ho = { ...o, _face: o.head ? null : faceFn(o, expr) };
+    if (o.head) { beastHead(scaled(b, cx, hy + 2, 1.22), cx, hy + 2, o.head, o); if (expr === 'angry') { b.line(cx - 7, hy - 4, cx - 2, hy - 2, '#1a0a0a'); b.line(cx + 2, hy - 2, cx + 7, hy - 4, '#1a0a0a'); } }
+    else { humanHead(b, cx, hy, ho); hair(b, cx, hy, o); }
+    if (o.beard) { b.poly([[cx - 6, hy + 6], [cx + 6, hy + 6], [cx + 4, hy + 18], [cx + 1, hy + 28], [cx - 1, hy + 28], [cx - 4, hy + 18]], o.beard, 0.6); for (let i = -2; i <= 2; i++) b.line(cx + i * 1.5, hy + 9, cx + i * 1.1, hy + 24, lit(C(o.beard), 0.15)); if (!o.head) b.line(cx - 1, hy + 6, cx + 1, hy + 6, '#b0503a'); }
+    if (o.mustache) { b.curve([[cx, hy + 5], [cx - 6, hy + 5], [cx - 10, hy + 11]], o.mustache, 1.4, 0); b.curve([[cx, hy + 5], [cx + 6, hy + 5], [cx + 10, hy + 11]], o.mustache, 1.4, 0); }
+    hat(b, cx, hy, o);
+    if (expr === 'cast') for (let i = 0; i < 6; i++) { const a = (i / 6) * 6.283; const v = [...C('#fff6c8')]; v.noOutline = true; b.set(cx + Math.cos(a) * 12, hy + Math.sin(a) * 12, v); }
+
+    // ---------- vũ khí tay phải ----------
+    weaponTall(b, handR[0], handR[1], o, /fan|vase|gourd|abacus|lantern|whisk/.test(o.weapon || '') ? 1.35 : 1.9);
+    return rimLight(b);
+  }
+
   const HEROES = {
     than_m: { body: 'robe', robe: '#f4ecd6', inner: '#e8d6a8', trim: '#e0b040', sash: '#b8302a', hair: '#24160e', hairStyle: 'bun', hat: 'crown', weapon: 'staff', ribbon: '#f07a6a', boot: '#6a4422' },
     than_f: { body: 'dress', robe: '#f8eedc', inner: '#e86a8a', trim: '#e0b040', sash: '#d24a5a', hair: '#24160e', hairStyle: 'twinlong', hairBack: true, hat: 'tiara', weapon: 'staff', ribbon: '#ff9ab0', pin: '#e8c45a', smile: true },
@@ -829,7 +1022,7 @@ const Art = (() => {
   const cache = new Map();
   function build(kind, opts, frame) {
     switch (kind) {
-      case 'hum': return humanoid(opts, frame);
+      case 'hum': return opts.chibi ? humanoid(opts, frame) : tallHumanoid(opts, frame, opts._expr || 'calm');
       case 'quad': return quad(opts, frame);
       case 'bird': return bird(opts, frame);
       case 'bat': return bat(opts, frame);
@@ -843,10 +1036,12 @@ const Art = (() => {
       case 'king': return kingBird(opts, frame);
     }
   }
-  function get(key, kind, opts, frame = 0, scale = 4) {
-    const k = key + '|' + frame + '|' + scale;
+  const TALL = (kind, opts) => kind === 'hum' && !opts.chibi;
+  function get(key, kind, opts, frame = 0, scale = 4, expr = 'calm') {
+    if (TALL(kind, opts)) scale = Math.min(scale, 3);
+    const k = key + '|' + frame + '|' + scale + '|' + expr;
     if (!cache.has(k)) {
-      const cv = render(build(kind, opts, frame), scale);
+      const cv = render(build(kind, expr === 'calm' ? opts : { ...opts, _expr: expr }, frame), scale);
       cache.set(k, { cv, url: cv.toDataURL() });
     }
     return cache.get(k);
@@ -898,34 +1093,46 @@ const Art = (() => {
   }
 
   // API
-  function hero(race, gender, frame = 0, scale = 4, gear) {
-    const id = race + '_' + (gender === 'f' ? 'f' : 'm');
-    if (!gear) return get('hero:' + id, 'hum', HEROES[id] || HEROES.than_m, frame, scale);
-    const o = applyGear(HEROES[id] || HEROES.than_m, gear, race);
-    const key = 'hero:' + id + ':' + [gear.w, gear.aq, gear.hq, gear.plus >= 7 ? 1 : 0].join(',') + '|' + frame + '|' + scale;
-    if (!cache.has(key)) { let b = build('hum', o, frame); if (o.aura) b = withAura(b, o.aura); const cv = render(b, scale); cache.set(key, { cv, url: cv.toDataURL() }); }
+  function heroOpts(race, gender, gear) { const id = race + '_' + (gender === 'f' ? 'f' : 'm'); const base = HEROES[id] || HEROES.than_m; return [id, gear ? applyGear(base, gear, race) : base]; }
+  function hero(race, gender, frame = 0, scale = 4, gear, expr = 'calm') {
+    const [id, o] = heroOpts(race, gender, gear);
+    if (!gear) return get('hero:' + id, 'hum', o, frame, scale, expr);
+    scale = Math.min(scale, 3);
+    const key = 'hero:' + id + ':' + [gear.w, gear.aq, gear.hq, gear.plus >= 7 ? 1 : 0].join(',') + '|' + frame + '|' + scale + '|' + expr;
+    if (!cache.has(key)) { let b = build('hum', expr === 'calm' ? o : { ...o, _expr: expr }, frame); if (o.aura) b = withAura(b, o.aura); const cv = render(b, scale); cache.set(key, { cv, url: cv.toDataURL() }); }
     return cache.get(key);
   }
-  function npc(id, frame = 0, scale = 4) { const o = NPCS[id]; return o ? get('npc:' + id, o.kind || 'hum', o, frame, scale) : null; }
-  function form(formId, element = 'tho', frame = 0, scale = 4) {
+  // chân dung (đầu + vai) cho ảnh đại diện, danh sách
+  function face(race, gender, gear, expr = 'calm') {
+    const [id, o] = heroOpts(race, gender, gear);
+    const key = 'face:' + id + ':' + (gear ? [gear.w, gear.aq, gear.hq].join(',') : '') + '|' + expr;
+    if (!cache.has(key)) {
+      const full = build('hum', { ...o, weapon: null, offhand: null, wings: null, _expr: expr }, 0), x0 = 12, y0 = 0, w = 48, h = 52, b = new Buf(w, h);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) b.d[y * w + x] = full.get(x + x0, y + y0);
+      const cv = render(b, 3); cache.set(key, { cv, url: cv.toDataURL() });
+    }
+    return cache.get(key);
+  }
+  function npc(id, frame = 0, scale = 4, expr) { const o = NPCS[id]; return o ? get('npc:' + id, o.kind || 'hum', o, frame, scale, expr) : null; }
+  function form(formId, element = 'tho', frame = 0, scale = 4, expr) {
     const fn = FORMS[formId]; if (!fn) return null;
     const [kind, opts] = fn(ELEM[element] || ELEM.tho);
-    return get('form:' + formId + ':' + element, kind, opts, frame, scale);
+    return get('form:' + formId + ':' + element, kind, opts, frame, scale, kind === 'hum' ? expr : undefined);
   }
-  function human(hid, frame = 0, scale = 4) { const o = HUMANS[hid]; return o ? get('hum:' + hid, o.kind || 'hum', o, frame, scale) : null; }
-  function boss(bid, frame = 0, scale = 4) {
+  function human(hid, frame = 0, scale = 4, expr) { const o = HUMANS[hid]; return o ? get('hum:' + hid, o.kind || 'hum', o, frame, scale, expr) : null; }
+  function boss(bid, frame = 0, scale = 4, expr) {
     if (bid === 'world') return get('boss:world', 'king', { main: '#3a5a8a', light: '#a8c8e8', acc: '#e8c45a' }, frame, scale);
-    return npc(BOSS_ALIAS[bid] || bid, frame, scale);
+    return npc(BOSS_ALIAS[bid] || bid, frame, scale, expr);
   }
   // từ một đơn vị trận đấu
-  function unit(u, frame = 0) {
-    if (u.hero) return hero(u.hero.race, u.hero.gender, frame, 4, u.hero.gear);
-    if (u.bossId) return boss(u.bossId, frame);
-    if (u.hid) return human(u.hid, frame);
-    if (u.form) return form(u.form, u.element, frame);
+  function unit(u, frame = 0, expr) {
+    if (u.hero) return hero(u.hero.race, u.hero.gender, frame, 4, u.hero.gear, expr);
+    if (u.bossId) return boss(u.bossId, frame, 4, expr);
+    if (u.hid) return human(u.hid, frame, 4, expr);
+    if (u.form) return form(u.form, u.element, frame, 4, expr);
     return null;
   }
   const kindOf = (formId) => (FORMS[formId] ? FORMS[formId](ELEM.tho)[0] : 'hum');
 
-  return { hero, npc, form, human, boss, unit, mount, kindOf, HEROES, NPCS, FORMS, ELEM, MOUNTS };
+  return { get, build, face, hero, npc, form, human, boss, unit, mount, kindOf, HEROES, NPCS, FORMS, ELEM, MOUNTS };
 })();

@@ -430,7 +430,7 @@ const GameMap = (() => {
       const src = Sprites.npcSrc(n.id);
       let c = null, hgt = 1.3, wid = 1;
       if (src) { const im = imgCache[src] || (imgCache[src] = Object.assign(new Image(), { src })); if (im.complete && im.naturalWidth) { c = im; hgt = 1.3 * (n.boss ? 1.1 : 0.92) * 1.3; wid = hgt * im.naturalWidth / im.naturalHeight; } }
-      else { const pix = Art.npc(n.look || n.id); if (pix) { c = pix.cv; const hum = pix.cv.width / pix.cv.height < 0.9; hgt = hum ? (n.boss ? 1.75 : 1.5) : 1.3; wid = hgt * pix.cv.width / pix.cv.height; } }
+      else { const pix = Art.npc(n.look || n.id); if (pix) { c = pix.cv; const hum = pix.cv.width / pix.cv.height < 0.9; hgt = hum ? (n.boss ? 2.35 : 2.0) : 1.3; wid = hgt * pix.cv.width / pix.cv.height; } }
       if (c) sprites.push({ c, x: n.x + 0.5, y: Math.max(0, bob), z: n.y + 0.9, w: wid, h: hgt });
       const pulse = 0.6 + 0.4 * Math.sin(now / 500 + n.x);
       glows.push({ x: n.x + 0.5, y: 0.08, z: n.y + 0.95, w: 0.55, h: 0.16, col: n.boss ? [1, 0.3, 0.2, 0.35 * pulse] : n.role ? [1, 0.82, 0.45, 0.3 * pulse] : [1, 1, 1, 0.12 * pulse] });
@@ -439,8 +439,9 @@ const GameMap = (() => {
     const heroes = [];
     const addHero = (race, gender, px, py, name, self, moving, face, mount, gear) => {
       const fr = moving ? 1 + (Math.floor(now / 140) % 2) : 0;
-      const im = Sprites.heroImg(race, gender, fr, gear);
-      const hh = 1.5, ww = hh * im.width / im.height * (52 / 40) * (40 / 52);
+      const blink = !moving && Math.floor((now + px * 977) / 130) % 32 === 0;
+      const im = Sprites.heroImg(race, gender, fr, gear, blink ? 'blink' : undefined);
+      const hh = 2.0;
       const lift = mount ? 0.32 : 0;
       if (mount && Art.mount) { const mc = Art.mount(mount); if (mc) sprites.push({ c: mc.cv, x: px + 0.5, y: Math.sin(now / 260) * 0.04, z: py + 0.93, w: 1.3 * mc.cv.width / mc.cv.height, h: 1.3 * 0.62, flip: face < 0 }); }
       sprites.push({ c: im, x: px + 0.5, y: lift + (mount ? Math.sin(now / 260) * 0.04 : 0), z: py + 0.92, w: hh * im.width / im.height, h: hh, flip: face < 0 });
@@ -575,7 +576,7 @@ const GameMap = (() => {
     const pix = !src && Art.npc(n.look || n.id);
     if (pix) {
       const hum = pix.cv.width / pix.cv.height < 0.9;
-      const hgt = T * (hum ? (n.boss ? 1.75 : 1.5) : 1.3), wid = hgt * pix.cv.width / pix.cv.height;
+      const hgt = T * (hum ? (n.boss ? 2.35 : 2.0) : 1.3), wid = hgt * pix.cv.width / pix.cv.height;
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(pix.cv, cx - wid / 2, by - hgt + T * 0.06 + bob, wid, hgt);
       ctx.imageSmoothingEnabled = true;
@@ -604,9 +605,10 @@ const GameMap = (() => {
 
   function drawHero(race, gender, px, py, name, self, now, moving, face, gear) {
     const cx = (px + 0.5) * T, by = (py + 1) * T;
-    const h = T * 1.5, w = h * 40 / 52;
     const fr = moving ? 1 + (Math.floor(now / 140) % 2) : 0;
-    const im = Sprites.heroImg(race, gender, fr, gear);
+    const blink = !moving && Math.floor((now + px * 977) / 130) % 32 === 0;
+    const im = Sprites.heroImg(race, gender, fr, gear, blink ? 'blink' : undefined);
+    const h = T * 2.0, w = h * (im.width / im.height || 0.51);
     if (self) { // vòng sáng dưới chân
       ctx.strokeStyle = 'rgba(243,210,122,.55)'; ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.ellipse(cx, by - T * 0.1, T * 0.36, T * 0.12, 0, 0, 7); ctx.stroke();

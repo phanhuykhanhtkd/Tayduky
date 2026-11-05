@@ -186,6 +186,14 @@ io.on('connection', (socket) => {
   on('meta', false, () => ({ ok: true, meta: { ...META, ASSETS: scanAssets() }, noState: true }));
 
   // ---------------- Tài khoản ----------------
+  // mã khôi phục 8 ký tự (bỏ các ký tự dễ nhầm 0/O, 1/I/L) – chỉ lưu bản băm
+  const RC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  function newRecovery(acc) {
+    const raw = [...crypto.randomBytes(8)].map((x) => RC[x % RC.length]).join('');
+    acc.rcSalt = crypto.randomBytes(8).toString('hex'); acc.rc = hashPass(raw, acc.rcSalt);
+    return raw.slice(0, 4) + '-' + raw.slice(4);
+  }
+  const normRC = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
   function bindAccount(user) {
     socket.data.user = user;
     const acc = db.accounts[user];
@@ -202,7 +210,8 @@ io.on('connection', (socket) => {
     const salt = crypto.randomBytes(8).toString('hex');
     db.accounts[user] = { salt, pass: hashPass(String(pass), salt), token: crypto.randomBytes(16).toString('hex'), charId: null, createdAt: Date.now() };
     rl.push(Date.now()); regs.set(ip, rl);
-    return bindAccount(user);
+    const recovery = newRecovery(db.accounts[user]);
+    return { ...bindAccount(user), recovery };
   });
   on('auth:login', false, (_, { user, pass }) => {
     user = String(user || '').trim().toLowerCase().slice(0, 32);
@@ -228,6 +237,25 @@ io.on('connection', (socket) => {
     acc.pass = hashPass(String(pass), acc.salt);
     acc.token = crypto.randomBytes(16).toString('hex'); // các thiết bị khác phải đăng nhập lại
     return { ok: true, token: acc.token, msg: 'Đã đổi mật khẩu. Các thiết bị khác sẽ phải đăng nhập lại.', noState: true };
+  });
+  on('auth:recover', false, (_, { user, code, pass }) => {
+    user = String(user || '').trim().toLowerCase().slice(0, 32);
+    if (locked('u:' + user) || locked('ip:' + ip)) return { ok: false, msg: 'Sai quá nhiều lần – thử lại sau 5 phút.' };
+    const acc = Object.prototype.hasOwnProperty.call(db.accounts, user) ? db.accounts[user] : null;
+    const c = normRC(code);
+    if (!acc || !acc.rc || c.length !== 8 || acc.rc !== hashPass(c, acc.rcSalt)) { failKey('u:' + user); failKey('ip:' + ip); return { ok: false, msg: 'Sai tên đăng nhập hoặc mã khôi phục.' }; }
+    if (String(pass || '').length < 4 || String(pass).length > 64) return { ok: false, msg: 'Mật khẩu mới 4–64 ký tự.' };
+    acc.salt = crypto.randomBytes(8).toString('hex'); acc.pass = hashPass(String(pass), acc.salt);
+    acc.token = crypto.randomBytes(16).toString('hex');
+    const recovery = newRecovery(acc); // mã cũ hết hiệu lực sau khi dùng
+    return { ...bindAccount(user), recovery, msg: 'Đã đặt lại mật khẩu.' };
+  });
+  on('auth:recoveryNew', false, (_, { pass }) => {
+    const acc = db.accounts[socket.data.user];
+    if (!acc) return { ok: false, msg: 'Chưa đăng nhập.' };
+    if (locked('u:' + socket.data.user)) return { ok: false, msg: 'Sai quá nhiều lần – thử lại sau 5 phút.' };
+    if (acc.pass !== hashPass(String(pass || '').slice(0, 64), acc.salt)) { failKey('u:' + socket.data.user); return { ok: false, msg: 'Mật khẩu không đúng.' }; }
+    return { ok: true, recovery: newRecovery(acc), noState: true };
   });
   on('auth:logoutAll', false, () => {
     const acc = db.accounts[socket.data.user];

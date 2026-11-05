@@ -46,7 +46,28 @@ const BattleUI = (() => {
     return sleep(1150).then(() => { el.hidden = true; $$('.unit', box).forEach((u) => u.classList.remove('enter')); });
   }
 
-  function creatureHTML(u) { return Sprites.unitImg(u); }
+  function creatureHTML(u) { return Sprites.unitImg(u, '', baseExpr(u)); }
+  // ---------- cảm xúc nhân vật: thở, chớp mắt, vui/giận/đau/vận công ----------
+  const exprT = {};
+  function baseExpr(u) { if (!u) return 'calm'; if (u.dead) return 'hurt'; if (u.boss) return 'angry'; return u.hp / (u.maxHp || 1) < 0.25 ? 'hurt' : 'calm'; }
+  function setExpr(id, expr, ms) {
+    const el = els[id], u = unit(id); if (!el || !u) return;
+    const img = el.querySelector('.spr img.px.hum'); if (!img) return;
+    const a = Art.unit(u, 0, expr); if (a && img.getAttribute('src') !== a.url) img.src = a.url;
+    clearTimeout(exprT[id]);
+    if (ms) exprT[id] = setTimeout(() => setExpr(id, baseExpr(unit(id))), ms);
+  }
+  let blinkT = null;
+  function blinkLoop() {
+    clearTimeout(blinkT);
+    blinkT = setTimeout(() => {
+      if (root.hidden || !snap) return;
+      const alive = snap.units.filter((u) => !u.dead && els[u.id] && !exprT[u.id + 'b'] && baseExpr(u) === 'calm');
+      const u = alive[Math.floor(Math.random() * alive.length)];
+      if (u && !els[u.id].classList.contains('cast')) setExpr(u.id, 'blink', 150);
+      blinkLoop();
+    }, 900 + Math.random() * 1600);
+  }
 
   function render() {
     box.innerHTML = '';
@@ -70,6 +91,7 @@ const BattleUI = (() => {
       els[u.id] = el;
     }
     sync(snap);
+    blinkLoop();
   }
 
   function sync(s) {
@@ -110,8 +132,23 @@ const BattleUI = (() => {
   const unit = (id) => snap.units.find((u) => u.id === id);
   let timer = null, left = 0;
   const TURN = 30;
+  // vòng lệnh hình thoi bao quanh nhân vật của người chơi
+  const RING = { attack: 180, skill: 228, defend: 276, catch: 324, item: 132, flee: 30 };
+  function placeCmds() {
+    const cm = $('#b-cmds'), me = els.p && els.p.querySelector('.spr'); if (!cm || !me) return;
+    const R = root.getBoundingClientRect(), r = me.getBoundingClientRect(), st = stage.getBoundingClientRect();
+    const rad = Math.min(104, R.width * 0.27), half = 36;
+    let cx = r.left - R.left + r.width / 2, cy = r.top - R.top + r.height * 0.5;
+    // giữ cả vòng nằm trong màn hình
+    cx = Math.max(rad + half + 4, Math.min(R.width - rad * Math.cos(30 * Math.PI / 180) - half - 4, cx));
+    cy = Math.max(st.top - R.top + rad + half, Math.min(R.height - rad * Math.sin(132 * Math.PI / 180) - half - 8 - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0), cy));
+    cm.style.setProperty('--cx', cx + 'px'); cm.style.setProperty('--cy', cy + 'px');
+    $$('.seal', cm).forEach((b, i) => { const a = (RING[b.dataset.c] ?? 90) * Math.PI / 180; b.style.setProperty('--x', Math.cos(a) * rad + 'px'); b.style.setProperty('--y', Math.sin(a) * rad + 'px'); b.style.setProperty('--d', i * 40 + 'ms'); });
+  }
+  addEventListener('resize', () => { if (!root.hidden) placeCmds(); });
   function ready() {
     busy = false;
+    placeCmds();
     $('#b-cmds').classList.remove('wait');
     hint(mode ? '' : 'Chọn lệnh');
     clearInterval(timer); left = TURN; tick();
@@ -242,11 +279,12 @@ const BattleUI = (() => {
     const u = unit(h.t); if (!u) return;
     const p = rectOf(h.t);
     if (h.miss) { num(h.t, 'Né!', 'miss'); Sound.sfx('miss'); return; }
-    if (h.h != null) { const nh = Math.min(u.maxHp, u.hp + h.h); setBars(h.t, nh, u.maxHp, u.mp, u.maxMp); num(h.t, '+' + fmt(h.h), 'heal'); if (p) FX.impact('heal', p); Sound.sfx('heal'); return; }
+    if (h.h != null) { const nh = Math.min(u.maxHp, u.hp + h.h); setBars(h.t, nh, u.maxHp, u.mp, u.maxMp); num(h.t, '+' + fmt(h.h), 'heal'); setExpr(h.t, 'smile', 800); if (p) FX.impact('heal', p); Sound.sfx('heal'); return; }
     const kind = ev.fx && ev.fx !== 'hit' ? ev.fx : (ev.k === 'atk' ? 'slash' : 'hit');
     if (p) FX.impact(ev.k === 'atk' ? (h.crit ? 'slash' : 'hit') : kind, p, h.crit);
     num(h.t, '-' + fmt(h.d), h.crit ? 'crit' : (h.adv > 0 ? 'adv' : ''));
     els[h.t].classList.remove('hurt'); void els[h.t].offsetWidth; els[h.t].classList.add('hurt');
+    u.hp = Math.max(0, u.hp - h.d); setExpr(h.t, 'hurt', h.dead ? 0 : 560); u.hp += h.d;
     setBars(h.t, Math.max(0, u.hp - h.d), u.maxHp, u.mp, u.maxMp);
     if (h.dead) { u.dead = true; setTimeout(() => { els[h.t]?.classList.add('dead'); turnBar(); if (p) FX.death(p, u.side === 1 ? '#ffc8a0' : '#c8e8ff', !!u.boss); Sound.sfx(u.boss ? 'bossdeath' : 'death'); }, 330); }
     if (h.stun) setTimeout(() => num(h.t, 'Choáng', 'info'), 250);
@@ -270,7 +308,7 @@ const BattleUI = (() => {
           if (au && (au.id === 'p' || au.boss)) await cutin(au, ev.s);
           else banner(ev.s, au?.side);
           if (me) FX.cast(me, col);
-          a?.classList.add('cast');
+          a?.classList.add('cast'); setExpr(ev.a, 'cast', 900);
           Sound.sfx('charge');
           await sleep(420);
           a?.classList.remove('cast');
@@ -283,7 +321,7 @@ const BattleUI = (() => {
           await Promise.all(ev.hits.map((h) => { const p = rectOf(h.t); return p ? FX.projectile(ev.fx, me, p) : null; }));
           a?.classList.remove('cast');
         } else if (a && t0 && me && !ev.aoe) {
-          const dx = t0.x - me.x, dy = t0.y - me.y;
+          const dx = t0.x - me.x, dy = t0.y - me.y; setExpr(ev.a, 'angry', 900);
           a.style.transition = 'transform .12s ease-out'; a.style.transform = `translate(${-dx * 0.06}px, ${-dy * 0.06 + 4}px) scale(.96)`; await sleep(120);
           Sound.sfx('swing');
           a.style.transition = 'transform .15s cubic-bezier(.5,0,.9,.4)'; ghosts(a, dx * 0.66, dy * 0.66);
@@ -399,7 +437,8 @@ const BattleUI = (() => {
     const win = res.outcome === 'win' || (res.outcome === 'timeout' && res.kind === 'world');
     const titles = { win: 'Đại Thắng', lose: 'Thất Bại', flee: 'Thoát Thân', timeout: 'Kết Thúc' };
     Sound.sfx(win ? 'victory' : res.outcome === 'lose' ? 'defeat' : 'wind');
-    if (win) { FX.victory(); setTimeout(() => Sound.sfx('fireworks'), 300); }
+    clearTimeout(blinkT);
+    if (win) { FX.victory(); setTimeout(() => Sound.sfx('fireworks'), 300); snap?.units.forEach((u) => { if (u.side === 0 && !u.dead) setExpr(u.id, 'smile'); }); }
     else if (res.outcome === 'lose') { root.classList.add('defeat'); FX.flash('#3a0000', 40, 0.5); }
     const I = G.meta.ITEMS;
     const slots = [];

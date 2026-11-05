@@ -54,6 +54,18 @@ function rawHttp(line) { return new Promise((r) => { const s = net.connect(PORT,
   r = await X.emit('char:create', { name: '<i>' + T + '</i>', race: 'than', gender: 'm' });
   const en = await X.emit('enter');
   ok(r.ok && en.state && !/[<>]/.test(en.state.name), 'Tên nhân vật bị lọc ký tự HTML (chống XSS)', en.state && en.state.name);
+  // mã khôi phục
+  const K = await client(); const ku = 'rc' + T;
+  r = await K.emit('auth:register', { user: ku, pass: '1234' }); const code1 = r.recovery;
+  ok(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code1 || ''), 'Đăng ký trả về mã khôi phục dạng XXXX-XXXX', code1);
+  r = await X.emit('auth:recover', { user: ku, code: 'AAAA-AAAA', pass: 'moi1' }); ok(!r.ok, 'Mã khôi phục sai bị từ chối');
+  r = await X.emit('auth:recover', { user: '__proto__', code: code1, pass: 'moi1' }); ok(!r.ok, 'Khôi phục tài khoản "__proto__" bị chặn');
+  r = await X.emit('auth:recover', { user: ku, code: code1.toLowerCase().replace('-', ''), pass: 'moi1' }); const code2 = r.recovery;
+  ok(r.ok && r.token && code2 && code2 !== code1, 'Khôi phục bằng mã đúng (chữ thường, bỏ gạch) → đặt lại mật khẩu, cấp mã mới');
+  r = await X.emit('auth:login', { user: ku, pass: 'moi1' }); ok(r.ok, 'Đăng nhập bằng mật khẩu mới sau khôi phục');
+  r = await X.emit('auth:recover', { user: ku, code: code1, pass: 'moi2' }); ok(!r.ok, 'Mã khôi phục cũ hết hiệu lực sau khi dùng');
+  r = await X.emit('auth:recoveryNew', { pass: 'sai' }); ok(!r.ok, 'Tạo mã khôi phục mới cần đúng mật khẩu');
+  r = await X.emit('auth:recoveryNew', { pass: 'moi1' }); ok(r.ok && /^[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(r.recovery || ''), 'Tạo mã khôi phục mới trong Cài đặt');
   r = await A.emit('auth:changePass', { old: '1234', pass: 'abcd' }); ok(r.ok && r.token, 'Đổi mật khẩu');
   const A2 = await client(); r = await A2.emit('auth:token', { token: A.token }); ok(!r.ok, 'Token cũ hết hiệu lực sau khi đổi mật khẩu');
   let locked = false;
