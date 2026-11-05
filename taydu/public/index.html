@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tây Du Ký</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- PWA trên iOS: chạy toàn màn hình khi "Thêm vào MH chính" -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tây Du Ký">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#1d130e">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== Màn chào (mở khoá âm thanh trên iPhone) ===== -->
+  <section id="scr-splash" class="screen">
+    <div class="scene" id="splash-bg"></div>
+    <div class="mist-layer m1"></div><div class="mist-layer m2"></div>
+    <div class="cranes" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="splash-body">
+      <h1 class="logo"><span class="logo-a">Tây Du</span><span class="logo-b">Ký</span></h1>
+      <p class="logo-sub">Tám mươi mốt kiếp nạn · Tây Thiên thỉnh kinh</p>
+      <button class="tap-start" id="tap-start">Chạm để bắt đầu</button>
+      <p class="splash-note" id="splash-note">Đang kết nối máy chủ…</p>
+    </div>
+  </section>
+
+  <!-- ===== Màn hình đăng nhập ===== -->
+  <section id="scr-login" class="screen" hidden>
+    <div class="scene" id="login-bg"></div>
+    <div class="mist-layer m1"></div><div class="mist-layer m2"></div>
+    <div class="login-body">
+      <h1 class="logo small"><span class="logo-a">Tây Du</span><span class="logo-b">Ký</span></h1>
+      <form id="f-login" class="scroll-card ornate" autocomplete="on">
+        <div class="seg">
+          <button type="button" class="seg-b on" data-mode="login">Đăng nhập</button>
+          <button type="button" class="seg-b" data-mode="register">Tạo tài khoản</button>
+        </div>
+        <label>Tên đăng nhập<input name="user" autocomplete="username" autocapitalize="off" spellcheck="false" required></label>
+        <label>Mật khẩu<input name="pass" type="password" autocomplete="current-password" required></label>
+        <button class="btn-seal wide" type="submit" id="b-login">Vào game</button>
+        <p class="form-err" id="login-err" role="alert"></p>
+      </form>
+      <p class="install-hint" id="install-hint" hidden>Chơi toàn màn hình: bấm <b>Chia sẻ</b> rồi chọn <b>Thêm vào MH chính</b>.</p>
+    </div>
+  </section>
+
+  <!-- ===== Tạo nhân vật ===== -->
+  <section id="scr-create" class="screen" hidden>
+    <div class="scene dim" id="create-bg"></div>
+    <div class="create-wrap">
+      <h2 class="title-gilt">Chọn con đường tu luyện</h2>
+      <div class="create-stage"><img id="create-hero" alt=""><div class="create-circle"></div></div>
+      <div id="race-list" class="race-list"></div>
+      <div class="create-foot scroll-card ornate">
+        <div class="seg gender">
+          <button type="button" class="seg-b on" data-g="m">Nam</button>
+          <button type="button" class="seg-b" data-g="f">Nữ</button>
+        </div>
+        <label>Đạo hiệu<input id="c-name" maxlength="12" placeholder="2–12 ký tự" autocomplete="off"></label>
+        <button class="btn-seal wide" id="b-create">Bước vào Tam Giới</button>
+        <p class="form-err" id="create-err" role="alert"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Màn hình chính ===== -->
+  <section id="scr-game" class="screen" hidden>
+    <header class="hud">
+      <button class="hud-ava" id="hud-ava" aria-label="Nhân vật"><img id="hud-img" alt=""><span class="hud-lvl" id="hud-lv"></span></button>
+      <div class="hud-mid">
+        <div class="hud-name"><span id="hud-name"></span><span class="hud-pow" id="hud-pow"></span></div>
+        <div class="bar hp"><i id="hud-hp"></i><span id="hud-hpt"></span></div>
+        <div class="bar mp"><i id="hud-mp"></i><span id="hud-mpt"></span></div>
+        <div class="bar xp"><i id="hud-xp"></i></div>
+      </div>
+      <div class="hud-money">
+        <span title="Bạc"><b class="coin silver"></b><em id="hud-bac"></em></span>
+        <span title="Vàng"><b class="coin gold"></b><em id="hud-vang"></em></span>
+        <button class="hud-gear" id="hud-gear" aria-label="Cài đặt"></button>
+      </div>
+    </header>
+    <div class="hud-sub">
+      <button class="map-chip" id="map-chip"><span id="map-name"></span></button>
+      <button class="quest-track" id="quest-track"></button>
+    </div>
+
+    <div class="map-wrap" id="map-wrap">
+      <canvas id="map"></canvas>
+      <div class="map-title" id="map-title"></div>
+      <div class="pt-badge" id="pt-badge" hidden></div>
+    </div>
+
+    <button class="ticker" id="ticker" aria-label="Mở kênh chat"></button>
+
+    <nav class="nav">
+      <button data-p="char"><span class="ni" data-i="char"></span>Nhân vật</button>
+      <button data-p="pet"><span class="ni" data-i="pet"></span>Tiên sủng</button>
+      <button data-p="bag"><span class="ni" data-i="bag"></span>Hành trang</button>
+      <button data-p="quest"><span class="ni" data-i="quest"></span>Nhiệm vụ</button>
+      <button data-p="act"><span class="ni" data-i="act"></span>Hoạt động</button>
+      <button data-p="social"><span class="ni" data-i="social"></span>Giao lưu</button>
+    </nav>
+  </section>
+
+  <!-- ===== Chiến đấu ===== -->
+  <section id="battle" hidden>
+    <div class="b-bg" id="b-bg"></div>
+    <div class="b-top">
+      <div class="b-round" id="b-round"></div>
+      <div class="b-turns" id="b-turns"></div>
+      <div class="b-timer" id="b-timer"></div>
+      <button class="b-auto" id="b-auto">Tự động</button>
+    </div>
+    <div class="b-boss" id="b-boss" hidden><span id="b-boss-name"></span><div class="bar hp"><i id="b-boss-hp"></i><span id="b-boss-t"></span></div></div>
+    <div class="b-stage" id="b-stage">
+      <div class="b-board" aria-hidden="true"></div>
+      <canvas class="b-fx under" id="b-fx-under"></canvas>
+      <div class="b-units" id="b-units"></div>
+      <canvas class="b-fx" id="b-fx"></canvas>
+      <div class="b-cutin" id="b-cutin" hidden></div>
+      <div class="b-banner" id="b-banner"></div>
+      <div class="b-intro" id="b-intro" hidden></div>
+    </div>
+    <div class="b-log" id="b-log"></div>
+    <div class="b-hint" id="b-hint"></div>
+    <div class="b-cmds" id="b-cmds">
+      <button class="seal" data-c="attack"><i data-i="attack"></i><span>Đánh</span></button>
+      <button class="seal" data-c="skill"><i data-i="skill"></i><span>Pháp</span></button>
+      <button class="seal" data-c="defend"><i data-i="defend"></i><span>Thủ</span></button>
+      <button class="seal" data-c="item"><i data-i="item"></i><span>Đồ</span></button>
+      <button class="seal" data-c="catch"><i data-i="catch"></i><span>Bắt</span></button>
+      <button class="seal" data-c="flee"><i data-i="flee"></i><span>Chạy</span></button>
+    </div>
+  </section>
+
+  <!-- Bảng (cuộn giấy) -->
+  <div id="sheet" class="sheet" hidden>
+    <div class="sheet-scrim" data-close></div>
+    <div class="sheet-paper ornate" role="dialog" aria-modal="true">
+      <div class="rod top"></div>
+      <div class="sheet-head"><h3 id="sheet-title"></h3><button class="x" data-close aria-label="Đóng">✕</button></div>
+      <div class="sheet-tabs" id="sheet-tabs"></div>
+      <div class="sheet-body" id="sheet-body"></div>
+      <div class="rod bottom"></div>
+    </div>
+  </div>
+
+  <!-- Hội thoại NPC -->
+  <div id="dialog" class="dialog" hidden>
+    <div class="dlg-box ornate">
+      <div class="dlg-who"><span class="dlg-ico" id="dlg-ico"></span><b id="dlg-name"></b></div>
+      <p class="dlg-text" id="dlg-text"></p>
+      <div class="dlg-opts" id="dlg-opts"></div>
+    </div>
+  </div>
+
+  <!-- Hộp thoại kết quả / xác nhận -->
+  <div id="modal" class="modal" hidden><div class="modal-card ornate" id="modal-card"></div></div>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <div id="netbar" class="netbar" hidden>Mất kết nối máy chủ – đang kết nối lại…</div>
+</div>
+
+<script src="js/net.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/pixel.js"></script>
+<script src="js/tiles.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/map.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

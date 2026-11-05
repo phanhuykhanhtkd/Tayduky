@@ -1,0 +1,126 @@
+# Tây Du Ký Mobile – Bản Nội Bộ (PWA cho iPhone)
+
+Game nhập vai đánh theo lượt màn hình dọc, lấy cảm hứng từ Tây Du Ký Mobile / Hán Phong Tây Du ngày xưa. Chạy trên máy tính của bạn, chơi trên iPhone qua Safari, toàn màn hình như một app.
+
+Toàn bộ hình ảnh là đồ hoạ pixel art tự vẽ bằng mã (nhân vật, bản đồ, phông trận đấu), không dùng tài nguyên gốc của game cũ.
+
+## Cần gì
+
+- Máy tính cài **Node.js 18 trở lên** (https://nodejs.org). Không cần `npm install` – server không dùng thư viện ngoài.
+- iPhone và máy tính dùng **chung một mạng Wi-Fi**.
+
+## Chạy game
+
+**Windows:** giải nén file zip ra một thư mục (đừng chạy trực tiếp trong WinRAR), rồi bấm đúp **`CHAY-GAME.bat`**. Không bấm đúp vào `server.js` – Windows sẽ mở nó bằng Windows Script Host và báo lỗi.
+
+Hoặc dùng dòng lệnh:
+
+```bash
+cd taydu
+node server.js
+```
+
+Màn hình sẽ in ra địa chỉ, ví dụ:
+
+```
+• Trên máy tính:  http://localhost:3000
+• Trên iPhone:    http://192.168.1.23:3000
+```
+
+Trên iPhone:
+
+1. Mở **Safari**, gõ địa chỉ “Trên iPhone” ở trên.
+2. Bấm nút **Chia sẻ** → **Thêm vào MH chính**.
+3. Mở biểu tượng *Tây Du Ký* trên màn hình chính → game chạy toàn màn hình, không còn thanh Safari.
+
+Nếu iPhone không vào được: kiểm tra tường lửa Windows/macOS có cho phép Node.js nhận kết nối trong mạng riêng không (Windows sẽ hỏi lần đầu chạy – chọn *Allow*). Muốn đổi cổng: `PORT=3001 node server.js` (Windows PowerShell: `$env:PORT=3001; node server.js`).
+
+## Có gì trong game
+
+| Hệ thống | Nội dung |
+|---|---|
+| Tộc | Thần Tộc (phép + hồi máu), Ma Tộc (cận chiến), Yêu Tộc (nhanh, độc, ảo ảnh) – mỗi tộc 4 kỹ năng mở theo cấp |
+| Điểm tiềm năng | 5 điểm/cấp chia vào Thể · Lực · Pháp · Nhanh; tẩy điểm 20 vàng |
+| Cốt truyện | Bám sát *Tây Du Ký* của Ngô Thừa Ân: Tiền truyện Đại Náo Thiên Cung + **đủ 81 nạn đúng thứ tự** (theo danh sách ở hồi 99), 15 chương từ Thiên Cung, Trường An, Ngũ Trang Quán, Bạch Hổ Lĩnh, Thông Thiên Hà, Nữ Nhi Quốc, Hỏa Diệm Sơn, Sư Đà Lĩnh… đến Linh Sơn; hơn 40 boss có thật trong truyện |
+| Chiến đấu | Theo lượt trên bàn cờ chéo, thứ tự theo tốc độ: Đánh, Pháp (kỹ năng), Thủ, Đồ, Bắt, Chạy, nút Tự động. Ngũ hành tương khắc (+25% sát thương) |
+| Tiên sủng | 700 loài = 28 hình thái × 5 ngũ hành × 5 phẩm (Phàm → Thánh), thêm Biến Dị hiếm. Bắt bằng Bầu Bạc/Bầu Vàng – càng ít máu càng dễ |
+| Trang bị | 8 ô: Vũ khí, Mũ, Giáp, Giày, Pháp bảo, Bội, Nhẫn, Dây chuyền. 6 phẩm chất, cường hóa +1 → +10, khảm 5 loại ngọc |
+| Nhiệm vụ ẩn | 4 nhiệm vụ: theo toạ độ + giờ thật, mang Tiên sủng đặc biệt, hội thoại ngầm với NPC. Nghe lời đồn từ NPC để có gợi ý |
+| Hoạt động | Boss thế giới (máu chung mọi người chơi), Tam Giới Đấu, Trộm Đào, Đoạt Bảo, Tài Xỉu, Oẳn Tù Tì (chỉ dùng bạc trong game) |
+| Xã hội | Chat 4 kênh (Khu, Phái, Shop, Hệ thống), Môn Phái + Giáo Phái Chiến, Kết Hôn, Sư Đồ, thấy người chơi khác đi lại trên bản đồ |
+
+Người chơi khác trong cùng Wi-Fi chỉ cần mở cùng địa chỉ là vào chung một thế giới.
+
+## Hình ảnh & âm thanh
+
+- **Âm thanh**: nhạc nền ngũ cung (đàn tranh, sáo trúc, trống, cồng) riêng cho từng chương, trận thường và trận boss, cùng hiệu ứng cho mọi chiêu thức và thao tác. Tất cả được tổng hợp trực tiếp trong trình duyệt – không cần file nhạc. Trên iPhone, âm thanh bật sau khi chạm **Chạm để bắt đầu** (vẫn nghe được cả khi gạt nút im lặng). Nếu không nghe: tăng âm lượng bằng nút bên hông khi đang ở trong game, rồi vào Cài đặt → **Phát thử**.
+- **Cài đặt** (nút bánh răng góc trên phải): âm lượng nhạc / hiệu ứng, *Hiệu ứng nhẹ* cho máy yếu, *Tránh quái*.
+- **Bản đồ pixel art** (`public/js/tiles.js`): nền vẽ từng điểm ảnh theo từng vùng – gạch ngọc Thiên Cung, đá cuội Trường An, đường đất, cỏ có ngọn và hoa dại, cát gợn, đất nứt Hỏa Diệm Sơn, rêu hang động, tuyết; mép cỏ và bờ nước tự nhiên, nước / sông sao / dung nham chuyển động. Nhà mái cong lợp ngói, tường thành có lỗ châu mai, cột son, cây theo vùng (liễu, thông tuyết, nấm hang, cây khô), đá nhiều dạng. Đổi ngày – hoàng hôn – đêm theo giờ thật, có đèn lồng, đom đóm, lá rơi, tàn lửa tuỳ chương.
+- **Trận đấu**: phông cảnh pixel art riêng từng chương (trời chuyển màu kiểu dither, núi nhiều lớp, chùa, hồ, núi lửa, hang pha lê…), bàn cờ lát đá pixel theo vùng, pháp trận dưới chân, thanh thứ tự ra đòn, hiệu ứng hạt cho sét, lửa, băng, độc, hồi máu…
+- **Hiệu ứng chiến đấu**: cắt cảnh khi tung chiêu (nhân vật lướt vào cùng tên chiêu, boss thì dải đỏ), màn nền tối lại lúc niệm chú, pháp trận lục giác xoay dưới chân, cột sáng. Mỗi hệ có hiệu ứng riêng: sét đánh nhiều nhánh, cầu lửa nổ kèm khói và vết cháy trên đất, gai băng mọc từ mặt đất, mây độc, đá rơi làm nứt đất, lốc xoáy, xoáy bóng tối, cột sáng hồi máu. Có rung màn hình, khựng hình khi bạo kích kèm vệt chém chữ X, lướt tới có bóng mờ, trúng đòn bị bật lùi, quái tan thành hạt sáng và linh hồn bay lên, boss nổ liên hoàn khi chết, pháo hoa khi thắng. Mỗi bối cảnh có hạt riêng: hoa rơi, tàn lửa, lá, tuyết, mưa giông. Bật *Hiệu ứng nhẹ* trong Cài đặt nếu máy yếu.
+- **Âm thanh chiến đấu**: tiếng đòn đánh có lực dội trầm, chém gió, sấm rền, lửa nổ lách tách, băng vỡ leng keng, đá rơi rung đất, tiếng tụ khí khi niệm chú, trống và cồng khi cắt cảnh, tiếng gầm khi boss xuất hiện, tiếng nổ liên hoàn khi boss chết, pháo hoa lúc thắng.
+
+- **Nhân vật pixel art**: toàn bộ 6 nhân vật người chơi, ~30 NPC, 13 boss, lính Thiên binh/Sơn tặc/Hoả yêu và 28 hình thái Tiên sủng được vẽ bằng điểm ảnh (tự đổ bóng khối, viền màu), màu Tiên sủng đổi theo ngũ hành. Mã nguồn hình nằm trong `public/js/pixel.js` – có thể chỉnh màu áo, vũ khí, kiểu tóc… ở các bảng `HEROES`, `NPCS`, `FORMS`.
+
+### Thay bằng tranh vẽ của riêng bạn
+
+Muốn thay hình pixel bằng tranh vẽ riêng, đặt file **PNG nền trong suốt** vào:
+
+| Thư mục | Tên file | Ví dụ |
+|---|---|---|
+| `public/assets/monsters/` | mã hình thái Tiên sủng | `hautinh.png`, `holy.png`, `thanhlong.png` |
+| `public/assets/bosses/` | mã boss | `culinh.png`, `nguuma.png`, `lucnhi.png` |
+| `public/assets/npcs/` | mã NPC | `thaibach.png`, `duongtang.png`, `quanam.png` |
+
+Mã đầy đủ xem trong `game/data.js` (mục `FORMS`, `BOSSES`, `npcs`). Tải lại trang là game tự nhận tranh mới.
+
+## Quản lý dữ liệu
+
+- Mọi thứ lưu ở `data/db.json` (tài khoản, nhân vật, túi đồ, Tiên sủng, môn phái).
+- Muốn chỉnh tay (ví dụ cộng vàng, đổi cấp): **tắt server trước** (Ctrl+C), sửa file, rồi chạy lại.
+- Xoá `data/db.json` để làm lại từ đầu.
+- Sao lưu: chỉ cần copy file này.
+
+## Tuỳ biến nội dung
+
+| Muốn đổi | Sửa ở |
+|---|---|
+| Cốt truyện, lời thoại, NPC, boss, bản đồ từng chương | `game/story.js` |
+| Tộc, kỹ năng, Tiên sủng, giá vật phẩm | `game/data.js` |
+| Công thức chỉ số, rơi đồ, tỷ lệ | `game/logic.js` |
+| Công thức sát thương, bắt Tiên sủng, AI quái | `game/battle.js` |
+| Màu sắc, giao diện | `public/css/style.css` |
+| Hình nhân vật | `public/js/pixel.js` |
+| Nền bản đồ, nhà, cây, phông trận | `public/js/tiles.js` |
+
+Bản đồ là lưới 12 × 20 ký tự trong `game/data.js`: `.` đường đi, `,` vùng có quái, `T` cây, `~` nước, `#` đá/cột, `H` nhà, `P` cổng sang chương sau.
+
+### Thử nhiệm vụ ẩn theo giờ
+
+Một số nhiệm vụ ẩn chỉ kích hoạt vào giờ nhất định. Để thử mà không phải chờ, chạy server với giờ giả lập:
+
+```bash
+TDK_HOUR=22 node server.js
+```
+
+## Kiểm tra nhanh server
+
+Khi server đang chạy, mở cửa sổ dòng lệnh khác:
+
+```bash
+node tools/smoke-test.js
+```
+
+Script tự tạo nhân vật, đánh quái, bắt Tiên sủng, mua đồ, cường hóa, đấu trường, đánh boss đầu tiên.
+
+`node tools/story-test.js <tài khoản> <mật khẩu>` cho một nhân vật tự chơi hết cốt truyện (dùng để kiểm tra sau khi sửa `story.js`).
+
+## Lưu ý về PWA trên iPhone
+
+- Chế độ toàn màn hình (Thêm vào MH chính) hoạt động bình thường qua `http://` trong mạng LAN.
+- Service worker (lưu đệm giao diện) chỉ bật khi chạy qua HTTPS hoặc localhost; qua LAN `http://` thì game vẫn chạy đầy đủ, chỉ là không lưu đệm.
+- Khi khoá màn hình iPhone, kết nối sẽ tự nối lại khi bạn mở lại; trận đấu đang dở vẫn được giữ trên server.
+
+## Giấy phép phông chữ
+
+Phông Lora (bản rút gọn hỗ trợ tiếng Việt) theo giấy phép SIL Open Font License.

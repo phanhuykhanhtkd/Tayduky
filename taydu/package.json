@@ -1,0 +1,15 @@
+{
+  "name": "tay-du-ky-mobile",
+  "version": "1.0.0",
+  "description": "Tây Du Ký Mobile – bản nội bộ PWA cho iPhone, máy chủ Node.js không cần thư viện ngoài",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tools/smoke-test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}
