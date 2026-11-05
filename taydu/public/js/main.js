@@ -213,15 +213,36 @@ function settings() {
 }
 
 // ---------------- di chuyển ----------------
-let walkTok = 0;
-async function walk(route, then) {
+let walkTok = 0, inflight = null;
+// target: mảng các ô, hoặc hàm đích (x, y) => bool – đường đi được tính SAU khi bước đang đi xong,
+// tránh lệch vị trí với máy chủ ("Bước không hợp lệ") khi chạm liên tục / mạng chậm.
+async function walk(target, then) {
   const tok = ++walkTok;
-  for (const [x, y] of route) {
+  while (inflight) { try { await inflight; } catch {} }
+  if (tok !== walkTok) return;
+  let route = typeof target === 'function' ? GameMap.path([G.me.x, G.me.y], target) : target;
+  if (!route) { if (typeof target === 'function' && target(G.me.x, G.me.y) && then) then(); return; }
+  const goal = route[route.length - 1];
+  let retried = false;
+  for (let i = 0; i < route.length; i++) {
+    const [x, y] = route[i];
     if (tok !== walkTok || BattleUI.active) return;
     const anim = GameMap.animateTo(x, y, 160);
-    const r = await Net.emit('move', { x, y });
+    inflight = Net.emit('move', { x, y });
+    let r;
+    try { r = await inflight; } finally { inflight = null; }
     await anim;
-    if (!r.ok) { GameMap.snap(r.pos || [G.me.x, G.me.y]); if (r.msg) UI.toast(r.msg); return; }
+    if (!r.ok) {
+      if (r.pos) { G.me.x = r.pos[0]; G.me.y = r.pos[1]; }
+      GameMap.snap([G.me.x, G.me.y]);
+      if (!r.msg || r.msg === 'Bước không hợp lệ') { // lệch vị trí: tự tính lại đường, không báo lỗi
+        if (G.me.x === goal[0] && G.me.y === goal[1]) break;
+        const nr = !retried && GameMap.path([G.me.x, G.me.y], (a, b) => a === goal[0] && b === goal[1]);
+        if (nr) { retried = true; route = nr; i = -1; continue; }
+        return;
+      }
+      UI.toast(r.msg); return;
+    }
     Sound.sfx('step');
     G.me.x = x; G.me.y = y;
     if (r.regen) G.patchHud({ hp: r.regen[0], mp: r.regen[1] });
@@ -240,19 +261,18 @@ const adjacent = (n) => (x, y) => Math.abs(x - n.x) + Math.abs(y - n.y) === 1;
 function goToNpc(n) {
   const me = [G.me.x, G.me.y];
   if (adjacent(n)(...me)) return talk(n.id);
-  const route = GameMap.path(me, adjacent(n));
-  if (!route) return UI.toast('Không tìm được đường tới ' + n.name);
-  walk(route, () => talk(n.id));
+  if (!GameMap.path(me, adjacent(n))) return UI.toast('Không tìm được đường tới ' + n.name);
+  walk(adjacent(n), () => talk(n.id));
 }
 
-GameMap.onTap = (x, y) => {
+function onMapTap(x, y) {
   if (BattleUI.active) return;
   const n = npcAt(x, y);
   if (n) return goToNpc(n);
   if (x === G.me.x && y === G.me.y) return;
-  const route = GameMap.path([G.me.x, G.me.y], (a, b) => a === x && b === y);
-  if (route) walk(route);
-};
+  walk((a, b) => a === x && b === y);
+}
+GameMap.onTap = onMapTap;
 
 function onTravel(r) {
   walkTok++;
