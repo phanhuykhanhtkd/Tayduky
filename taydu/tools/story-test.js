@@ -1,10 +1,12 @@
 // Bot chơi hết cốt truyện (cần server đang chạy và một nhân vật đã được "buff" sẵn)
 // node tools/story-test.js <user> <pass>
 const URL = process.env.WS || 'ws://localhost:3000/ws';
+let lastSend = 0;
+const pace = (fn) => { const now = Date.now(), at = Math.max(now, lastSend + 45); lastSend = at; setTimeout(fn, at - now); }; // ~22 lệnh/giây như người thật
 function client() {
   const ws = new WebSocket(URL); let n = 0; const wait = new Map();
   ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.a != null) { wait.get(d.a)?.(d.d); wait.delete(d.a); } };
-  const emit = (e, d) => new Promise((r, j) => { const i = ++n; wait.set(i, r); ws.send(JSON.stringify({ e, d, i })); setTimeout(() => j(new Error('timeout ' + e)), 8000); });
+  const emit = (e, d) => new Promise((r, j) => { const i = ++n; wait.set(i, r); pace(() => ws.send(JSON.stringify({ e, d, i }))); setTimeout(() => j(new Error('timeout ' + e)), 8000); });
   return new Promise((r) => (ws.onopen = () => r({ ws, emit })));
 }
 (async () => {

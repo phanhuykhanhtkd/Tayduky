@@ -127,11 +127,18 @@ async function enter(first) {
   G.chat = r.chat || [];
   G.pending = r.pending || [];
   G.boss = r.boss;
+  G.event = r.event;
+  Panels2.initMini();
+  Net.emit('party:info').then((x) => x.ok && Panels2.setParty(x.party));
+  if (r.mail) setTimeout(() => UI.toast(`📬 Bạn có ${r.mail} thư mới ở Chợ (mục Thư).`, 'gold'), 2500);
   renderTicker(); updateBadges();
   requestAnimationFrame(() => GameMap.resize());
   if (r.battle) return startBattle(r.battle);
   Sound.play(G.meta.MAPS[r.state.map].theme);
+  Sound.ambient(G.meta.MAPS[r.state.map].theme);
   mapTitle();
+  if (!first && r.state.tut >= 99) setTimeout(async () => { const d = await Net.emit('daily:info'); if (d.ok && d.daily.checkin.canClaim && !UI.sheet.open && !BattleUI.active) Panels.daily(true); }, 1400);
+  if (first || r.state.tut < 99) Tut.start();
   if (first) {
     setTimeout(() => UI.dialog({ name: 'Thái Bạch Kim Tinh', icon: '🧙‍♂️', npc: 'thaibach', text: `Chào ${r.state.name}! Đây là Thiên Cung. Chạm vào bản đồ để đi, chạm vào NPC để trò chuyện. Ta đang đứng gần ngươi – lại đây nhận nhiệm vụ đầu tiên nhé. Nhớ ghé Tiên Đồng trị thương và Tiên Thương mua Bầu Bạc để thu phục Tiên sủng.`, options: [] }), 1600);
   }
@@ -148,7 +155,7 @@ function mapTitle() {
 function updateHud() {
   const c = G.me; if (!c) return;
   const d = c.derived;
-  const src = Sprites.heroURL(c.race, c.gender);
+  const src = Sprites.heroURL(c.race, c.gender, 0, c.gear);
   if ($('#hud-img').getAttribute('src') !== src) $('#hud-img').src = src;
   $('#hud-name').textContent = c.name;
   $('#hud-lv').textContent = c.lvl;
@@ -174,6 +181,7 @@ function updateBadges() {
   if (!G.me) return;
   $('[data-p="char"]').classList.toggle('dot', G.me.points > 0);
   $('[data-p="social"]').classList.toggle('dot', G.pending.length > 0);
+  $('[data-p="act"]').classList.toggle('dot', !!G.me.dailyBadge);
 }
 
 function renderTicker() {
@@ -185,9 +193,9 @@ $('#hud-ava').onclick = () => Panels.char();
 $('#hud-gear').onclick = () => settings();
 $('#pt-badge').onclick = () => Panels.char('info');
 $('#map-chip').onclick = () => Panels.act('travel');
-$('#quest-track').onclick = () => Panels.quest();
+$('#quest-track').onclick = () => { Tut.event('quest'); Panels.quest(); };
 $('#ticker').onclick = () => Panels.social('chat');
-$$('.nav button').forEach((b) => (b.onclick = () => Panels[b.dataset.p]()));
+$$('.nav button').forEach((b) => (b.onclick = () => { Tut.event('open_' + b.dataset.p); Panels[b.dataset.p](); }));
 document.addEventListener('click', (e) => { if (e.target.closest('button:not(.seal):not([data-close]):not(.tap-start)')) Sound.sfx('click'); });
 
 // ---------------- cài đặt ----------------
@@ -197,18 +205,39 @@ function settings() {
     body.innerHTML = `
       <div class="set-row"><span class="ic">${Sprites.ICONS.sound}</span><label style="margin:0">Nhạc nền<input type="range" id="s-music" min="0" max="100" value="${Math.round(st.music * 100)}"></label><output id="o-music">${Math.round(st.music * 100)}</output></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.skill}</span><label style="margin:0">Hiệu ứng âm thanh<input type="range" id="s-sfx" min="0" max="100" value="${Math.round(st.sfx * 100)}"></label><output id="o-sfx">${Math.round(st.sfx * 100)}</output></div>
+      ${GameMap.hdSupported ? `<div class="set-row"><span class="ic">${Sprites.ICONS.act}</span><div><b>Đồ hoạ HD-2D (3D)</b><div class="muted">Bản đồ có chiều sâu, bóng đổ, ánh đèn. Tắt nếu máy nóng.</div></div><button class="toggle ${GameMap.hd ? 'on' : ''}" id="s-hd" aria-label="HD-2D"></button></div>` : ''}
       <div class="set-row"><span class="ic">${Sprites.ICONS.gear}</span><div><b>Hiệu ứng nhẹ</b><div class="muted">Bật trên iPhone đời cũ để mượt hơn.</div></div><button class="toggle ${FX.low ? 'on' : ''}" id="s-low" aria-label="Hiệu ứng nhẹ"></button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.flee}</span><div><b>Tránh quái</b><div class="muted">Đi lại không gặp quái ngẫu nhiên.</div></div><button class="toggle ${G.me.peace ? 'on' : ''}" id="s-peace" aria-label="Tránh quái"></button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.sound}</span><div><b>Thử âm thanh</b><div class="muted" id="s-state">Trạng thái: ${Sound.state === 'running' ? 'đang phát' : Sound.state}</div></div><button class="btn-seal sm jade" id="s-test">Phát thử</button></div>
       <p class="muted" style="margin-top:10px">Không nghe thấy? Tăng âm lượng bằng nút bên hông iPhone khi đang ở trong game (âm lượng phương tiện), tắt chế độ Tập trung/Không làm phiền nếu có, rồi bấm Phát thử.</p>
       <p class="muted" style="margin-top:14px">Bản đồ đổi sáng tối theo giờ thật trên máy. Một số nhiệm vụ ẩn chỉ xuất hiện vào giờ nhất định.</p>
-      <div class="btns"><button class="btn-seal ghost" id="s-logout">Đăng xuất</button></div>`;
+      <div class="sec" style="margin-top:14px">Tài khoản</div>
+      <div class="set-row"><span class="ic">${Sprites.ICONS.char}</span><div><b>Đổi mật khẩu</b><div class="muted">Các thiết bị khác sẽ phải đăng nhập lại.</div></div><button class="btn-seal sm" id="s-pass">Đổi</button></div>
+      <div class="set-row"><span class="ic">${Sprites.ICONS.flee}</span><div><b>Đăng xuất mọi thiết bị khác</b><div class="muted">Khi lỡ đăng nhập trên máy lạ.</div></div><button class="btn-seal sm ghost" id="s-all">Đăng xuất</button></div>
+      <div class="btns"><button class="btn-seal ghost" id="s-logout">Đăng xuất máy này</button></div>`;
     const bind = (id, k) => { const i = $('#s-' + id); i.oninput = () => { $('#o-' + id).textContent = i.value; Sound.set(k, i.value / 100); }; i.onchange = () => Sound.sfx('click'); };
     bind('music', 'music'); bind('sfx', 'sfx');
     $('#s-test').onclick = () => { Sound.test(); setTimeout(() => { const el = $('#s-state'); if (el) el.textContent = 'Trạng thái: ' + (Sound.state === 'running' ? 'đang phát' : Sound.state); }, 300); };
+    if ($('#s-hd')) $('#s-hd').onclick = () => { GameMap.setHD(!GameMap.hd); UI.refreshSheet(); };
     $('#s-low').onclick = () => { FX.setLow(!FX.low); GameMap.initAmb(); UI.refreshSheet(); };
     $('#s-peace').onclick = async () => { await G.call('char:peace'); UI.refreshSheet(); };
     $('#s-logout').onclick = async () => { if (await UI.confirm('<p>Đăng xuất khỏi thiết bị này?</p>', 'Đăng xuất')) { localStorage.removeItem('tdk_token'); location.reload(); } };
+    $('#s-pass').onclick = async () => {
+      const ok = await UI.modal(`<h3 style="font-size:20px">Đổi mật khẩu</h3><label>Mật khẩu hiện tại<input id="pw-old" type="password" autocomplete="current-password"></label><label>Mật khẩu mới<input id="pw-new" type="password" autocomplete="new-password"></label><label>Nhập lại mật khẩu mới<input id="pw-new2" type="password" autocomplete="new-password"></label>`,
+        [{ id: 'no', label: 'Thôi', cls: 'ghost' }, { id: 'yes', label: 'Đổi mật khẩu' }]);
+      if (ok !== 'yes') return;
+      const o = $('#pw-old').value, n1 = $('#pw-new').value, n2 = $('#pw-new2').value;
+      if (n1 !== n2) return UI.toast('Hai lần nhập mật khẩu mới không giống nhau.', 'err');
+      const r = await Net.emit('auth:changePass', { old: o, pass: n1 });
+      if (r.ok) { localStorage.setItem('tdk_token', r.token); Sound.sfx('quest'); }
+      UI.toast(r.msg, r.ok ? 'gold' : 'err');
+    };
+    $('#s-all').onclick = async () => {
+      if (!(await UI.confirm('<p>Đăng xuất tài khoản này khỏi mọi điện thoại / máy tính khác? Máy này vẫn giữ đăng nhập.</p>', 'Đăng xuất'))) return;
+      const r = await Net.emit('auth:logoutAll');
+      if (r.ok) localStorage.setItem('tdk_token', r.token);
+      UI.toast(r.msg, r.ok ? 'gold' : 'err');
+    };
   });
 }
 
@@ -227,7 +256,8 @@ async function walk(target, then) {
   for (let i = 0; i < route.length; i++) {
     const [x, y] = route[i];
     if (tok !== walkTok || BattleUI.active) return;
-    const anim = GameMap.animateTo(x, y, 160);
+    const mt = G.me.gear && G.me.gear.mount && G.meta.MOUNTS[G.me.gear.mount];
+    const anim = GameMap.animateTo(x, y, Math.round(160 / (mt ? mt.speed : 1)));
     inflight = Net.emit('move', { x, y });
     let r;
     try { r = await inflight; } finally { inflight = null; }
@@ -243,7 +273,7 @@ async function walk(target, then) {
       }
       UI.toast(r.msg); return;
     }
-    Sound.sfx('step');
+    Sound.step(surfaceAt(x, y));
     G.me.x = x; G.me.y = y;
     if (r.regen) G.patchHud({ hp: r.regen[0], mp: r.regen[1] });
     if (r.state) G.setState(r.state);
@@ -255,6 +285,12 @@ async function walk(target, then) {
   if (tok === walkTok && then) then();
 }
 
+// mặt đất dưới chân → tiếng bước
+function surfaceAt(x, y) {
+  const M = GameMap.meta, th = M.theme, grass = M.tiles[y] && M.tiles[y][x] === ',';
+  return ({ heaven: grass ? 'cloud' : 'jade', city: grass ? 'grass' : 'stone', forest: grass ? 'grass' : 'dirt', river: grass ? 'grass' : 'dirt',
+    desert: grass ? 'dirt' : 'sand', cave: grass ? 'moss' : 'stone', snow: 'snow' })[th] || 'dirt';
+}
 function npcAt(x, y) { return GameMap.meta.npcs.find((n) => n.x === x && n.y === y); }
 const adjacent = (n) => (x, y) => Math.abs(x - n.x) + Math.abs(y - n.y) === 1;
 
@@ -282,7 +318,10 @@ function onTravel(r) {
   updateHud();
   Sound.sfx('portal');
   Sound.play(G.meta.MAPS[G.me.map].theme);
+  Sound.ambient(G.meta.MAPS[G.me.map].theme);
   mapTitle();
+  Panels2.maybeComic(G.me.map);
+  Panels2.renderPartyBar();
 }
 
 async function goQuest() {
@@ -306,6 +345,7 @@ async function goQuest() {
 // ---------------- NPC ----------------
 async function talk(id) {
   const r = await Net.emit('npc:talk', { id });
+  Tut.event('talk');
   if (!r.ok) return UI.toast(r.msg, 'err');
   const d = r.dialog;
   UI.dialog(d, async (opt) => {
@@ -373,8 +413,13 @@ Net.on('chat', (m) => {
 Net.on('map:join', (p) => { if (G.me && p.id !== G.me.id) GameMap.addPlayer(p); });
 Net.on('map:move', (p) => GameMap.movePlayer(p));
 Net.on('map:leave', (p) => GameMap.removePlayer(p.id));
+Net.on('map:gear', (p) => GameMap.setPlayerGear(p.id, p.gear));
+Net.on('party', (p) => Panels2.setParty(p));
+Net.on('fx:firework', (d) => Panels2.firework(d.by));
 Net.on('boss:update', (b) => { G.boss = b; if (UI.sheet.name === 'act' && UI.sheet.tab === 'list') UI.refreshSheet(); });
-Net.on('social:req', (r) => { G.pending.push(r); updateBadges(); Sound.sfx('quest'); UI.toast(`${r.fromName} ${r.type === 'marry' ? 'gửi lời cầu hôn 💍' : 'muốn bái bạn làm sư phụ 📿'} – xem ở Giao lưu`, 'gold'); });
+Net.on('social:req', async (r) => {
+  if (r.type === 'party') { Sound.sfx('quest'); const ok = await UI.confirm(`<p><b>${esc(r.fromName)}</b> (cấp ${r.fromLvl}) mời bạn vào tổ đội. Đồng ý?</p>`, 'Vào đội'); await G.call('social:respond', { type: 'party', fromId: r.fromId, accept: ok }); return; }
+  G.pending.push(r); updateBadges(); Sound.sfx('quest'); UI.toast(`${r.fromName} ${r.type === 'marry' ? 'gửi lời cầu hôn 💍' : 'muốn bái bạn làm sư phụ 📿'} – xem ở Giao lưu`, 'gold'); });
 Net.on('kicked', async (k) => {
   G.kicked = true;
   await UI.modal(`<h3>Đã đăng xuất</h3><p style="text-align:center">${esc(k.msg)}</p>`, [{ id: 'ok', label: 'Vào lại trên máy này' }]);

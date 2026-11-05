@@ -117,7 +117,7 @@ const Pix = (() => {
 //  NHÂN VẬT DẠNG NGƯỜI (đầu người hoặc đầu thú) – khung 36×48
 // =====================================================================
 const Art = (() => {
-  const { Buf, render, H, mix, lit, drk } = Pix;
+  const { Buf, render, H, mix, lit, drk, C } = Pix;
   const SKIN = '#f6d2b0', SKIN_D = '#e0a985', EYE = '#24140e';
 
   const ELEM = {
@@ -852,8 +852,60 @@ const Art = (() => {
     return cache.get(k);
   }
 
+  // ---------- trang bị hiện trên người ----------
+  const QCOL = ['#e8e2d4', '#6fd06f', '#5ab0ff', '#c77dff', '#ffa630', '#ff4d4d'];
+  function applyGear(base, g, race) {
+    if (!g) return base;
+    const o = { ...base };
+    if (g.w) o.weapon = g.w;
+    if (g.aq >= 2) o.trim = QCOL[g.aq];
+    if (g.aq >= 3 && !o.cape) o.cape = mix(H(QCOL[g.aq]), [30, 14, 24], 0.55);
+    if (g.aq >= 4) o.sash = QCOL[g.aq];
+    if (g.hq >= 3) o.hat = race === 'ma' ? 'helmet' : race === 'than' ? 'crown' : o.hat;
+    if (g.plus >= 7) o.aura = QCOL[Math.max(g.aq || 0, g.wq || 0, 4)];
+    return o;
+  }
+  function withAura(b, col) { // viền hào quang 1 điểm ảnh quanh hình
+    const c = C(col), out = b.d.slice();
+    for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+      if (b.get(x, y)) continue;
+      let near = 0;
+      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, -2]]) if (b.get(x + dx, y + dy)) { near = Math.abs(dx) + Math.abs(dy); break; }
+      if (near) { const v = near === 1 ? lit(c, 0.25) : c.slice(); v.noOutline = true; out[y * b.w + x] = v; }
+    }
+    b.d = out; return b;
+  }
+  // thú cưỡi
+  const MOUNTS = {
+    candau: ['cloud', { main: '#fff6d8', light: '#ffffff', acc: '#f0c050' }],
+    bachma: ['quad', { main: '#f4f2ec', light: '#ffffff', acc: '#b8b0a0', mane: '#e8ecf4', maneSize: 0.8, tail: 'tuft', legs: 12, legW: 3.4, neck: 5, hoof: '#4a3a2a', snout: 'long', ears: 'point', size: 1.1 }],
+    kylan: ['quad', { main: '#e8b040', light: '#fff0b0', acc: '#a8401a', mane: '#ff6a2a', maneSize: 0.9, horn: 'single', scales: true, tail: 'tuft', legs: 11, neck: 5, hoof: '#3a2418', snout: 'long', ears: 'point', size: 1.1 }],
+    hac: ['bird', { main: '#ffffff', light: '#f6f2ea', wing: '#ffffff', wingTip: '#1a1a22', tail: '#1a1a22', headc: '#ffffff', cap: '#e02a2a', beak: '#6a6a5a', beakLen: 6, neckLen: 12, neckX: 9, neckc: '#ffffff', legs: true, headR: 3 }],
+    hoho: ['quad', { main: '#e8902a', light: '#fff0d8', acc: '#2a1a10', stripes: true, tail: 'tiger', legs: 10, legW: 4, headR: 6, snout: 'short', ears: 'round', size: 1.12 }],
+  };
+  function cloudMount() {
+    const b = new Buf(44, 22);
+    for (const [x, y, r] of [[10, 13, 7], [19, 10, 8], [28, 12, 7.5], [35, 14, 5.5], [6, 16, 4.5], [22, 15, 8]]) b.ell(x, y, r, r * 0.72, '#fff6d8', 1);
+    for (const [x, y] of [[14, 9], [25, 8], [31, 10]]) b.ell(x, y, 3, 2, '#ffffff', 0.4);
+    b.curve([[40, 15], [44, 18], [43, 21]], '#f0c050', 1.6, 0.4);
+    return b;
+  }
+  function mount(id, frame = 0) {
+    const m = MOUNTS[id]; if (!m) return null;
+    const k = 'mount:' + id + '|' + frame;
+    if (!cache.has(k)) { const b = m[0] === 'cloud' ? cloudMount() : build(m[0], m[1], frame); const cv = render(b, 4); cache.set(k, { cv, url: cv.toDataURL() }); }
+    return cache.get(k);
+  }
+
   // API
-  function hero(race, gender, frame = 0, scale = 4) { const id = race + '_' + (gender === 'f' ? 'f' : 'm'); return get('hero:' + id, 'hum', HEROES[id] || HEROES.than_m, frame, scale); }
+  function hero(race, gender, frame = 0, scale = 4, gear) {
+    const id = race + '_' + (gender === 'f' ? 'f' : 'm');
+    if (!gear) return get('hero:' + id, 'hum', HEROES[id] || HEROES.than_m, frame, scale);
+    const o = applyGear(HEROES[id] || HEROES.than_m, gear, race);
+    const key = 'hero:' + id + ':' + [gear.w, gear.aq, gear.hq, gear.plus >= 7 ? 1 : 0].join(',') + '|' + frame + '|' + scale;
+    if (!cache.has(key)) { let b = build('hum', o, frame); if (o.aura) b = withAura(b, o.aura); const cv = render(b, scale); cache.set(key, { cv, url: cv.toDataURL() }); }
+    return cache.get(key);
+  }
   function npc(id, frame = 0, scale = 4) { const o = NPCS[id]; return o ? get('npc:' + id, o.kind || 'hum', o, frame, scale) : null; }
   function form(formId, element = 'tho', frame = 0, scale = 4) {
     const fn = FORMS[formId]; if (!fn) return null;
@@ -867,7 +919,7 @@ const Art = (() => {
   }
   // từ một đơn vị trận đấu
   function unit(u, frame = 0) {
-    if (u.hero) return hero(u.hero.race, u.hero.gender, frame);
+    if (u.hero) return hero(u.hero.race, u.hero.gender, frame, 4, u.hero.gear);
     if (u.bossId) return boss(u.bossId, frame);
     if (u.hid) return human(u.hid, frame);
     if (u.form) return form(u.form, u.element, frame);
@@ -875,5 +927,5 @@ const Art = (() => {
   }
   const kindOf = (formId) => (FORMS[formId] ? FORMS[formId](ELEM.tho)[0] : 'hum');
 
-  return { hero, npc, form, human, boss, unit, kindOf, HEROES, NPCS, FORMS, ELEM };
+  return { hero, npc, form, human, boss, unit, mount, kindOf, HEROES, NPCS, FORMS, ELEM, MOUNTS };
 })();

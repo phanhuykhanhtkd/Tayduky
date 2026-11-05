@@ -28,6 +28,7 @@ class Socket extends EventEmitter {
     this.rooms = new Set();
     this.data = {};
     this.address = req.socket.remoteAddress;
+    this.req = { headers: { 'x-forwarded-for': req.headers['x-forwarded-for'] } };
     this.buf = Buffer.alloc(0);
     this.frag = [];
     this.alive = true;
@@ -45,7 +46,7 @@ class Socket extends EventEmitter {
       let len = b1 & 0x7f, off = 2;
       if (len === 126) { if (this.buf.length < 4) return; len = this.buf.readUInt16BE(2); off = 4; }
       else if (len === 127) { if (this.buf.length < 10) return; len = Number(this.buf.readBigUInt64BE(2)); off = 10; }
-      if (len > 1024 * 1024) return this.close(); // chặn gói tin quá lớn
+      if (len > 64 * 1024) return this.close(); // chặn gói tin quá lớn (64KB)
       const maskLen = masked ? 4 : 0;
       if (this.buf.length < off + maskLen + len) return;
       const mask = masked ? this.buf.slice(off, off + 4) : null;

@@ -5,6 +5,12 @@
 const GameMap = (() => {
   const cv = $('#map');
   const ctx = cv.getContext('2d');
+  // HD-2D (WebGL) – tự tắt nếu máy không hỗ trợ
+  const cv3 = $('#map3d');
+  const hdOK = typeof Hd2d !== 'undefined' && Hd2d.init(cv3);
+  let hdPref = true; try { hdPref = localStorage.getItem('tdk_hd') !== '0'; } catch {}
+  const hdOn = () => hdOK && hdPref && Hd2d.ok;
+  function setHD(v) { hdPref = !!v; try { localStorage.setItem('tdk_hd', v ? '1' : '0'); } catch {} cv.parentElement.classList.toggle('hd', hdOn()); resize(); }
   const COLS = 12, ROWS = 20;
   let W = 0, H = 0, dpr = 1, T = 32, offY = 0, camY = 0;
   let M = null, mapId = null, ground = null, groundFrames = null, objs = [], waterTiles = [], lights = [];
@@ -43,6 +49,8 @@ const GameMap = (() => {
     dpr = Math.min(3, window.devicePixelRatio || 1);
     W = r.width; H = r.height;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    cv.parentElement.classList.toggle('hd', hdOn());
+    if (hdOn()) Hd2d.resize(W, H, dpr);
     const nt = W / COLS;
     if (M && (nt !== T || !ground)) { T = nt; build(); }
     T = nt;
@@ -381,6 +389,7 @@ const GameMap = (() => {
     const target = mapH > H ? Math.max(0, Math.min(mapH - H, (me.py + 0.5) * T - H / 2)) : 0;
     camY += (target - camY) * 0.2; if (Math.abs(target - camY) < 0.3) camY = target;
 
+    if (hdOn()) return frameHD(now);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#0d0907'; ctx.fillRect(0, 0, W, H);
     ctx.save();
@@ -396,13 +405,83 @@ const GameMap = (() => {
     const ents = objs.map((o) => ({ z: o.z, draw: () => { ctx.imageSmoothingEnabled = !o.w; ctx.drawImage(o.c, o.x, o.y, o.w || o.c.width / Math.min(2, dpr), o.h || o.c.height / Math.min(2, dpr)); ctx.imageSmoothingEnabled = true; } }));
     M.tiles.forEach((row, y) => { const x = row.indexOf('P'); if (x >= 0) ents.push({ z: y + 0.5, draw: () => drawPortal(x, y, now) }); });
     for (const n of M.npcs) ents.push({ z: n.y + 0.6, draw: () => drawNpc(n, now) });
-    for (const o of others.values()) ents.push({ z: o.py + 0.6, draw: () => drawHero(o.race, o.gender, o.px, o.py, o.name, false, now, o.moving, o.face || 1) });
-    ents.push({ z: me.py + 0.61, draw: () => drawHero(me.race, me.gender, me.px, me.py, me.name, true, now, !!me.to, me.face) });
+    for (const o of others.values()) ents.push({ z: o.py + 0.6, draw: () => drawHero(o.race, o.gender, o.px, o.py, o.name, false, now, o.moving, o.face || 1, o.gear) });
+    ents.push({ z: me.py + 0.61, draw: () => drawHero(me.race, me.gender, me.px, me.py, me.name, true, now, !!me.to, me.face, G.me && G.me.gear) });
     overlay = [];
     ents.sort((a, b) => a.z - b.z).forEach((e) => e.draw());
     overlay.forEach((f) => f());
     ctx.restore();
     lighting(now);
+  }
+
+  // =====================================================================
+  //  KHUNG HÌNH HD-2D: dựng cảnh 3D bằng WebGL, chữ/nhãn vẽ trên lớp 2D
+  // =====================================================================
+  const imgCache = {};
+  function frameHD(now) {
+    const k = 1 / T, th = TH[M.theme];
+    const h = new Date().getHours() + new Date().getMinutes() / 60;
+    const night = h >= 19 || h < 5, dusk = (h >= 17 && h < 19) || (h >= 5 && h < 6.5);
+    const sprites = [], glows = [];
+    for (const o of objs) sprites.push({ c: o.c, x: (o.x + o.w / 2) * k, z: (o.y + o.h) * k - 0.14, w: o.w * k, h: o.h * k, tilt: 0.42 });
+    const npcPos = [];
+    for (const n of M.npcs) {
+      const bob = Math.sin(now / 700 + n.x * 2) * 0.03;
+      const src = Sprites.npcSrc(n.id);
+      let c = null, hgt = 1.3, wid = 1;
+      if (src) { const im = imgCache[src] || (imgCache[src] = Object.assign(new Image(), { src })); if (im.complete && im.naturalWidth) { c = im; hgt = 1.3 * (n.boss ? 1.1 : 0.92) * 1.3; wid = hgt * im.naturalWidth / im.naturalHeight; } }
+      else { const pix = Art.npc(n.look || n.id); if (pix) { c = pix.cv; const hum = pix.cv.width / pix.cv.height < 0.9; hgt = hum ? (n.boss ? 1.75 : 1.5) : 1.3; wid = hgt * pix.cv.width / pix.cv.height; } }
+      if (c) sprites.push({ c, x: n.x + 0.5, y: Math.max(0, bob), z: n.y + 0.9, w: wid, h: hgt });
+      const pulse = 0.6 + 0.4 * Math.sin(now / 500 + n.x);
+      glows.push({ x: n.x + 0.5, y: 0.08, z: n.y + 0.95, w: 0.55, h: 0.16, col: n.boss ? [1, 0.3, 0.2, 0.35 * pulse] : n.role ? [1, 0.82, 0.45, 0.3 * pulse] : [1, 1, 1, 0.12 * pulse] });
+      npcPos.push([n, hgt]);
+    }
+    const heroes = [];
+    const addHero = (race, gender, px, py, name, self, moving, face, mount, gear) => {
+      const fr = moving ? 1 + (Math.floor(now / 140) % 2) : 0;
+      const im = Sprites.heroImg(race, gender, fr, gear);
+      const hh = 1.5, ww = hh * im.width / im.height * (52 / 40) * (40 / 52);
+      const lift = mount ? 0.32 : 0;
+      if (mount && Art.mount) { const mc = Art.mount(mount); if (mc) sprites.push({ c: mc.cv, x: px + 0.5, y: Math.sin(now / 260) * 0.04, z: py + 0.93, w: 1.3 * mc.cv.width / mc.cv.height, h: 1.3 * 0.62, flip: face < 0 }); }
+      sprites.push({ c: im, x: px + 0.5, y: lift + (mount ? Math.sin(now / 260) * 0.04 : 0), z: py + 0.92, w: hh * im.width / im.height, h: hh, flip: face < 0 });
+      if (self) glows.push({ x: px + 0.5, y: 0.06, z: py + 0.96, w: 0.5, h: 0.14, col: [1, 0.85, 0.5, 0.4] });
+      heroes.push([name, px, py, self, hh + lift]);
+    };
+    for (const o of others.values()) addHero(o.race, o.gender, o.px, o.py, o.name, false, o.moving, o.face || 1, o.gear && o.gear.mount, o.gear);
+    addHero(me.race, me.gender, me.px, me.py, me.name, true, !!me.to, me.face, G.me && G.me.gear && G.me.gear.mount, G.me && G.me.gear);
+    M.tiles.forEach((row, y) => { const x = row.indexOf('P'); if (x >= 0) { const p = 0.75 + 0.25 * Math.sin(now / 300); glows.push({ x: x + 0.5, y: 0.7, z: y + 0.6, w: 0.55 * p, h: 0.85 * p, col: [1, 0.85, 0.45, 0.9] }); glows.push({ x: x + 0.5, y: 0.7, z: y + 0.62, w: 0.25, h: 0.45, col: [1, 1, 0.9, 0.9] }); } });
+    const lit = night || dusk || th.dark;
+    if (lit) for (const [x, y, r] of lights) glows.push({ x: x * k, y: 0.75, z: y * k - 0.1, w: 0.28, h: 0.32, col: [1, 0.6, 0.25, night || th.dark ? 0.9 : 0.4] });
+    const fi = Math.floor(now / 420) % groundFrames.length;
+    Hd2d.render({
+      theme: M.theme, ground: groundFrames[fi], mapW: COLS, mapH: ROWS, focusX: me.px + 0.5, focusZ: me.py + 0.5, sprites, glows,
+      night, dusk, dark: !!th.dark, lights: lights.map(([x, y, r]) => [x * k, y * k, r * k * 1.3, 1]), blur: FX.low ? 0 : 2.2,
+    });
+    // lớp 2D: nhãn tên, dấu nhiệm vụ, điểm đến, hạt môi trường
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (marker && now - marker.t < 800) {
+      const p = Hd2d.project(marker.x + 0.5, 0, marker.y + 0.7);
+      if (p) { const kk = (now - marker.t) / 800; ctx.strokeStyle = `rgba(243,210,122,${1 - kk})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x, p.y, 8 + kk * 14, 3 + kk * 6, 0, 0, 7); ctx.stroke(); }
+    }
+    for (const [n, hgt] of npcPos) {
+      const p = Hd2d.project(n.x + 0.5, 0, n.y + 1.05); if (!p) continue;
+      label(n.name, p.x, p.y, n.boss ? '#ff9a85' : '#f3d27a', 'rgba(15,9,6,.75)', true);
+      if (questNpc === n.id) {
+        const tt = 0.6, hh2 = hgt + 0.3 + Math.sin(now / 220) * 0.06; const q = Hd2d.project(n.x + 0.5, hh2 * Math.cos(tt), n.y + 0.9 - hh2 * Math.sin(tt)); if (!q) continue;
+        const s2 = T * 0.3;
+        ctx.save(); ctx.shadowColor = 'rgba(255,214,90,.9)'; ctx.shadowBlur = 10; ctx.fillStyle = n.boss ? '#a8322a' : '#c9962e';
+        ctx.beginPath(); ctx.moveTo(q.x, q.y - s2); ctx.lineTo(q.x + s2 * 0.75, q.y); ctx.lineTo(q.x, q.y + s2); ctx.lineTo(q.x - s2 * 0.75, q.y); ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0; ctx.strokeStyle = '#fff2c0'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = '#fff8e0'; ctx.font = `700 ${T * 0.3}px Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n.boss ? '⚔' : '!', q.x, q.y + 1);
+        ctx.restore();
+      }
+    }
+    for (const [name, px, py, self, hh] of heroes) {
+      const p = Hd2d.project(px + 0.5, (hh + 0.06) * Math.cos(0.6), py + 0.92 - (hh + 0.06) * Math.sin(0.6)); if (!p) continue;
+      label(name, p.x, p.y, self ? '#ffffff' : '#bfe6d6', self ? 'rgba(168,50,42,.88)' : 'rgba(15,9,6,.72)');
+    }
+    drawAmb(now, night);
   }
 
   function drawWater(now) {
@@ -523,11 +602,11 @@ const GameMap = (() => {
     });
   }
 
-  function drawHero(race, gender, px, py, name, self, now, moving, face) {
+  function drawHero(race, gender, px, py, name, self, now, moving, face, gear) {
     const cx = (px + 0.5) * T, by = (py + 1) * T;
     const h = T * 1.5, w = h * 40 / 52;
     const fr = moving ? 1 + (Math.floor(now / 140) % 2) : 0;
-    const im = Sprites.heroImg(race, gender, fr);
+    const im = Sprites.heroImg(race, gender, fr, gear);
     if (self) { // vòng sáng dưới chân
       ctx.strokeStyle = 'rgba(243,210,122,.55)'; ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.ellipse(cx, by - T * 0.1, T * 0.36, T * 0.12, 0, 0, 7); ctx.stroke();
@@ -543,14 +622,17 @@ const GameMap = (() => {
   cv.addEventListener('pointerdown', (e) => {
     if (!M) return;
     const r = cv.getBoundingClientRect();
-    const x = Math.floor((e.clientX - r.left) / T);
-    const y = Math.floor((e.clientY - r.top - offY + camY) / T);
+    let x = Math.floor((e.clientX - r.left) / T);
+    let y = Math.floor((e.clientY - r.top - offY + camY) / T);
+    if (hdOn()) { const p = Hd2d.pick(e.clientX - r.left, e.clientY - r.top); if (!p) return; x = Math.floor(p.x); y = Math.floor(p.z); }
     if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return;
     marker = { x, y, t: performance.now() };
     onTapTile && onTapTile(x, y);
   });
 
   // ---------- tìm đường ----------
+  // toạ độ màn hình (px) của tâm ô – dùng cho hướng dẫn tân thủ
+  function screenOf(x, y) { const r = cv.getBoundingClientRect(); if (hdOn()) { const p = Hd2d.project(x + 0.5, 0.9, y + 0.9); if (p) return { x: r.left + p.x, y: r.top + p.y }; } return { x: r.left + (x + 0.5) * T, y: r.top + (y + 0.25) * T + offY - camY }; }
   function walkable(x, y) {
     const ch = M.tiles[y] && M.tiles[y][x];
     if (!ch) return false;
@@ -590,12 +672,13 @@ const GameMap = (() => {
   function addPlayer(p) { others.set(p.id, { ...p, px: p.x, py: p.y, face: 1 }); }
   function movePlayer({ id, x, y }) { const o = others.get(id); if (o) { o.x = x; o.y = y; } }
   function removePlayer(id) { others.delete(id); }
+  function setPlayerGear(id, gear) { const o = others.get(id); if (o) o.gear = gear; }
 
   window.addEventListener('resize', () => setTimeout(resize, 60));
   requestAnimationFrame(frame);
 
   return {
-    setMap, setMe, snap, resize, path, walkable, animateTo, setPlayers, addPlayer, movePlayer, removePlayer, initAmb,
-    me, set onTap(fn) { onTapTile = fn; }, set questNpc(id) { questNpc = id; }, get id() { return mapId; }, get meta() { return M; },
+    setMap, setMe, snap, resize, path, walkable, animateTo, setPlayers, addPlayer, movePlayer, removePlayer, initAmb, screenOf, setHD, setPlayerGear, get hd() { return hdOn(); }, get hdSupported() { return hdOK; },
+    me, set onTap(fn) { onTapTile = fn; }, set questNpc(id) { questNpc = id; }, get questNpc() { return questNpc; }, get id() { return mapId; }, get meta() { return M; },
   };
 })();

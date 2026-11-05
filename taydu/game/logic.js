@@ -15,7 +15,9 @@ function weighted(weights) {
   return weights.length - 1;
 }
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-3);
-const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+// ngày theo giờ Việt Nam (máy chủ trên mạng thường chạy giờ UTC)
+const vnNow = () => new Date(Date.now() + 7 * 3600e3);
+const today = () => { const d = vnNow(); return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`; };
 
 // ---------- cấp độ ----------
 const expNeed = (L) => Math.floor(35 * Math.pow(L, 1.65) + 25);
@@ -68,6 +70,7 @@ function createChar(id, user, name, race, gender) {
     arena: 1000, guild: null, contrib: 0,
     spouse: null, master: null, disciples: [],
     kills: 0, createdAt: Date.now(), storyVer: 2,
+    checkin: { n: 0, last: null }, tower: { best: 0 }, tut: 0,
   };
   c.equip.vukhi = makeEquip('vukhi', 1, 0);
   c.equip.giap = makeEquip('giap', 1, 0);
@@ -98,6 +101,7 @@ function calcStats(c, spouseBonus = !!c.spouse) {
     }
   }
   if (spouseBonus) { o.maxHp *= 1.05; o.atk *= 1.05; o.matk *= 1.05; }
+  require('./features2').mountBonus(c, o);
   for (const k of Object.keys(o)) o[k] = k === 'crit' || k === 'dodge' ? Math.round(o[k] * 10) / 10 : Math.round(o[k]);
   return o;
 }
@@ -129,7 +133,7 @@ function clampHpMp(c) {
 
 function resetDaily(c) {
   const t = today();
-  if (!c.daily || c.daily.date !== t) c.daily = { date: t, peach: 0, arena: 0, treasure: 0 };
+  if (!c.daily || c.daily.date !== t) c.daily = { date: t, peach: 0, arena: 0, treasure: 0, kills: 0, catches: 0, arenaWins: 0, bossWins: 0, towerWins: 0, towerFails: 0, enhance: 0, claimed: [], chest: false };
 }
 
 // ---------- hành trang ----------
@@ -182,7 +186,7 @@ function petView(p) {
   const sp = D.getSpecies(p.sid);
   return {
     ...p, icon: sp.icon, element: sp.element, grade: sp.grade, species: sp.name,
-    skills: sp.skills, stats: petStats(p), need: expNeed(p.lvl),
+    skills: require('./features2').petSkills(p), stats: petStats(p), need: expNeed(p.lvl), learned: p.learned || [],
   };
 }
 function petAddExp(c, p, n) {
@@ -281,6 +285,15 @@ function completeQuestStep(c) {
   return res;
 }
 
+// ---------- hình trang bị hiện trên người (gửi cho client vẽ) ----------
+function gearBrief(c) {
+  const w = c.equip && c.equip.vukhi, a = c.equip && c.equip.giap, h = c.equip && c.equip.mu;
+  let wk = null;
+  if (w) wk = w.unique ? 'goldstaff' : /Côn/.test(w.name) ? (w.q >= 3 ? 'goldstaff' : 'staff') : /Kiếm/.test(w.name) ? 'sword' : /Đao/.test(w.name) ? 'saber' : /Thương/.test(w.name) ? (w.q >= 4 ? 'firespear' : 'spear') : null;
+  const plus = Math.max(0, ...Object.values(c.equip || {}).filter(Boolean).map((e) => e.plus || 0));
+  return { w: wk, wq: w ? w.q : -1, aq: a ? a.q : -1, hq: h ? h.q : -1, plus, mount: c.mount || null };
+}
+
 // ---------- trạng thái gửi client ----------
 function publicChar(c, extra = {}) {
   resetDaily(c);
@@ -295,18 +308,20 @@ function publicChar(c, extra = {}) {
     quest: questView(c), nan: c.nan, unlocked: c.unlocked,
     secrets: c.secrets, daily: c.daily, arena: c.arena, guild: c.guild, contrib: c.contrib,
     spouse: c.spouse, master: c.master, disciples: c.disciples, power: power(c), kills: c.kills,
-    peace: !!c.peace,
+    peace: !!c.peace, gear: gearBrief(c),
+    tut: c.tut ?? (c.lvl <= 1 && c.quest === 0 ? 0 : 99), towerBest: (c.tower && c.tower.best) || 0,
+    dailyBadge: require('./features').badge(c),
     secretHints: Object.fromEntries(Object.keys(D.SECRETS).filter((k) => c.secrets[k] || (c.secretState.rumors || {})[k]).map((k) => [k, D.SECRETS[k].hint])),
     ...extra,
   };
 }
 
 module.exports = {
-  rand, randf, chance, pick, weighted, uid, today, expNeed,
+  rand, randf, chance, pick, weighted, uid, today, vnNow, expNeed,
   makeEquip, makeUniqueStaff, equipStats, equipPrice,
   createChar, calcStats, power, addExp, clampHpMp, resetDaily,
   countItem, addItem, removeItem, addEquip, bagUsed,
   beastStats, petStats, makePet, petView, petAddExp,
   makeMonster, makeHuman, makeBoss, rollEncounter, rollDrops,
-  questView, applyReward, completeQuestStep, publicChar,
+  questView, applyReward, completeQuestStep, publicChar, gearBrief,
 };

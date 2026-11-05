@@ -25,7 +25,7 @@ class Battle {
 
     const s = L.calcStats(char);
     this.units.push(this.mk({
-      id: 'p', side: 0, kind: 'player', name: char.name, lvl: char.lvl, hero: { race: char.race, gender: char.gender },
+      id: 'p', side: 0, kind: 'player', name: char.name, lvl: char.lvl, hero: { race: char.race, gender: char.gender, gear: L.gearBrief(char) },
       ...s, hp: Math.max(1, char.hp), mp: char.mp, skills: this.playerSkills(char),
     }));
     const pet = char.pets.find((p) => p.uid === char.activePet);

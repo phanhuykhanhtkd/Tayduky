@@ -10,10 +10,13 @@ const os = require('os');
 const crypto = require('crypto');
 
 const D = require('./game/data');
+require('./game/data2'); // gộp vật phẩm / kỹ năng mới vào D
+const F2 = require('./game/features2');
 const L = require('./game/logic');
 const DB = require('./game/db');
 const { Battle } = require('./game/battle');
 const { Server } = require('./game/realtime');
+const F = require('./game/features');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -44,13 +47,17 @@ const MIME = {
   '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2',
 };
 const server = http.createServer((req, res) => {
-  let p = decodeURIComponent(req.url.split('?')[0]);
+  let p;
+  try { p = decodeURIComponent(req.url.split('?')[0]); } catch { res.writeHead(400); return res.end(); }
+  if (p.includes('\0')) { res.writeHead(400); return res.end(); }
   if (p === '/') p = '/index.html';
   const file = path.normalize(path.join(PUBLIC, p));
   if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, buf) => {
     if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Không tìm thấy'); }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache',
+      'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'same-origin',
+      'Content-Security-Policy': "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ws: wss:; font-src 'self' data:" });
     res.end(buf);
   });
 });
@@ -63,12 +70,13 @@ const online = new Map(); // charId -> socket
 const battles = new Map(); // charId -> Battle
 const chat = { khu: [], shop: [], he: [], phai: {} };
 const pending = new Map(); // charId(target) -> [{type, fromId, fromName, t}]
-const lastChat = new Map();
+const lastChat = new Map(), lastText = new Map();
+const respondHooks = new Map();
 
 const hashPass = (pass, salt) => crypto.scryptSync(pass, salt, 32).toString('hex');
 const charOf = (s) => (s.data.charId ? db.chars[s.data.charId] : null);
 const charByName = (n) => Object.values(db.chars).find((c) => c.name.toLowerCase() === String(n).trim().toLowerCase());
-const hour = () => (process.env.TDK_HOUR ? Number(process.env.TDK_HOUR) : new Date().getHours()); // TDK_HOUR: giả lập giờ để thử nhiệm vụ ẩn
+const hour = () => (process.env.TDK_HOUR ? Number(process.env.TDK_HOUR) : L.vnNow().getUTCHours()); // TDK_HOUR: giả lập giờ để thử nhiệm vụ ẩn
 const fmt = (n) => Number(n).toLocaleString('vi-VN');
 
 function pushState(c) { const s = online.get(c.id); if (s) s.emit('state', L.publicChar(c)); }
@@ -94,7 +102,7 @@ function mapPlayers(mapId) {
   }
   return out;
 }
-const playerBrief = (c) => ({ id: c.id, name: c.name, race: c.race, gender: c.gender, lvl: c.lvl, x: c.x, y: c.y, guild: c.guild ? db.guilds[c.guild]?.name : null });
+const playerBrief = (c) => ({ id: c.id, name: c.name, race: c.race, gender: c.gender, lvl: c.lvl, x: c.x, y: c.y, gear: L.gearBrief(c), guild: c.guild ? db.guilds[c.guild]?.name : null });
 
 function tileAt(mapId, x, y) { const t = D.MAPS[mapId].tiles[y]; return t ? t[x] || '#' : '#'; }
 function walkable(mapId, x, y) {
@@ -119,7 +127,7 @@ function metaBundle() {
     QUESTS: D.QUESTS.map((q) => ({ title: q.title, text: q.text, map: q.map, nan: q.nan, no: q.no, type: q.type, count: q.count })),
     SECRETS: Object.fromEntries(Object.entries(D.SECRETS).map(([k, v]) => [k, { name: v.name, reward: v.reward }])),
     SPECIES_COUNT: D.SPECIES_COUNT, FORMS: D.FORMS.map((f) => ({ id: f.id, name: f.name, icon: f.icon })),
-    ENHANCE_RATE: D.ENHANCE_RATE,
+    ENHANCE_RATE: D.ENHANCE_RATE, MOUNTS: require('./game/data2').MOUNTS,
   };
 }
 const META = metaBundle();
@@ -136,17 +144,41 @@ function scanAssets() {
 // --------------------------------------------------------------------
 //  Kết nối
 // --------------------------------------------------------------------
+// ---------- chống spam / dò mật khẩu ----------
+const ipOf = (s) => { const x = s.req && s.req.headers['x-forwarded-for']; return String(x ? x.split(',').pop() : s.address || '').trim(); }; // lấy địa chỉ do proxy (Render) ghi cuối cùng
+const conns = new Map(); // ip -> số kết nối
+const loginFails = new Map(); // key -> {n, until}
+const regs = new Map(); // ip -> [thời điểm]
+// tài khoản: 8 lần sai / 10 phút → khoá 5 phút · một IP (có thể nhiều người dùng chung mạng): 40 lần
+function failKey(k) { const max = k.startsWith('ip:') ? 40 : 8; const f = loginFails.get(k) || { n: 0, until: 0, first: Date.now() }; if (Date.now() - f.first > 10 * 60e3) { f.n = 0; f.first = Date.now(); } f.n++; if (f.n >= max) { f.until = Date.now() + 5 * 60e3; f.n = 0; } loginFails.set(k, f); }
+const locked = (k) => (loginFails.get(k) || {}).until > Date.now();
+setInterval(() => { const now = Date.now(); for (const [k, f] of loginFails) if (f.until < now && now - f.first > 15 * 60e3) loginFails.delete(k); for (const [k, l] of regs) { const r = l.filter((t) => now - t < 3600e3); if (r.length) regs.set(k, r); else regs.delete(k); } }, 60e3).unref();
+
 io.on('connection', (socket) => {
+  const ip = ipOf(socket);
+  conns.set(ip, (conns.get(ip) || 0) + 1);
+  if (conns.get(ip) > Number(process.env.TDK_CONN_LIMIT || 12)) { socket.close(); conns.set(ip, conns.get(ip) - 1); return; }
+  // giới hạn tốc độ: 25 lệnh/giây, tích luỹ tối đa 50
+  let tokens = 50, last = Date.now(), strikes = 0;
+  const allow = () => { const now = Date.now(); tokens = Math.min(50, tokens + (now - last) / 40); last = now; if (tokens < 1) { if (++strikes > 200) socket.close(); return false; } tokens--; return true; };
   const on = (evt, needChar, fn) => {
     socket.on(evt, async (d, ack) => {
-      const c = charOf(socket);
-      if (needChar && !c) return ack({ ok: false, msg: 'Chưa vào game.' });
-      if (c) L.resetDaily(c);
-      const r = (await fn(c, d || {})) || { ok: true };
-      if (c && r.ok !== false && !r.noState) r.state = L.publicChar(c);
-      delete r.noState;
-      DB.save();
-      ack(r);
+      if (typeof ack !== 'function') ack = () => {};
+      if (!allow()) return ack({ ok: false, msg: 'Thao tác quá nhanh, chờ chút nhé.' });
+      if (d != null && typeof d !== 'object') d = {};
+      try {
+        const c = charOf(socket);
+        if (needChar && !c) return ack({ ok: false, msg: 'Chưa vào game.' });
+        if (c) L.resetDaily(c);
+        const r = (await fn(c, d || {})) || { ok: true };
+        if (c && r.ok !== false && !r.noState) r.state = L.publicChar(c);
+        delete r.noState;
+        DB.save();
+        ack(r);
+      } catch (e) {
+        console.error(`[LỖI] ${evt}:`, e && e.stack || e);
+        ack({ ok: false, msg: 'Máy chủ gặp lỗi, thử lại sau.' });
+      }
     });
   };
   const notInBattle = (c) => (battles.has(c.id) ? { ok: false, msg: 'Đang trong trận đấu!' } : null);
@@ -160,34 +192,63 @@ io.on('connection', (socket) => {
     return { ok: true, token: acc.token, hasChar: !!acc.charId };
   }
   on('auth:register', false, (_, { user, pass }) => {
+    const rl = (regs.get(ip) || []).filter((t) => Date.now() - t < 3600e3);
+    if (rl.length >= Number(process.env.TDK_REG_LIMIT || 6)) return { ok: false, msg: 'Tạo quá nhiều tài khoản – thử lại sau 1 giờ.' };
     user = String(user || '').trim().toLowerCase();
+    if (String(pass || '').length > 64) return { ok: false, msg: 'Mật khẩu tối đa 64 ký tự.' };
     if (!/^[a-z0-9_]{3,16}$/.test(user)) return { ok: false, msg: 'Tên đăng nhập 3–16 ký tự (a-z, 0-9, _).' };
     if (String(pass || '').length < 4) return { ok: false, msg: 'Mật khẩu tối thiểu 4 ký tự.' };
     if (db.accounts[user]) return { ok: false, msg: 'Tên đăng nhập đã tồn tại.' };
     const salt = crypto.randomBytes(8).toString('hex');
-    db.accounts[user] = { salt, pass: hashPass(pass, salt), token: crypto.randomBytes(16).toString('hex'), charId: null, createdAt: Date.now() };
+    db.accounts[user] = { salt, pass: hashPass(String(pass), salt), token: crypto.randomBytes(16).toString('hex'), charId: null, createdAt: Date.now() };
+    rl.push(Date.now()); regs.set(ip, rl);
     return bindAccount(user);
   });
   on('auth:login', false, (_, { user, pass }) => {
-    user = String(user || '').trim().toLowerCase();
+    user = String(user || '').trim().toLowerCase().slice(0, 32);
+    if (locked('u:' + user) || locked('ip:' + ip)) return { ok: false, msg: 'Sai quá nhiều lần – thử lại sau 5 phút.' };
     const acc = db.accounts[user];
-    if (!acc || acc.pass !== hashPass(String(pass || ''), acc.salt)) return { ok: false, msg: 'Sai tên đăng nhập hoặc mật khẩu.' };
+    if (!acc || acc.pass !== hashPass(String(pass || '').slice(0, 64), acc.salt)) { failKey('u:' + user); failKey('ip:' + ip); return { ok: false, msg: 'Sai tên đăng nhập hoặc mật khẩu.' }; }
     return bindAccount(user);
   });
   on('auth:token', false, (_, { token }) => {
+    if (typeof token !== 'string' || token.length !== 32 || locked('ip:' + ip)) return { ok: false, msg: 'Phiên đăng nhập hết hạn.' };
     const user = Object.keys(db.accounts).find((u) => db.accounts[u].token === token);
-    if (!user || !token) return { ok: false, msg: 'Phiên đăng nhập hết hạn.' };
+    if (!user) { failKey('ip:' + ip); return { ok: false, msg: 'Phiên đăng nhập hết hạn.' }; }
     return bindAccount(user);
+  });
+
+  on('auth:changePass', false, (_, { old, pass }) => {
+    const acc = db.accounts[socket.data.user];
+    if (!acc) return { ok: false, msg: 'Chưa đăng nhập.' };
+    if (locked('u:' + socket.data.user)) return { ok: false, msg: 'Sai quá nhiều lần – thử lại sau 5 phút.' };
+    if (acc.pass !== hashPass(String(old || '').slice(0, 64), acc.salt)) { failKey('u:' + socket.data.user); return { ok: false, msg: 'Mật khẩu cũ không đúng.' }; }
+    if (String(pass || '').length < 4 || String(pass).length > 64) return { ok: false, msg: 'Mật khẩu mới 4–64 ký tự.' };
+    acc.salt = crypto.randomBytes(8).toString('hex');
+    acc.pass = hashPass(String(pass), acc.salt);
+    acc.token = crypto.randomBytes(16).toString('hex'); // các thiết bị khác phải đăng nhập lại
+    return { ok: true, token: acc.token, msg: 'Đã đổi mật khẩu. Các thiết bị khác sẽ phải đăng nhập lại.', noState: true };
+  });
+  on('auth:logoutAll', false, () => {
+    const acc = db.accounts[socket.data.user];
+    if (!acc) return { ok: false, msg: 'Chưa đăng nhập.' };
+    acc.token = crypto.randomBytes(16).toString('hex');
+    return { ok: true, token: acc.token, msg: 'Đã đăng xuất khỏi mọi thiết bị khác.', noState: true };
+  });
+  on('tut:set', true, (c, { step, done }) => {
+    c.tut = Math.max(0, Math.min(99, Number(step) || 0));
+    if (c.tut >= 99 && done && !c.tutReward) { c.tutReward = true; L.applyReward(c, { bac: 500, items: { bau_bac: 2 } }); return { ok: true }; }
+    return { ok: true, noState: true };
   });
 
   on('char:create', false, (_, { name, race, gender }) => {
     const acc = db.accounts[socket.data.user];
     if (!acc) return { ok: false, msg: 'Chưa đăng nhập.' };
     if (acc.charId) return { ok: false, msg: 'Tài khoản đã có nhân vật.' };
-    name = String(name || '').trim().replace(/\s+/g, ' ');
+    name = String(name || '').normalize('NFC').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e<>&"'`]/g, '').trim().replace(/\s+/g, ' ');
     if (name.length < 2 || name.length > 12) return { ok: false, msg: 'Tên nhân vật 2–12 ký tự.' };
     if (charByName(name)) return { ok: false, msg: 'Tên đã có người dùng.' };
-    if (!D.RACES[race]) return { ok: false, msg: 'Chọn tộc.' };
+    if (!F2.own(D.RACES, race)) return { ok: false, msg: 'Chọn tộc.' };
     const id = 'c' + DB.nextId();
     db.chars[id] = L.createChar(id, socket.data.user, name, race, gender === 'f' ? 'f' : 'm');
     acc.charId = id;
@@ -211,10 +272,12 @@ io.on('connection', (socket) => {
       ok: true, state: L.publicChar(c), players: mapPlayers(c.map).filter((p) => p.id !== c.id), battle: b ? b.snapshot() : null,
       chat: [...chat.khu, ...chat.shop, ...chat.he, ...(c.guild ? chat.phai[c.guild] || [] : [])].sort((a, b2) => a.t - b2.t),
       pending: pending.get(c.id) || [], boss: bossInfo(),
+      mail: (c.mail || []).filter((m) => !m.seen).length, event: (() => { const e = F2.activeEvent(); return e ? { id: e.id, name: e.name, icon: e.icon } : null; })(),
     };
   });
 
   socket.on('disconnect', () => {
+    conns.set(ip, Math.max(0, (conns.get(ip) || 1) - 1));
     const c = charOf(socket);
     if (c && online.get(c.id) === socket) {
       online.delete(c.id);
@@ -287,7 +350,7 @@ io.on('connection', (socket) => {
 
   on('map:travel', true, (c, { map }) => {
     const nb = notInBattle(c); if (nb) return nb;
-    const M = D.MAPS[map];
+    const M = F2.own(D.MAPS, map);
     if (!M) return { ok: false, msg: 'Bản đồ không tồn tại.' };
     if (M.chapter > c.unlocked) return { ok: false, msg: 'Chưa mở khoá chương này.' };
     travel(c, map);
@@ -396,6 +459,7 @@ io.on('connection', (socket) => {
 
   // ---------------- Chiến đấu ----------------
   function startBattle(c, enemies, opts) {
+    if (!['arena', 'world', 'peach'].includes(opts.kind || 'wild')) { const al = F2.partyAllies(db, c, online, battles); if (al.length) opts.allies = al; }
     const b = new Battle(c, enemies, opts);
     battles.set(c.id, b);
     return b.snapshot();
@@ -429,7 +493,7 @@ io.on('connection', (socket) => {
         const dmg = b.damageDealtTotal || b.damageDealt;
         res.exp = Math.round(Math.min(dmg * 0.6, L.expNeed(c.lvl) * 0.5));
         res.bac = Math.round(Math.min(dmg * 0.08, 3000));
-      } else if (b.kind === 'arena') {
+      } else if (b.kind === 'arena' || b.kind === 'tower') {
         // xử lý riêng bên dưới
       } else {
         for (const e of enemies) {
@@ -478,6 +542,7 @@ io.on('connection', (socket) => {
       if (res.quest) sysIfLevel(c, res.quest.ups);
       if (b.kind === 'wild' && c.map === 'ch4') guildContrib(c, 1);
       if (b.kind === 'peach') { L.addItem(c, 'ban_dao', 1); res.items.push('ban_dao'); }
+      if (b.kind === 'tower') { F.towerWin(c, b, res, sys); const p2 = c.pets.find((p) => p.uid === c.activePet); if (p2 && res.exp) res.petUps = L.petAddExp(c, p2, res.exp * 0.6); }
     }
     if (b.kind === 'arena') {
       const opp = b.opts.opp;
@@ -489,7 +554,7 @@ io.on('connection', (socket) => {
       } else { c.arena = Math.max(0, c.arena - 10); res.arena = -10; }
     }
     if (out === 'lose') {
-      if (b.kind !== 'arena' && b.kind !== 'world') {
+      if (b.kind !== 'arena' && b.kind !== 'world' && b.kind !== 'tower') {
         const lost = Math.floor(c.bac * 0.05);
         c.bac -= lost; res.lostBac = lost;
         c.hp = Math.max(1, Math.round(s.maxHp * 0.3));
@@ -500,6 +565,8 @@ io.on('connection', (socket) => {
     L.clampHpMp(c);
     sysIfLevel(c, res.ups);
     masterReward(c, res.ups);
+    F2.battleExtras(c, b, res, { db, toast, pushState });
+    F.onBattleEnd(c, b, res);
     return res;
   }
 
@@ -538,8 +605,9 @@ io.on('connection', (socket) => {
 
   on('item:use', true, (c, { id }) => {
     const nb = notInBattle(c); if (nb) return nb;
-    const it = D.ITEMS[id];
+    const it = F2.own(D.ITEMS, id);
     if (!it || L.countItem(c, id) < 1) return { ok: false, msg: 'Không có vật phẩm.' };
+    const ex = F2.useItem(c, it, id, { sys, io }); if (ex) return ex;
     const s = L.calcStats(c);
     if (it.type === 'hp') { if (c.hp >= s.maxHp) return { ok: false, msg: 'Khí huyết đã đầy.' }; c.hp = Math.min(s.maxHp, c.hp + it.value); }
     else if (it.type === 'mp') { if (c.mp >= s.maxMp) return { ok: false, msg: 'Nội lực đã đầy.' }; c.mp = Math.min(s.maxMp, c.mp + it.value); }
@@ -592,7 +660,7 @@ io.on('connection', (socket) => {
       return { ok: true, msg: `Bán được ${fmt(p)} bạc.` };
     }
     const it = D.ITEMS[id];
-    qty = Math.max(1, Math.floor(qty || 1));
+    qty = F2.int(qty ?? 1, 1, 9999); if (qty == null) return { ok: false, msg: 'Số lượng không hợp lệ.' };
     if (!it || L.countItem(c, id) < qty) return { ok: false, msg: 'Không đủ vật phẩm.' };
     const p = (it.sell || Math.floor((it.price || 40) / 2)) * qty;
     L.removeItem(c, id, qty); c.bac += p;
@@ -605,6 +673,7 @@ io.on('connection', (socket) => {
     const cost = (it.plus + 1) * (it.lvl * 8 + 30);
     if (L.countItem(c, 'da_ch') < 1) return { ok: false, msg: 'Cần 1 Đá Cường Hóa.' };
     if (c.bac < cost) return { ok: false, msg: `Cần ${fmt(cost)} bạc.` };
+    F.ensure(c); c.daily.enhance++;
     L.removeItem(c, 'da_ch', 1); c.bac -= cost;
     const rate = D.ENHANCE_RATE[it.plus];
     if (Math.random() < rate) {
@@ -648,7 +717,7 @@ io.on('connection', (socket) => {
     const list = shopList(c);
     const e = list.find((x) => x.kind === kind && (kind === 'item' ? x.id === id : x.slot === slot));
     if (!e) return { ok: false, msg: 'Hàng không có.' };
-    qty = kind === 'item' ? Math.max(1, Math.min(99, Math.floor(qty || 1))) : 1;
+    qty = kind === 'item' ? F2.int(qty ?? 1, 1, 99) : 1; if (qty == null) return { ok: false, msg: 'Số lượng không hợp lệ.' };
     const total = e.price * qty;
     if (c[e.cur] < total) return { ok: false, msg: `Không đủ ${e.cur === 'vang' ? 'vàng' : 'bạc'}.` };
     if (kind === 'item') { if (!L.addItem(c, id, qty)) return { ok: false, msg: 'Hành trang đầy.' }; }
@@ -779,7 +848,7 @@ io.on('connection', (socket) => {
   }
   function heroUnitsFrom(o) {
     const s = L.calcStats(o);
-    const units = [{ kind: 'hero', name: o.name, lvl: o.lvl, hero: { race: o.race, gender: o.gender }, ...s, hp: s.maxHp, mp: s.maxMp,
+    const units = [{ kind: 'hero', name: o.name, lvl: o.lvl, hero: { race: o.race, gender: o.gender, gear: L.gearBrief(o) }, ...s, hp: s.maxHp, mp: s.maxMp,
       skills: [...o.skills.filter((k) => (D.SKILLS[k].lv || 1) <= o.lvl), ...(o.secretSkills || [])], catchable: false }];
     const pet = o.pets.find((p) => p.uid === o.activePet);
     if (pet) { const v = L.petView(pet); units.push({ kind: 'beast', sid: pet.sid, name: pet.name, lvl: pet.lvl, icon: v.icon, element: v.element, grade: v.grade, mut: pet.mut, ...v.stats, skills: v.skills, catchable: false }); }
@@ -791,7 +860,7 @@ io.on('connection', (socket) => {
     if (c.daily.arena >= D.CONFIG.dailyArena) return { ok: false, msg: 'Hôm nay đã hết lượt Tam Giới Đấu.' };
     let opp;
     if (String(id).startsWith('bot:')) opp = botCache.get(id.slice(4));
-    else opp = db.chars[id];
+    else opp = F2.own(db.chars, id);
     if (!opp || opp.id === c.id) return { ok: false, msg: 'Đối thủ không tồn tại.' };
     c.daily.arena++;
     const s = L.calcStats(c); c.hp = s.maxHp; c.mp = s.maxMp; // đấu trường hồi đầy
@@ -816,7 +885,17 @@ io.on('connection', (socket) => {
   on('chat:send', true, (c, { ch, text }) => {
     text = String(text || '').trim().slice(0, 120);
     if (!text) return { ok: false, noState: true };
-    if (!['khu', 'phai', 'shop'].includes(ch)) return { ok: false, msg: 'Kênh không hợp lệ.', noState: true };
+    text = text.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e]/g, '');
+    if (!['khu', 'phai', 'shop', 'doi'].includes(ch)) return { ok: false, msg: 'Kênh không hợp lệ.', noState: true };
+    if (text === lastText.get(c.id)) return { ok: false, msg: 'Đừng gửi lặp lại tin nhắn.', noState: true };
+    lastText.set(c.id, text);
+    if (ch === 'doi') {
+      const pid = F2.partyOf.get(c.id); if (!pid) return { ok: false, msg: 'Bạn chưa có tổ đội.', noState: true };
+      const msg = { ch: 'doi', from: c.name, fromId: c.id, race: c.race, lvl: c.lvl, text, t: Date.now() };
+      for (const [id] of [...F2.partyOf].filter(([, p]) => p === pid)) online.get(id)?.emit('chat', msg);
+      lastChat.set(c.id, Date.now());
+      return { ok: true, noState: true };
+    }
     const now = Date.now();
     if (now - (lastChat.get(c.id) || 0) < 1200) return { ok: false, msg: 'Nói chậm thôi…', noState: true };
     lastChat.set(c.id, now);
@@ -844,7 +923,7 @@ io.on('connection', (socket) => {
     return { ok: true };
   });
   on('guild:join', true, (c, { id }) => {
-    const g = db.guilds[id];
+    const g = F2.own(db.guilds, id);
     if (c.guild) return { ok: false, msg: 'Bạn đã ở trong một phái.' };
     if (!g) return { ok: false, msg: 'Phái không tồn tại.' };
     if (Object.keys(g.members).length >= 30) return { ok: false, msg: 'Phái đã đủ 30 người.' };
@@ -878,7 +957,7 @@ io.on('connection', (socket) => {
     return { ok: true };
   });
   on('guild:war', true, (c, { id }) => {
-    const g = db.guilds[c.guild], o = db.guilds[id];
+    const g = db.guilds[c.guild], o = F2.own(db.guilds, id);
     if (!g || g.leader !== c.id) return { ok: false, msg: 'Chỉ Chưởng Môn được tuyên chiến.' };
     if (!o || o.id === g.id) return { ok: false, msg: 'Chọn phái đối thủ.' };
     if (g.warDate === L.today()) return { ok: false, msg: 'Hôm nay phái đã tham gia Giáo Phái Chiến.' };
@@ -927,9 +1006,10 @@ io.on('connection', (socket) => {
     const i = list.findIndex((r) => r.type === type && r.fromId === fromId);
     if (i < 0) return { ok: false, msg: 'Lời mời đã hết hạn.' };
     list.splice(i, 1);
-    const f = db.chars[fromId];
+    const f = F2.own(db.chars, fromId);
     if (!f) return { ok: false, msg: 'Người gửi không tồn tại.' };
-    if (!accept) { toast(f, `${c.name} đã từ chối ${type === 'marry' ? 'lời cầu hôn' : 'nhận bạn làm đệ tử'}.`); return { ok: true }; }
+    if (!accept) { toast(f, `${c.name} đã từ chối ${type === 'marry' ? 'lời cầu hôn' : type === 'party' ? 'lời mời tổ đội' : 'nhận bạn làm đệ tử'}.`); return { ok: true }; }
+    if (respondHooks.has(type)) return respondHooks.get(type)(c, f);
     if (type === 'marry') {
       if (c.spouse || f.spouse) return { ok: false, msg: 'Đã có phu thê.' };
       if (f.bac < 520) return { ok: false, msg: `${f.name} không đủ sính lễ.` };
@@ -968,11 +1048,22 @@ io.on('connection', (socket) => {
 
   // ---------------- Xếp hạng ----------------
   on('rank:list', true, (c, { type }) => {
-    const key = { lvl: (x) => x.lvl * 1e9 + x.exp, power: L.power, arena: (x) => x.arena, nan: (x) => x.nan * 1e6 + x.lvl }[type] || ((x) => x.lvl);
-    const list = Object.values(db.chars).map((x) => ({ id: x.id, name: x.name, race: x.race, lvl: x.lvl, v: key(x), power: L.power(x), arena: x.arena, nan: x.nan }))
+    const key = { lvl: (x) => x.lvl * 1e9 + x.exp, power: L.power, arena: (x) => x.arena, nan: (x) => x.nan * 1e6 + x.lvl, tower: (x) => ((x.tower && x.tower.best) || 0) * 1e3 + x.lvl }[type] || ((x) => x.lvl);
+    const list = Object.values(db.chars).map((x) => ({ id: x.id, name: x.name, race: x.race, lvl: x.lvl, v: key(x), power: L.power(x), arena: x.arena, nan: x.nan, tower: (x.tower && x.tower.best) || 0 }))
       .sort((a, b) => b.v - a.v).slice(0, 30);
     return { ok: true, list, noState: true };
   });
+
+  F.register(on, { notInBattle, startBattle, sys, db });
+  // lệnh chỉ dùng khi chạy kiểm thử (TDK_TEST=1) – KHÔNG bật trên máy chủ thật
+  if (process.env.TDK_TEST === '1') on('test:give', true, (c, { items, bac, vang, lvl, petLvl, points }) => {
+    if (points) c.points += points;
+    for (const [id, n] of Object.entries(items || {})) L.addItem(c, id, n);
+    c.bac += bac || 0; c.vang += vang || 0; if (lvl) { c.points += (lvl - c.lvl) * D.CONFIG.pointsPerLevel; c.lvl = lvl; const s = L.calcStats(c); c.hp = s.maxHp; c.mp = s.maxMp; }
+    if (petLvl) c.pets.forEach((p) => (p.lvl = petLvl));
+    return { ok: true };
+  });
+  F2.register(on, { db, notInBattle, sys, online, battles, io, pushState, toast, socket, request, onRespond: (type, fn) => respondHooks.set(type, fn) });
 });
 
 // --------------------------------------------------------------------

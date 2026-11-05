@@ -6,7 +6,7 @@ const BattleUI = (() => {
   const root = $('#battle'), stage = $('#b-stage'), box = $('#b-units');
   let snap = null, busy = false, mode = null, auto = false, onEnd = null, theme = 'city';
   const els = {};
-  const SLOT = { 1: [[36, 55], [18, 71], [58, 40], [16, 42]], 0: [[72, 88], [42, 91], [90, 74]] };
+  const SLOT = { 1: [[36, 55], [18, 71], [58, 40], [16, 42]], 0: [[72, 88], [42, 91], [90, 74], [20, 82], [55, 77]] };
   FX.attach($('#b-fx'), $('#b-fx-under'), [stage, $('#b-bg')]);
   const ECOL = { thunder: '#9fd8ff', fire: '#ff8a2a', ice: '#bff0ff', poison: '#c88aff', heal: '#7cf09a', gold: '#ffd65a', wind: '#9ff0d8', rock: '#e0b07a', shadow: '#b07af0', rage: '#ff5a2a', slash: '#fff0c8', hit: '#fff0c8' };
 
@@ -16,22 +16,24 @@ const BattleUI = (() => {
   // ---------- bắt đầu ----------
   async function start(s, opts = {}) {
     snap = s; onEnd = opts.onEnd; busy = true; mode = null;
-    theme = s.kind === 'arena' ? 'arena' : s.kind === 'world' ? 'world' : (G.meta.MAPS[G.me.map]?.theme || 'city');
+    theme = s.kind === 'arena' || s.kind === 'tower' ? 'arena' : s.kind === 'world' ? 'world' : (G.meta.MAPS[G.me.map]?.theme || 'city');
     root.className = theme;
     $('#b-bg').style.backgroundImage = `url("${Sprites.battleBG(theme)}")`;
     const bd = $('.b-board', root); if (bd && typeof Tiles !== 'undefined') bd.style.setProperty('--tex', `url("${Tiles.boardTex(theme)}")`);
     root.hidden = false;
     closePick();
-    $('#b-log').textContent = s.kind === 'boss' ? 'Trận chiến với boss – không thể bỏ chạy!' : s.kind === 'arena' ? 'Tam Giới Đấu bắt đầu!' : s.kind === 'world' ? `Đánh ${s.maxRounds} hiệp, sát thương cộng dồn vào boss chung.` : 'Yêu quái xuất hiện!';
+    $('#b-log').textContent = s.kind === 'boss' ? 'Trận chiến với boss – không thể bỏ chạy!' : s.kind === 'arena' ? 'Tam Giới Đấu bắt đầu!' : s.kind === 'world' ? `Đánh ${s.maxRounds} hiệp, sát thương cộng dồn vào boss chung.` : s.kind === 'tower' ? 'Trấn Yêu Tháp – vượt tầng này để đi tiếp!' : 'Yêu quái xuất hiện!';
     render();
     FX.resize(); FX.clear(); FX.ambient(theme);
     root.classList.remove('dim', 'defeat');
     $('#b-cmds').classList.add('wait');
     const boss = s.units.find((u) => u.boss);
-    Sound.play(boss || s.kind === 'arena' ? 'boss' : 'battle');
+    Sound.ambient(null);
+    Sound.play(boss || s.kind === 'arena' || s.kind === 'tower' ? 'boss' : 'battle');
     Sound.sfx('gong');
     if (boss) { setTimeout(() => { Sound.sfx('roar'); FX.shake(14, 700); FX.flash('#8a0a0a', 22, 0.35); const p = rectOf(boss.id); if (p) { FX.shock(p.x, p.y + 50, '#ff5a3a', 160, 36); FX.impact('rage', p); } }, 380); }
-    await intro(boss ? boss.name : s.kind === 'arena' ? 'Tam Giới Đấu' : 'Khai Chiến', !!boss);
+    await intro(boss ? boss.name : s.kind === 'arena' ? 'Tam Giới Đấu' : s.kind === 'tower' ? 'Trấn Yêu Tháp' : 'Khai Chiến', !!boss);
+    Tut.event('battle');
     ready();
     if (auto) setTimeout(autoAct, 400);
   }
@@ -132,7 +134,7 @@ const BattleUI = (() => {
     if (c === 'catch') return pickCatch();
   });
   $('#b-auto').onclick = () => {
-    auto = !auto;
+    auto = !auto; Tut.event('auto');
     $('#b-auto').classList.toggle('on', auto);
     if (auto && !busy && snap && !snap.over) { cancel(); autoAct(); }
   };
@@ -213,7 +215,7 @@ const BattleUI = (() => {
   async function send(action) {
     if (busy) return;
     busy = true; cancel(); clearInterval(timer); $('#b-timer').textContent = '';
-    $('#b-cmds').classList.add('wait'); hint('');
+    $('#b-cmds').classList.add('wait'); hint(''); Tut.event('act');
     const r = await Net.emit('battle:act', action);
     if (!r.ok) { UI.toast(r.msg, 'err'); busy = false; ready(); return; }
     await play(r.events);
@@ -417,6 +419,7 @@ const BattleUI = (() => {
     if (loot.length) html += `<div class="sec">Chiến lợi phẩm</div><div class="v-loot">${loot.join('')}</div>`;
     if (res.ups.length) html += `<p class="v-note gold">Thăng lên cấp ${res.ups[res.ups.length - 1]}! Nhớ cộng điểm tiềm năng.</p>`;
     if (res.petUps) html += `<p class="v-note">Tiên sủng tăng ${res.petUps} cấp.</p>`;
+    if (res.towerFloor) html += `<p class="v-note gold">🗼 Vượt tầng ${res.towerFloor} Trấn Yêu Tháp!${res.towerGot && res.towerGot.length ? ' Nhận: ' + res.towerGot.map(esc).join(', ') : ''}</p>`;
     if (res.quest) html += `<p class="v-note">📜 Hoàn thành «${esc(res.quest.title)}» · vượt ${res.quest.nan} kiếp nạn</p>`;
     if (res.outcome === 'lose' && res.respawn) html += `<p class="muted center">Bạn được đưa về điểm hồi sinh.</p>`;
     await UI.modal(html, [{ id: 'ok', label: 'Tiếp tục' }]);
@@ -424,6 +427,8 @@ const BattleUI = (() => {
     closePick(); FX.clear(); root.classList.remove('dim', 'defeat');
     snap = null;
     Sound.play(G.meta.MAPS[G.me.map]?.theme || 'city');
+    Sound.ambient(G.meta.MAPS[G.me.map]?.theme);
+    Tut.event('battleEnd');
     onEnd && onEnd(res);
   }
 

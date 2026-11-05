@@ -80,8 +80,8 @@ ${sideLocks}${mark}${lash}
   }
 
   // nhân vật dùng bản pixel art (pixel.js)
-  function heroURL(race, gender, frame = 0) { return Art.hero(race, gender, frame).url; }
-  function heroImg(race, gender, frame = 0) { return Art.hero(race, gender, frame).cv; }
+  function heroURL(race, gender, frame = 0, gear) { return Art.hero(race, gender, frame, 4, gear).url; }
+  function heroImg(race, gender, frame = 0, gear) { return Art.hero(race, gender, frame, 4, gear && gear.gear ? gear.gear : gear).cv; }
   // ảnh của một đơn vị bất kỳ (trận đấu / tiên sủng): <img> pixel, tranh tuỳ chỉnh, hoặc emoji dự phòng
   function unitImg(u, cls = '') {
     const custom = creatureSrc(u);

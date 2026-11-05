@@ -22,7 +22,7 @@ const Panels = (() => {
     if (tab === 'info') {
       const left = c.points - Object.values(pending).reduce((a, b) => a + b, 0);
       body.innerHTML = `
-        <div class="char-top"><img src="${Sprites.heroURL(c.race, c.gender)}" alt="">
+        <div class="char-top"><img src="${Sprites.heroURL(c.race, c.gender, 0, c.gear)}" alt="">
           <div><h4 style="margin:0;font-size:20px">${esc(c.name)}</h4>
           <div class="muted">${R.name} · Cấp ${c.lvl} · Lực chiến ${fmt(c.power)}</div>
           <div class="muted">Tu vi ${fmt(c.exp)} / ${fmt(c.need)}</div><div class="pbar"><i style="width:${100 * c.exp / c.need}%"></i></div>
@@ -170,10 +170,12 @@ const Panels = (() => {
       <div class="btns">
         ${p.uid === c.activePet ? '<button class="btn-seal ghost sm" data-a="rest">Cho nghỉ</button>' : '<button class="btn-seal sm" data-a="active">Xuất chiến</button>'}
         <button class="btn-seal jade sm" data-a="rename">Đổi tên</button>
-        <button class="btn-seal ghost sm" data-a="release">Phóng sinh</button></div>`;
+        <button class="btn-seal ghost sm" data-a="release">Phóng sinh</button></div>
+      <div class="btns"><button class="btn-seal" data-a="lab">🔮 Bồi dưỡng: học chiêu · tiến hoá · hợp thể</button></div>`;
     body.querySelectorAll('[data-u]').forEach((b) => (b.onclick = () => { selPet = b.dataset.u; UI.refreshSheet(); }));
     body.querySelectorAll('[data-a]').forEach((b) => (b.onclick = async () => {
       const a = b.dataset.a;
+      if (a === 'lab') return Panels2.petLab(p.uid, 'learn');
       if (a === 'active') await G.call('pet:active', { uid: p.uid });
       if (a === 'rest') await G.call('pet:active', { uid: null });
       if (a === 'rename') { const n = await UI.prompt('Đặt tên Tiên sủng', p.name); if (n) await G.call('pet:rename', { uid: p.uid, name: n }); }
@@ -262,6 +264,13 @@ const Panels = (() => {
           ${b && b.top.length ? `<div class="muted" style="margin-top:6px">Sát thương cao nhất: ${b.top.map((t, i) => `${i + 1}. ${esc(t.name)} (${fmt(t.dmg)})`).join(' · ')}</div>` : ''}
           <div class="btns"><button class="btn-seal" id="a-boss" ${alive ? '' : 'disabled'}>Thảo phạt (cần cấp 10)</button></div></div>
         <div class="cards2">
+          <button class="act-card hot ${c.dailyBadge ? 'dot' : ''}" data-a="daily"><span class="ico">📅</span><b>Điểm danh & Nhiệm vụ ngày</b><small>Quà mỗi ngày, 5 việc nhỏ đổi tu vi, bạc, vàng.</small></button>
+          <button class="act-card hot" data-a="tower"><span class="ico">🗼</span><b>Trấn Yêu Tháp</b><small>Leo tầng, boss mỗi 5 tầng. Cao nhất: tầng ${c.towerBest}.</small></button>
+          <button class="act-card" data-a="party"><span class="ico">👥</span><b>Tổ đội</b><small>${Panels2.party ? `${Panels2.party.members.length}/3 người` : 'Rủ bạn bè cùng xuất trận.'}</small></button>
+          <button class="act-card" data-a="market"><span class="ico">🏪</span><b>Chợ giao dịch</b><small>Mua bán đồ, Tiên sủng với người chơi khác.</small></button>
+          <button class="act-card" data-a="craft"><span class="ico">⚗️</span><b>Lò Bát Quái & Lò Rèn</b><small>Luyện đan, linh đan, sách kỹ năng, rèn trang bị.</small></button>
+          <button class="act-card" data-a="mounts"><span class="ico">🐎</span><b>Thú cưỡi</b><small>${c.gear && c.gear.mount ? 'Đang cưỡi ' + esc(M().MOUNTS[c.gear.mount].name) : 'Đi nhanh hơn, cộng chỉ số.'}</small></button>
+          <button class="act-card ${G.event ? 'hot' : ''}" data-a="event"><span class="ico">${G.event ? G.event.icon : '🎉'}</span><b>${G.event ? esc(G.event.name) : 'Sự kiện'}</b><small>${G.event ? 'Đang diễn ra – nhận quà mỗi ngày!' : 'Tết, Trung Thu… sắp tới.'}</small></button>
           <button class="act-card" data-a="arena"><span class="ico">⚔️</span><b>Tam Giới Đấu</b><small>Đấu bóng người chơi khác. Còn ${CF.dailyArena - c.daily.arena}/${CF.dailyArena} lượt. Điểm: ${c.arena}</small></button>
           <button class="act-card" data-a="peach"><span class="ico">🍑</span><b>Trộm Đào</b><small>Vườn Bàn Đào ở Thiên Cung. Còn ${CF.dailyPeach - c.daily.peach}/${CF.dailyPeach} lượt.</small></button>
           <button class="act-card" data-a="treasure"><span class="ico">🎁</span><b>Đoạt Bảo</b><small>200 bạc mở một rương. Còn ${CF.dailyTreasure - c.daily.treasure}/${CF.dailyTreasure} lượt.</small></button>
@@ -270,22 +279,77 @@ const Panels = (() => {
           <button class="act-card" data-a="shop"><span class="ico">🛒</span><b>Cửa hàng</b><small>Đan dược, bầu bạc, ngọc, trang bị.</small></button>
         </div>`;
       $('#a-boss').onclick = async () => { const r = await G.call('boss:join', {}); if (r.battle) { UI.closeSheet(); G.startBattle(r.battle); } };
-      body.querySelectorAll('[data-a]').forEach((b2) => (b2.onclick = () => ({ arena, peach, treasure, dice, rps, shop })[b2.dataset.a]()));
+      body.querySelectorAll('[data-a]').forEach((b2) => (b2.onclick = () => ({ daily, tower, arena, peach, treasure, dice, rps, shop, party: Panels2.partyPanel, market: () => Panels2.market(), craft: () => Panels2.craft(), mounts: Panels2.mounts, event: Panels2.event })[b2.dataset.a]()));
     } else if (tab === 'travel') {
+      Panels2.renderWorld(body);
+    } else if (tab === 'travel-old') {
       body.innerHTML = `<p class="muted">Truyền tống tới các chương đã mở khoá.</p><div class="list">${M().MAP_ORDER.map((id) => { const m = M().MAPS[id]; const ok = m.chapter <= c.unlocked; return `<button class="li ${id === c.map ? 'on' : ''}" data-m="${id}" ${ok ? '' : 'disabled style="opacity:.5"'}>
         <span class="ico">${{ heaven: '☁️', city: '🏯', forest: '⛰️', desert: '🏜️', river: '🌊', cave: '🕳️', snow: '❄️' }[m.theme] || '🗺️'}</span><div class="grow"><div class="t">Chương ${m.chapter}: ${m.name}</div><div class="s">${ok ? `Quái cấp ${m.lv[0]}–${m.lv[1]}` : 'Chưa mở khoá'}${id === c.map ? ' · Bạn đang ở đây' : ''}</div></div></button>`; }).join('')}</div>`;
       body.querySelectorAll('[data-m]').forEach((b2) => (b2.onclick = async () => { if (b2.dataset.m === c.map) return; const r = await G.call('map:travel', { map: b2.dataset.m }); if (r.ok) { UI.closeSheet(); G.onTravel(r); } }));
     } else {
-      body.innerHTML = `<div class="seg" style="margin-bottom:8px">${[['lvl', 'Cấp độ'], ['power', 'Lực chiến'], ['arena', 'Đấu trường'], ['nan', 'Kiếp nạn']].map(([k, l]) => `<button class="seg-b ${k === rankType ? 'on' : ''}" data-r="${k}">${l}</button>`).join('')}</div><div id="rk" class="muted">Đang tải…</div>`;
+      body.innerHTML = `<div class="seg" style="margin-bottom:8px">${[['lvl', 'Cấp'], ['power', 'Lực chiến'], ['arena', 'Đấu'], ['tower', 'Tháp'], ['nan', 'Nạn']].map(([k, l]) => `<button class="seg-b ${k === rankType ? 'on' : ''}" data-r="${k}">${l}</button>`).join('')}</div><div id="rk" class="muted">Đang tải…</div>`;
       body.querySelectorAll('[data-r]').forEach((b2) => (b2.onclick = () => { rankType = b2.dataset.r; UI.refreshSheet(); }));
       const r = await Net.emit('rank:list', { type: rankType });
       const box = $('#rk'); if (!box || !r.ok) return;
       box.className = 'list';
-      box.innerHTML = r.list.map((x, i) => `<div class="li ${x.id === c.id ? 'on' : ''}"><span class="ico" style="font-size:18px;font-weight:700;font-family:var(--font)">${i + 1}</span><img src="${Sprites.heroURL(x.race, 'm')}" style="width:28px" alt=""><div class="grow"><div class="t">${esc(x.name)}</div><div class="s">Cấp ${x.lvl} · Lực chiến ${fmt(x.power)} · Đấu ${x.arena} · Nạn ${x.nan}/81</div></div></div>`).join('');
+      box.innerHTML = r.list.map((x, i) => `<div class="li ${x.id === c.id ? 'on' : ''}"><span class="ico" style="font-size:18px;font-weight:700;font-family:var(--font)">${i + 1}</span><img src="${Sprites.heroURL(x.race, 'm')}" style="width:28px" alt=""><div class="grow"><div class="t">${esc(x.name)}</div><div class="s">Cấp ${x.lvl} · Lực chiến ${fmt(x.power)} · ${rankType === 'tower' ? `Tháp tầng ${x.tower}` : `Đấu ${x.arena} · Nạn ${x.nan}/81`}</div></div></div>`).join('');
     }
   }
 
   function sub(name, title, render) { UI.openSheet(name, title, null, render); }
+
+  // ---------- điểm danh & nhiệm vụ ngày ----------
+  function rewardToast(res, extra) {
+    if (!res) return;
+    const p = [];
+    if (res.exp) p.push(`+${fmt(res.exp)} tu vi`);
+    if (res.bac) p.push(`+${fmt(res.bac)} bạc`);
+    if (res.vang) p.push(`+${res.vang} vàng`);
+    for (const [id, n] of Object.entries(res.items || {})) p.push(`+${n} ${M().ITEMS[id].name}`);
+    for (const g of res.got || []) p.push(g);
+    UI.toast(`🎁 ${extra ? extra + ' · ' : ''}${p.join(' · ')}`, 'gold');
+    Sound.sfx('chest');
+  }
+  function daily(auto) {
+    sub('daily', 'Điểm danh & Nhiệm vụ ngày', async (body) => {
+      const r = await Net.emit('daily:info'); if (!r.ok) return;
+      const d = r.daily, ck = d.checkin;
+      const done = ck.n % 7; // số ngày đã nhận trong vòng hiện tại
+      body.innerHTML = `
+        <div class="sec">Điểm danh 7 ngày <small class="muted">· đã điểm danh ${ck.n} ngày</small></div>
+        <div class="ck-grid">${ck.list.map((x) => { const got = x.day <= (ck.doneToday && done === 0 && ck.n > 0 ? 7 : done); const today = ck.canClaim && x.day === ck.nextDay; return `<div class="ck ${got ? 'got' : ''} ${today ? 'today' : ''} ${x.big ? 'big' : ''}"><b>Ngày ${x.day}</b><span>${{ 1: '💰', 2: '🏺', 3: '🪙', 4: '🪨', 5: '🏆', 6: '💎', 7: '🥚' }[x.day]}</span><small>${esc(x.label)}</small>${got ? '<i>✓</i>' : ''}</div>`; }).join('')}</div>
+        <div class="btns"><button class="btn-seal" id="d-ck" ${ck.canClaim ? '' : 'disabled'}>${ck.canClaim ? `Điểm danh ngày ${ck.nextDay}` : 'Hôm nay đã điểm danh – mai quay lại nhé'}</button></div>
+        <div class="sec" style="margin-top:14px">Nhiệm vụ hôm nay <small class="muted">· làm mới lúc 0 giờ</small></div>
+        <div class="list">${d.tasks.map((t) => `<div class="li"><span class="ico">${t.icon}</span><div class="grow"><div class="t">${esc(t.name)} <small class="muted">${t.prog}/${t.need}</small></div><div class="s">${esc(t.desc)} · Thưởng: ${esc(t.reward)}</div><div class="pbar"><i style="width:${100 * t.prog / t.need}%"></i></div></div>
+          <button class="btn-seal sm ${t.done && !t.claimed ? '' : 'ghost'}" data-claim="${t.id}" ${t.done && !t.claimed ? '' : 'disabled'}>${t.claimed ? 'Đã nhận' : t.done ? 'Nhận' : 'Chưa xong'}</button></div>`).join('')}</div>
+        <div class="detail chest ${d.chest.ready && !d.chest.claimed ? 'ready' : ''}" style="margin-top:10px"><div class="row"><span style="font:34px/1 var(--emoji)">${d.chest.claimed ? '📭' : '🎁'}</span><div class="grow"><b>Rương Năng Động</b><div class="muted">Nhận đủ thưởng 5 nhiệm vụ để mở: ${esc(d.chest.label)}</div></div>
+          <button class="btn-seal sm" id="d-chest" ${d.chest.ready && !d.chest.claimed ? '' : 'disabled'}>${d.chest.claimed ? 'Đã mở' : 'Mở rương'}</button></div></div>`;
+      $('#d-ck').onclick = async () => { const x = await G.call('daily:checkin', {}, true); if (x.ok) { rewardToast(x.res, `Điểm danh ngày ${x.day}`); UI.refreshSheet(); } else UI.toast(x.msg, 'err'); };
+      body.querySelectorAll('[data-claim]').forEach((b) => (b.onclick = async () => { const x = await G.call('daily:claim', { id: b.dataset.claim }, true); if (x.ok) { rewardToast(x.res); UI.refreshSheet(); } else UI.toast(x.msg, 'err'); }));
+      $('#d-chest').onclick = async () => { const x = await G.call('daily:chest', {}, true); if (x.ok) { rewardToast(x.res, 'Rương Năng Động'); UI.refreshSheet(); } else UI.toast(x.msg, 'err'); };
+      if (auto && ck.canClaim) $('#d-ck').classList.add('pulse');
+    });
+  }
+
+  // ---------- Trấn Yêu Tháp ----------
+  function tower() {
+    sub('tower', 'Trấn Yêu Tháp', async (body) => {
+      const r = await Net.emit('tower:info'); if (!r.ok) return;
+      const t = r.tower, fi = t.info;
+      const lvlWarn = fi.lvl > G.me.lvl + 3;
+      body.innerHTML = `
+        <div class="tower-hero"><div class="tw-art">${[...t.next].reverse().map((x) => `<div class="tw-fl ${x.boss ? 'boss' : ''}"><span>${x.floor}</span>${x.boss ? `<em>${x.bossIcon || '👹'}</em>` : ''}</div>`).join('')}<div class="tw-fl cur ${fi.boss ? 'boss' : ''}"><span>${fi.floor}</span>${fi.boss ? `<em>${fi.bossIcon || '👹'}</em>` : '<em>⚔️</em>'}</div></div>
+          <div class="tw-info"><small>Tầng hiện tại</small><b>Tầng ${fi.floor}</b><div>${fi.boss ? `Boss: <b>${esc(fi.bossName)}</b>` : `${fi.count} yêu quái`} · cấp ${fi.lvl}</div>
+          <div class="muted" style="margin-top:4px">Thưởng lần đầu: ${esc(fi.rewardLabel)}</div>
+          ${lvlWarn ? '<div class="warn">Quái cao hơn bạn khá nhiều cấp – hãy luyện thêm!</div>' : ''}
+          <div class="muted">Cao nhất: tầng ${t.best} · Lượt thua còn lại hôm nay: ${t.failsLeft}/5</div></div></div>
+        <div class="btns"><button class="btn-seal" id="tw-go" ${t.failsLeft > 0 ? '' : 'disabled'}>Khiêu chiến tầng ${fi.floor}</button></div>
+        <p class="muted">Vào tháp được hồi đầy khí huyết. Thắng thì đi tiếp không giới hạn, thua mất 1 lượt. Cứ 5 tầng có một boss trong truyện, 10 tầng thưởng trang bị.</p>
+        <div class="sec">Bảng vàng Trấn Yêu Tháp</div>
+        <div class="list">${t.top.length ? t.top.map((x, i) => `<div class="li ${x.id === G.me.id ? 'on' : ''}"><span class="ico" style="font-size:18px;font-weight:700;font-family:var(--font)">${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span><img src="${Sprites.heroURL(x.race, 'm')}" style="width:28px" alt=""><div class="grow"><div class="t">${esc(x.name)}</div><div class="s">Cấp ${x.lvl}</div></div><b>Tầng ${x.best}</b></div>`).join('') : '<p class="muted">Chưa ai leo tháp – hãy là người đầu tiên!</p>'}</div>`;
+      $('#tw-go').onclick = async () => { const x = await G.call('tower:fight', {}); if (x.battle) { UI.closeSheet(); G.startBattle(x.battle); } };
+    });
+  }
 
   function arena() {
     sub('arena', 'Tam Giới Đấu', async (body) => {
@@ -392,7 +456,7 @@ const Panels = (() => {
 
   // ================= GIAO LƯU =================
   function social(tab) { UI.openSheet('social', 'Giao lưu', [['chat', 'Trò chuyện'], ['guild', 'Môn phái'], ['friend', 'Bằng hữu']], renderSocial, tab); }
-  const CHN = { khu: 'Khu', phai: 'Phái', shop: 'Shop', he: 'Hệ thống' };
+  const CHN = { khu: 'Khu', doi: 'Đội', phai: 'Phái', shop: 'Shop', he: 'Hệ thống' };
   function chatLine(m) {
     const t = new Date(m.t).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     return `<div class="m"><span class="time">${t}</span><span class="chn ${m.ch}">[${CHN[m.ch]}]</span>${m.fromId ? `<span class="who">${esc(m.from)}:</span> ` : ''}${esc(m.text)}</div>`;
@@ -432,7 +496,7 @@ const Panels = (() => {
       body.innerHTML = '<p class="muted">Đang tải…</p>';
       const r = await Net.emit('players:online'); if (!r.ok) return;
       const reqs = G.pending;
-      body.innerHTML = `${reqs.length ? `<div class="sec">Lời mời đang chờ</div><div class="list">${reqs.map((q, i) => `<div class="li on"><span class="ico">${q.type === 'marry' ? '💍' : '📿'}</span><div class="grow"><div class="t">${esc(q.fromName)}</div><div class="s">${q.type === 'marry' ? 'muốn kết làm phu thê' : 'muốn bái bạn làm sư phụ'}</div></div><button class="btn-seal sm" data-ok="${i}">Đồng ý</button><button class="btn-seal ghost sm" data-no="${i}">Từ chối</button></div>`).join('')}</div>` : ''}
+      body.innerHTML = `${reqs.length ? `<div class="sec">Lời mời đang chờ</div><div class="list">${reqs.map((q, i) => `<div class="li on"><span class="ico">${q.type === 'marry' ? '💍' : q.type === 'party' ? '👥' : '📿'}</span><div class="grow"><div class="t">${esc(q.fromName)}</div><div class="s">${q.type === 'marry' ? 'muốn kết làm phu thê' : q.type === 'party' ? 'mời bạn vào tổ đội' : 'muốn bái bạn làm sư phụ'}</div></div><button class="btn-seal sm" data-ok="${i}">Đồng ý</button><button class="btn-seal ghost sm" data-no="${i}">Từ chối</button></div>`).join('')}</div>` : ''}
         <div class="sec">Đang trực tuyến (${r.list.length})</div>
         <div class="list">${r.list.map((p) => `<div class="li"><img src="${Sprites.heroURL(p.race, p.gender)}" style="width:34px" alt=""><div class="grow"><div class="t">${esc(p.name)}</div><div class="s">Cấp ${p.lvl} · ${esc(p.map)}${p.guild ? ' · ' + esc(p.guild) : ''}</div></div>
           <button class="btn-seal sm" data-marry="${esc(p.name)}" title="Cầu hôn">💍</button><button class="btn-seal jade sm" data-master="${esc(p.name)}" title="Bái sư">📿</button></div>`).join('') || '<p class="muted">Chưa có ai khác đang chơi. Rủ bạn bè cùng mạng Wi-Fi vào nhé!</p>'}</div>`;
@@ -444,5 +508,5 @@ const Panels = (() => {
     }
   }
 
-  return { char, pet, bag, quest, act, social, shop, peach, dice, rps, chatLine, PAPER_Q, PAPER_G };
+  return { char, pet, bag, quest, act, social, shop, peach, dice, rps, daily, tower, chatLine, PAPER_Q, PAPER_G };
 })();
