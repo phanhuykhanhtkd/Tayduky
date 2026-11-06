@@ -125,10 +125,21 @@ const Title = (() => {
 <defs>
   <linearGradient id="lg-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c8"/><stop offset=".38" stop-color="#ffd76a"/><stop offset=".55" stop-color="#e09a2a"/><stop offset=".75" stop-color="#ffe08a"/><stop offset="1" stop-color="#a8601a"/></linearGradient>
   <linearGradient id="lg-ink" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a0a10" stop-opacity="0"/><stop offset=".18" stop-color="#8a1018"/><stop offset=".8" stop-color="#b01a1e"/><stop offset="1" stop-color="#5a0a10" stop-opacity="0"/></linearGradient>
+  <filter id="lg-fire" x="-25%" y="-60%" width="150%" height="190%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035 0.09" numOctaves="2" seed="3" result="n"><animate attributeName="baseFrequency" dur="1.6s" values="0.035 0.09;0.04 0.12;0.035 0.09" repeatCount="indefinite"/></feTurbulence>
+    <feOffset in="n" dy="0" result="n2"><animate attributeName="dy" dur="1.1s" values="0;-24" repeatCount="indefinite"/></feOffset>
+    <feDisplacementMap in="SourceGraphic" in2="n2" scale="16" xChannelSelector="R" yChannelSelector="G" result="d"/>
+    <feGaussianBlur in="d" stdDeviation="1.2"/>
+  </filter>
+  <linearGradient id="lg-flame" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3a0a"/><stop offset=".5" stop-color="#ff8a1a"/><stop offset="1" stop-color="#ffe060"/></linearGradient>
   <filter id="lg-glow" x="-20%" y="-30%" width="140%" height="160%"><feGaussianBlur stdDeviation="4" result="b"/><feFlood flood-color="#ff7a2a" flood-opacity=".75"/><feComposite in2="b" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
 <path d="M14 104 C60 82 120 92 170 86 C230 78 290 70 348 88 C320 100 300 98 280 108 C220 122 150 116 96 124 C60 128 30 122 14 104Z" fill="url(#lg-ink)"/>
 <path d="M30 112 C80 104 130 112 180 106 M200 100 C250 94 300 92 336 96" stroke="#d8402a" stroke-width="1.5" fill="none" opacity=".55"/>
+<g filter="url(#lg-fire)" font-family="'Lora VN', Lora, Georgia, serif" font-weight="700" font-style="italic" text-anchor="middle" fill="none" stroke="url(#lg-flame)" stroke-linejoin="round" opacity=".95">
+  <text x="138" y="60" font-size="50" letter-spacing="1" stroke-width="12">Tây Du</text>
+  <text x="252" y="112" font-size="88" stroke-width="14">Ký</text>
+</g>
 <g filter="url(#lg-glow)" font-family="'Lora VN', Lora, Georgia, serif" font-weight="700" font-style="italic" text-anchor="middle" paint-order="stroke" stroke="#3a0608" stroke-linejoin="round">
   <text x="138" y="64" font-size="50" letter-spacing="1" fill="url(#lg-gold)" stroke-width="7">Tây Du</text>
   <text x="252" y="118" font-size="88" fill="url(#lg-gold)" stroke-width="9">Ký</text>

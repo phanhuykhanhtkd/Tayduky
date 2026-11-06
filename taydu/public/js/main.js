@@ -198,6 +198,7 @@ function updateHud() {
   $('#hud-mpt').textContent = `${fmt(c.mp)}/${fmt(d.maxMp)}`;
   $('#hud-bac').textContent = fmt(c.bac);
   $('#hud-vang').textContent = fmt(c.vang);
+  { const bs = G.meta.CONFIG.bagSize, n = c.bag.length, el = $('#hud-bag'); el.textContent = `${n}/${bs}`; el.parentNode.classList.toggle('full', n >= bs * 0.9); }
   $('#map-name').textContent = G.meta.MAPS[c.map].name;
   const q = c.quest;
   $('#quest-track').innerHTML = q.done ? '<b>Đã thỉnh kinh thành công</b> · 81/81 kiếp nạn'
@@ -217,7 +218,7 @@ function updateBadges() {
 
 function renderTicker() {
   const last = G.chat.slice(-2);
-  $('#ticker').innerHTML = last.map((m) => `<div><span class="chn ${m.ch}">[${{ khu: 'Khu', doi: 'Đội', phai: 'Phái', shop: 'Shop', he: 'HT' }[m.ch]}]</span>${m.fromId ? `<b>${esc(m.from)}</b>: ` : ''}${esc(m.text)}</div>`).join('') || '<div style="opacity:.6">Kênh chat – chạm để mở</div>';
+  $('#ticker').innerHTML = last.map((m) => `<div><span class="chn ${m.ch}">[${{ khu: 'Khu', doi: 'Đội', phai: 'Phái', shop: 'Shop', he: 'HT' }[m.ch]}]</span>${m.fromId ? `<b>${esc(m.from)}</b>: ` : ''}${esc(m.text).replace(/\[e(\d{1,2})\]/g, (a, n) => Art.EMO_UNI[+n] || a)}</div>`).join('') || '<div style="opacity:.6">Kênh chat – chạm để mở</div>';
 }
 
 $('#hud-ava').onclick = () => Panels.char();
@@ -459,6 +460,7 @@ Net.on('party', (p) => Panels2.setParty(p));
 Net.on('fx:firework', (d) => Panels2.firework(d.by));
 Net.on('boss:update', (b) => { G.boss = b; if (UI.sheet.name === 'act' && UI.sheet.tab === 'list') UI.refreshSheet(); });
 Net.on('social:req', async (r) => {
+  if (r.type === 'partyApply') { Sound.sfx('quest'); const ok = await UI.confirm(`<p><b>${esc(r.fromName)}</b> (cấp ${r.fromLvl}) xin vào tổ đội của bạn. Nhận vào?</p>`, 'Nhận vào'); await G.call('social:respond', { type: 'partyApply', fromId: r.fromId, accept: ok }); return; }
   if (r.type === 'party') { Sound.sfx('quest'); const ok = await UI.confirm(`<p><b>${esc(r.fromName)}</b> (cấp ${r.fromLvl}) mời bạn vào tổ đội. Đồng ý?</p>`, 'Vào đội'); await G.call('social:respond', { type: 'party', fromId: r.fromId, accept: ok }); return; }
   G.pending.push(r); updateBadges(); Sound.sfx('quest'); UI.toast(`${r.fromName} ${r.type === 'marry' ? 'gửi lời cầu hôn 💍' : 'muốn bái bạn làm sư phụ 📿'} – xem ở Giao lưu`, 'gold'); });
 Net.on('kicked', async (k) => {

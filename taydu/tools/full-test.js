@@ -167,6 +167,15 @@ function rawHttp(line) { return new Promise((r) => { const s = net.connect(PORT,
   r = await B.emit('tower:fight'); ok(r.battle && r.battle.units.some((u) => u.id.startsWith('a')), 'Đồng đội cùng bản đồ tự động xuất trận');
   res = await fight(B, r.battle); ok(res && res.result, 'Trận tổ đội kết thúc', res && res.result && res.result.outcome);
   r = await C.emit('party:leave'); ok(r.ok, 'Rời tổ đội');
+  // tuyển đội qua kênh Khu
+  r = await B.emit('party:recruit'); ok(r.ok, 'Đăng tin tuyển đội'); await sleep(200);
+  ok(C.ev.some((e) => e.e === 'chat' && e.d.recruit === B.st.id), 'Tin tuyển đội có nút Xin vào');
+  r = await B.emit('party:recruit'); ok(!r.ok, 'Chặn đăng tin tuyển liên tục (1 phút)');
+  r = await C.emit('party:apply', { id: B.st.id }); ok(r.ok, 'Gửi đơn xin vào đội', r.msg);
+  r = await C.emit('party:apply', { id: '__proto__' }); ok(!r.ok, 'Xin vào đội mã lạ bị chặn');
+  r = await B.emit('social:respond', { type: 'partyApply', fromId: C.st.id, accept: true }); ok(r.ok, 'Đội trưởng nhận đơn', r.msg);
+  r = await C.emit('party:info'); ok(r.party && r.party.members.length === 2, 'Người xin đã vào đội');
+  await C.emit('party:leave');
 
   console.log('\n═══ 11. Sự kiện ═══');
   r = await B.emit('event:info');

@@ -88,7 +88,7 @@ ${sideLocks}${mark}${lash}
     const custom = creatureSrc(u);
     if (custom) return `<img class="art ${cls}" src="${custom}" alt="">`;
     const a = Art.unit(u, 0, expr);
-    if (a) return `<img class="px ${a.cv.width / a.cv.height < 0.9 ? 'hum' : 'beast'} ${cls}" src="${a.url}" alt="">`;
+    if (a) return `<img class="px ${a.cv.width / a.cv.height < 0.9 ? 'hum' : 'beast'} ${u.form ? 'sz-' + Art.sizeOf(u.form) : ''} ${cls}" src="${a.url}" alt="">`;
     return `<span class="emo ${cls}">${u.icon || '❔'}</span>`;
   }
   function petImg(p, cls = '') { return unitImg({ form: p.sid ? p.sid.split('.')[0] : p.form, element: p.element, icon: p.icon }, cls); }

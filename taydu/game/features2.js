@@ -41,6 +41,7 @@ function activeEvent() {
 const parties = new Map(); // id -> { id, leader, members: [charId] }
 const partyOf = new Map(); // charId -> partyId
 let partySeq = 1;
+const recruitAt = new Map(); // charId -> lần đăng tin tuyển đội gần nhất
 function partyView(db, pid, online) {
   const p = parties.get(pid); if (!p) return null;
   return { id: p.id, leader: p.leader, members: p.members.map((id) => { const c = db.chars[id]; return c ? { id, name: c.name, race: c.race, gender: c.gender, lvl: c.lvl, map: c.map, online: online.has(id), gear: L.gearBrief(c) } : null; }).filter(Boolean) };
@@ -247,6 +248,38 @@ function register(on, ctx) {
     pushParty(pid);
     toast(from, `${c.name} đã vào tổ đội.`, 'gold');
     return { ok: true, msg: `Đã vào tổ đội của ${from.name}.` };
+  });
+  // tin tuyển đội ở kênh Khu – người khác bấm "Xin vào" để gửi đơn cho đội trưởng
+  on('party:recruit', true, (c) => {
+    const now = Date.now(); if (now - (recruitAt.get(c.id) || 0) < 60000) return { ok: false, msg: 'Chờ 1 phút rồi hãy đăng tin tuyển tiếp.', noState: true };
+    const pid = partyOf.get(c.id), p = pid && parties.get(pid);
+    if (p && p.leader !== c.id) return { ok: false, msg: 'Chỉ đội trưởng mới tuyển người.', noState: true };
+    if (p && p.members.length >= 3) return { ok: false, msg: 'Tổ đội đã đủ người.', noState: true };
+    recruitAt.set(c.id, now);
+    const left = 3 - (p ? p.members.length : 1), M = D.MAPS[c.map];
+    ctx.addChat('khu', { from: c.name, fromId: c.id, race: c.race, lvl: c.lvl, text: `📣 Tuyển đồng đội đi ${M ? M.name : 'phụ bản'} – còn ${left} chỗ, ai đi không?`, recruit: c.id });
+    return { ok: true, msg: 'Đã đăng tin tuyển đội ở kênh Khu.', noState: true };
+  });
+  on('party:apply', true, (c, { id }) => {
+    const L = own(db.chars, id);
+    if (!L || L.id === c.id) return { ok: false, msg: 'Không tìm thấy đội trưởng.', noState: true };
+    if (!online.has(L.id)) return { ok: false, msg: `${L.name} đang ngoại tuyến.`, noState: true };
+    if (partyOf.has(c.id)) return { ok: false, msg: 'Bạn đã có tổ đội.', noState: true };
+    const pid = partyOf.get(L.id), p = pid && parties.get(pid);
+    if (p && (p.leader !== L.id || p.members.length >= 3)) return { ok: false, msg: 'Tổ đội này đã đủ người.', noState: true };
+    if (!ctx.request(L, 'partyApply', c)) return { ok: false, msg: 'Bạn đã gửi đơn rồi, chờ đội trưởng trả lời.', noState: true };
+    return { ok: true, msg: `Đã gửi đơn xin vào đội của ${L.name}.`, noState: true };
+  });
+  ctx.onRespond('partyApply', (c, from) => { // c = đội trưởng đồng ý, from = người xin vào
+    if (partyOf.has(from.id)) return { ok: false, msg: `${from.name} đã vào đội khác.` };
+    let pid = partyOf.get(c.id), p = pid && parties.get(pid);
+    if (p && p.leader !== c.id) return { ok: false, msg: 'Bạn không còn là đội trưởng.' };
+    if (!p) { pid = partySeq++; p = { id: pid, leader: c.id, members: [c.id] }; parties.set(pid, p); partyOf.set(c.id, pid); }
+    if (p.members.length >= 3) return { ok: false, msg: 'Tổ đội đã đủ người.' };
+    p.members.push(from.id); partyOf.set(from.id, pid);
+    pushParty(pid);
+    toast(from, `${c.name} đã nhận bạn vào tổ đội.`, 'gold');
+    return { ok: true, msg: `${from.name} đã vào tổ đội.` };
   });
   on('party:leave', true, (c) => {
     const pid = partyOf.get(c.id);

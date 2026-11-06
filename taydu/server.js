@@ -1036,7 +1036,7 @@ io.on('connection', (socket) => {
     list.splice(i, 1);
     const f = F2.own(db.chars, fromId);
     if (!f) return { ok: false, msg: 'Người gửi không tồn tại.' };
-    if (!accept) { toast(f, `${c.name} đã từ chối ${type === 'marry' ? 'lời cầu hôn' : type === 'party' ? 'lời mời tổ đội' : 'nhận bạn làm đệ tử'}.`); return { ok: true }; }
+    if (!accept) { toast(f, `${c.name} đã từ chối ${type === 'marry' ? 'lời cầu hôn' : type === 'party' ? 'lời mời tổ đội' : type === 'partyApply' ? 'đơn xin vào đội' : 'nhận bạn làm đệ tử'}.`); return { ok: true }; }
     if (respondHooks.has(type)) return respondHooks.get(type)(c, f);
     if (type === 'marry') {
       if (c.spouse || f.spouse) return { ok: false, msg: 'Đã có phu thê.' };
@@ -1091,7 +1091,7 @@ io.on('connection', (socket) => {
     if (petLvl) c.pets.forEach((p) => (p.lvl = petLvl));
     return { ok: true };
   });
-  F2.register(on, { db, notInBattle, sys, online, battles, io, pushState, toast, socket, request, onRespond: (type, fn) => respondHooks.set(type, fn) });
+  F2.register(on, { db, notInBattle, sys, online, battles, io, pushState, toast, socket, request, addChat, onRespond: (type, fn) => respondHooks.set(type, fn) });
 });
 
 // --------------------------------------------------------------------

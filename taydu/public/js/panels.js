@@ -43,6 +43,7 @@ const Panels = (() => {
         </div>
         <div class="sec">Điểm tiềm năng <span class="pts ${left ? 'has' : ''}">${left}</span></div>
         <div class="st-card ornate-gold st-alloc">
+          <div class="st-who"><img src="${Sprites.faceURL(c.race, c.gender, c)}" alt=""><div><b>${esc(c.name)}</b><small>${M().RACES[c.race].name} · Cấp ${c.lvl}</small><small>Tổng tiềm năng: ${Object.values(c.stats).reduce((x, y) => x + y, 0) + left}</small></div></div>
           ${radar(c, pending)}
           <div class="alloc">
           ${Object.keys(RN).map((k) => `<b>${RN[k]}</b><span class="v">${c.stats[k]}<i class="add">${pending[k] ? '+' + pending[k] : ''}</i></span>
@@ -470,9 +471,14 @@ const Panels = (() => {
   // ================= GIAO LƯU =================
   function social(tab) { UI.openSheet('social', 'Giao lưu', [['chat', 'Trò chuyện'], ['guild', 'Môn phái'], ['friend', 'Bằng hữu']], renderSocial, tab); }
   const CHN = { khu: 'Khu', doi: 'Đội', phai: 'Phái', shop: 'Shop', he: 'Hệ thống' };
+  // biểu tượng cảm xúc: mã [e0]…[e11] → hình pixel
+  const emoHTML = (s) => s.replace(/\[e(\d{1,2})\]/g, (all, n) => (Art.EMOTES[+n] ? `<img class="emo-i" src="${Art.emote(+n).url}" alt="${Art.EMO_UNI[+n]}">` : all));
+  const RCOL = { than: '#ffd76a', ma: '#ff8a7a', yeu: '#d0a8ff' };
   function chatLine(m) {
     const t = new Date(m.t).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    return `<div class="m"><span class="time">${t}</span><span class="chn ${m.ch}">[${CHN[m.ch]}]</span>${m.fromId ? `<span class="who">${esc(m.from)}:</span> ` : ''}${esc(m.text)}</div>`;
+    const who = m.fromId ? `<span class="who" style="color:${RCOL[m.race] || '#e8c08a'}">${esc(m.from)}${m.lvl ? `<small>${m.lvl}</small>` : ''}:</span> ` : '';
+    const join = m.recruit && G.me && m.recruit !== G.me.id ? ` <button class="chat-join" data-join="${esc(m.recruit)}">Xin vào</button>` : '';
+    return `<div class="m ${m.recruit ? 'recruit' : ''}"><span class="time">${t}</span><span class="chn ${m.ch}">[${CHN[m.ch]}]</span>${who}${emoHTML(esc(m.text))}${join}</div>`;
   }
   async function renderSocial(body, tab) {
     const c = G.me;
@@ -480,10 +486,19 @@ const Panels = (() => {
       const TABS = { all: 'Tất cả', ...CHN }, all = chatCh === 'all';
       body.innerHTML = `<div class="seg chat-tabs" style="margin-bottom:8px">${Object.entries(TABS).map(([k, l]) => `<button class="seg-b ${k === chatCh ? 'on' : ''}" data-ch="${k}">${l}</button>`).join('')}</div>
         <div class="chat-log" id="chat-log">${G.chat.filter((m) => all || m.ch === chatCh).map(chatLine).join('') || '<div class="m empty" style="opacity:.6">Chưa có tin nhắn.</div>'}</div>
-        ${chatCh === 'he' ? '<p class="muted">Kênh hệ thống chỉ để đọc.</p>' : `<form class="chat-in" id="chat-f">${all ? `<select id="chat-to" aria-label="Gửi vào kênh">${['khu', 'doi', 'phai', 'shop'].map((k) => `<option value="${k}" ${k === chatTo ? 'selected' : ''}>${CHN[k]}</option>`).join('')}</select>` : ''}<input id="chat-t" maxlength="120" placeholder="Nhắn kênh ${all ? 'đã chọn' : CHN[chatCh]}…" autocomplete="off" enterkeyhint="send"><button class="btn-seal">Gửi</button></form>`}`;
+        ${chatCh === 'he' ? '<p class="muted">Kênh hệ thống chỉ để đọc.</p>' : `<form class="chat-in" id="chat-f">${all ? `<select id="chat-to" aria-label="Gửi vào kênh">${['khu', 'doi', 'phai', 'shop'].map((k) => `<option value="${k}" ${k === chatTo ? 'selected' : ''}>${CHN[k]}</option>`).join('')}</select>` : ''}<button type="button" class="chat-emo-b" id="chat-emo-b" aria-label="Biểu tượng cảm xúc">☺</button><input id="chat-t" maxlength="120" placeholder="Nhắn kênh ${all ? 'đã chọn' : CHN[chatCh]}…" autocomplete="off" enterkeyhint="send"><button class="btn-seal">Gửi</button></form>
+        <div class="chat-emo" id="chat-emo" hidden>${Art.EMOTES.map((e, i) => `<button type="button" data-emo="${i}"><img src="${Art.emote(i).url}" alt="${Art.EMO_UNI[i]}"></button>`).join('')}</div>
+        <div class="chat-tools"><button class="btn-seal sm jade" id="chat-recruit">📣 Tuyển đội phụ bản</button></div>`}`;
       body.querySelectorAll('[data-ch]').forEach((b) => (b.onclick = () => { chatCh = b.dataset.ch; UI.refreshSheet(); }));
       const log = $('#chat-log'); log.scrollTop = log.scrollHeight;
       const f = $('#chat-f');
+      body.querySelectorAll('[data-join]').forEach((b) => (b.onclick = () => G.call('party:apply', { id: b.dataset.join })));
+      log.addEventListener('click', (e) => { const b = e.target.closest('[data-join]'); if (b && !b.onclick) G.call('party:apply', { id: b.dataset.join }); });
+      if ($('#chat-emo-b')) {
+        $('#chat-emo-b').onclick = () => ($('#chat-emo').hidden = !$('#chat-emo').hidden);
+        body.querySelectorAll('[data-emo]').forEach((b) => (b.onclick = () => { const t = $('#chat-t'); if (t.value.length < 115) t.value += `[e${b.dataset.emo}]`; $('#chat-emo').hidden = true; t.focus(); }));
+        $('#chat-recruit').onclick = () => G.call('party:recruit');
+      }
       if (f) f.onsubmit = async (e) => { e.preventDefault(); const t = $('#chat-t'); if (!t.value.trim()) return; const to = $('#chat-to'); if (to) chatTo = to.value; const r = await Net.emit('chat:send', { ch: to ? to.value : chatCh, text: t.value }); if (!r.ok) UI.toast(r.msg, 'err'); else t.value = ''; };
     } else if (tab === 'guild') {
       body.innerHTML = '<p class="muted">Đang tải…</p>';

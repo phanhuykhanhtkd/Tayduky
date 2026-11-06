@@ -6,7 +6,8 @@ const BattleUI = (() => {
   const root = $('#battle'), stage = $('#b-stage'), box = $('#b-units');
   let snap = null, busy = false, mode = null, auto = false, onEnd = null, theme = 'city';
   const els = {};
-  const SLOT = { 1: [[36, 55], [18, 71], [58, 40], [16, 42]], 0: [[72, 88], [42, 91], [90, 74], [20, 82], [55, 77]] };
+  // đội hình nhìn ngang: địch bên trái, phe mình bên phải, xếp chéo hai hàng
+  const SLOT = { 1: [[26, 60], [14, 74], [30, 86], [14, 46], [32, 40]], 0: [[76, 68], [62, 84], [88, 86], [66, 52], [88, 50]] };
   FX.attach($('#b-fx'), $('#b-fx-under'), [stage, $('#b-bg')]);
   const ECOL = { thunder: '#9fd8ff', fire: '#ff8a2a', ice: '#bff0ff', poison: '#c88aff', heal: '#7cf09a', gold: '#ffd65a', wind: '#9ff0d8', rock: '#e0b07a', shadow: '#b07af0', rage: '#ff5a2a', slash: '#fff0c8', hit: '#fff0c8' };
 
@@ -15,7 +16,8 @@ const BattleUI = (() => {
 
   // ---------- bắt đầu ----------
   async function start(s, opts = {}) {
-    snap = s; onEnd = opts.onEnd; busy = true; mode = null;
+    snap = s; onEnd = opts.onEnd; busy = true; mode = null; combo = 0; comboSide = -1; $('#b-combo')?.remove();
+    if (!Object.keys(ULT).length) ultInit();
     theme = s.kind === 'arena' || s.kind === 'tower' ? 'arena' : s.kind === 'world' ? 'world' : (G.meta.MAPS[G.me.map]?.theme || 'city');
     root.className = theme;
     $('#b-bg').style.backgroundImage = `url("${Sprites.battleBG(theme)}")`;
@@ -24,6 +26,8 @@ const BattleUI = (() => {
     closePick();
     $('#b-log').textContent = s.kind === 'boss' ? 'Trận chiến với boss – không thể bỏ chạy!' : s.kind === 'arena' ? 'Tam Giới Đấu bắt đầu!' : s.kind === 'world' ? `Đánh ${s.maxRounds} hiệp, sát thương cộng dồn vào boss chung.` : s.kind === 'tower' ? 'Trấn Yêu Tháp – vượt tầng này để đi tiếp!' : 'Yêu quái xuất hiện!';
     render();
+    bossPlate();
+    stageBanner(s);
     FX.resize(); FX.clear(); FX.ambient(theme);
     root.classList.remove('dim', 'defeat');
     $('#b-cmds').classList.add('wait');
@@ -77,7 +81,7 @@ const BattleUI = (() => {
     for (const u of order) {
       const pos = SLOT[u.side][idx[u.side]++ % SLOT[u.side].length];
       const el = document.createElement('div');
-      el.className = `unit side${u.side}` + (u.boss ? ' boss' : '') + (u.mut ? ' mut' : '') + (u.dead ? ' dead' : '') + (u.hero ? ' is-hero' : '');
+      el.className = `unit side${u.side}` + (u.boss ? ' boss' : '') + (u.mut ? ' mut' : '') + (u.dead ? ' dead' : '') + (u.hero ? ' is-hero' : '') + (u.form && u.grade >= 2 ? ' aura g' + u.grade : '');
       el.style.left = pos[0] + '%'; el.style.top = `calc(${pos[1]}% - ${u.boss ? 176 : 146}px)`;
       el.style.zIndex = Math.round(pos[1]);
       const ring = u.side === 0 ? '#7fd6b7' : u.boss ? '#ff5a3a' : (G.meta.ELEMENTS[u.element]?.color || '#ffd65a');
@@ -94,8 +98,23 @@ const BattleUI = (() => {
     blinkLoop();
   }
 
+  // khung tên kẻ địch mạnh nhất (boss) ở trên cùng
+  function lead() { const en = snap.units.filter((u) => u.side === 1); return en.find((u) => u.boss) || en.sort((a, b) => b.lvl - a.lvl)[0]; }
+  function bossPlate() {
+    const el = $('#b-bossplate'), u = lead(); if (!u) { el.hidden = true; return; }
+    el.hidden = false; el.classList.toggle('isboss', !!u.boss);
+    el.innerHTML = `<span class="bp-ava">${Sprites.unitImg(u)}</span><div class="bp-txt"><b>${esc(u.name)}</b> <em>(Lv ${u.lvl})</em><div class="bar hp"><i></i></div></div>`;
+    el.dataset.id = u.id; el.querySelector('.bar i').style.width = Math.max(0, 100 * u.hp / u.maxHp) + '%';
+  }
+  function stageBanner(s) {
+    const el = $('#b-sbanner'), M = G.meta.MAPS[G.me.map];
+    const sub = s.kind === 'tower' ? `Trấn Yêu Tháp · Tầng ${(G.me.towerBest || 0) + 1}` : s.kind === 'boss' ? `Hàng Yêu · ${(lead() || {}).name || ''}` : s.kind === 'arena' ? 'Tam Giới Đấu' : s.kind === 'world' ? 'Boss Thế Giới' : `${M ? M.name : 'Hoang dã'}`;
+    el.querySelector('span').textContent = sub.replace(/ · $/, '');
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  }
   function sync(s) {
     snap = s;
+    { const bp = $('#b-bossplate'), u = bp && !bp.hidden && s.units.find((x) => x.id === bp.dataset.id); if (u) bp.querySelector('.bar i').style.width = Math.max(0, 100 * u.hp / u.maxHp) + '%'; }
     for (const u of s.units) {
       const el = els[u.id]; if (!el) continue;
       setBars(u.id, u.hp, u.maxHp, u.mp, u.maxMp);
@@ -133,17 +152,19 @@ const BattleUI = (() => {
   let timer = null, left = 0;
   const TURN = 30;
   // vòng lệnh hình thoi bao quanh nhân vật của người chơi
-  const RING = { attack: 180, skill: 228, defend: 276, catch: 324, item: 132, flee: 30 };
+  // lệnh hình thoi xếp so le thành cột bên trái nhân vật (kiểu cổ điển)
+  const ZIG = ['attack', 'skill', 'item', 'catch', 'defend', 'flee'];
   function placeCmds() {
     const cm = $('#b-cmds'), me = els.p && els.p.querySelector('.spr'); if (!cm || !me) return;
     const R = root.getBoundingClientRect(), r = me.getBoundingClientRect(), st = stage.getBoundingClientRect();
-    const rad = Math.min(104, R.width * 0.27), half = 36;
-    let cx = r.left - R.left + r.width / 2, cy = r.top - R.top + r.height * 0.5;
-    // giữ cả vòng nằm trong màn hình
-    cx = Math.max(rad + half + 4, Math.min(R.width - rad * Math.cos(30 * Math.PI / 180) - half - 4, cx));
-    cy = Math.max(st.top - R.top + rad + half, Math.min(R.height - rad * Math.sin(132 * Math.PI / 180) - half - 8 - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0), cy));
+    const step = Math.min(40, (st.height - 80) / 6.4), colA = 50, colB = 90;
+    const sab = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0;
+    let cx = r.left - R.left + r.width * 0.42, cy = r.top - R.top + r.height * 0.45;
+    cx = Math.max(colB + 44, Math.min(R.width - 30, cx));
+    const span = step * (ZIG.length - 1);
+    cy = Math.max(st.top - R.top + span / 2 + 44, Math.min(R.height - span / 2 - 50 - sab, cy));
     cm.style.setProperty('--cx', cx + 'px'); cm.style.setProperty('--cy', cy + 'px');
-    $$('.seal', cm).forEach((b, i) => { const a = (RING[b.dataset.c] ?? 90) * Math.PI / 180; b.style.setProperty('--x', Math.cos(a) * rad + 'px'); b.style.setProperty('--y', Math.sin(a) * rad + 'px'); b.style.setProperty('--d', i * 40 + 'ms'); });
+    $$('.seal', cm).forEach((b) => { const i = ZIG.indexOf(b.dataset.c); b.style.setProperty('--x', -(i % 2 ? colB : colA) + 'px'); b.style.setProperty('--y', (i - (ZIG.length - 1) / 2) * step + 'px'); b.style.setProperty('--d', i * 45 + 'ms'); });
   }
   addEventListener('resize', () => { if (!root.hidden) placeCmds(); });
   function ready() {
@@ -203,11 +224,17 @@ const BattleUI = (() => {
     selSeal(cmd); mode = { cmd };
     Sound.sfx('open');
     const p = document.createElement('div');
-    p.className = 'pick'; p.id = 'b-pick';
+    p.className = 'pick float'; p.id = 'b-pick';
     p.innerHTML = items.map((it, i) => `<button data-i="${i}" ${it.disabled ? 'disabled' : ''}><span class="ico">${it.icon}</span><span class="grow"><b>${esc(it.title)}</b><br><small class="muted">${esc(it.sub || '')}</small></span></button>`).join('')
       || '<p class="muted" style="margin:6px">Không có gì để dùng.</p>';
     p.querySelectorAll('button').forEach((b) => (b.onclick = () => { const it = items[+b.dataset.i]; closePick(); onPick(it); }));
     root.appendChild(p);
+    const seal = $(`.seal[data-c="${cmd}"]`), R = root.getBoundingClientRect();
+    if (seal) { const r = seal.getBoundingClientRect(), aL = r.left - R.left - 10, aR = R.right - r.right - 10, left = aL >= aR;
+      const w = Math.max(150, Math.min(230, left ? aL : aR));
+      p.style.width = w + 'px'; let x = left ? r.left - R.left - w - 2 : r.right - R.left + 2; x = Math.max(6, Math.min(R.width - w - 6, x));
+      p.style.left = x + 'px'; p.style.right = 'auto'; p.style.bottom = 'auto';
+      const h = p.offsetHeight; p.style.top = Math.max(60, Math.min(R.height - h - 12, r.top - R.top + r.height / 2 - h / 2)) + 'px'; }
   }
   function closePick() { $('#b-pick')?.remove(); }
 
@@ -313,6 +340,7 @@ const BattleUI = (() => {
           await sleep(420);
           a?.classList.remove('cast');
           if (sk?.mp) { const u = unit(ev.a); if (u) setBars(ev.a, u.hp, u.maxHp, Math.max(0, u.mp - sk.mp), u.maxMp); }
+          const ult = ULT[ev.s]; if (ult && !FX.low) await ultimate(ult, ev);
         }
         const ranged = ev.k === 'skill' && RANGED.has(ev.fx) && sk?.type === 'magic';
         if (ranged && me) {
@@ -328,6 +356,7 @@ const BattleUI = (() => {
           a.style.transform = `translate(${dx * 0.66}px, ${dy * 0.66}px) scale(1.06)`; await sleep(150);
         } else if (a) { a.style.transform = 'scale(1.14) translateY(-8px)'; await sleep(160); }
         Sound.sfx(ev.hits.some((h) => h.crit) ? 'crit' : ev.k === 'atk' ? 'hit' : (FX_SOUND[ev.fx] || 'hit'));
+        if (ev.hits.some((h) => !h.miss)) comboHit(unit(ev.a)?.side); else combo = 0;
         if (ev.aoe) for (let i = 0; i < ev.hits.length; i++) { applyHit(ev.hits[i], ev); await sleep(90); }
         else ev.hits.forEach((h) => applyHit(h, ev));
         await sleep(ev.hits.some((h) => h.crit) ? 360 : 240);
@@ -395,6 +424,45 @@ const BattleUI = (() => {
     await sleep(720);
     el.hidden = true;
   }
+  // ---------- tuyệt chiêu riêng từng tộc: màn tối + hình hiện quanh mục tiêu ----------
+  const ULT = {};
+  const ULT_BY_KEY = { kim_quang: 'buddha', cuu_thien: 'buddha', ma_diem: 'demon', pha_thien: 'demon', nhiep_hon: 'fox', yeu_phong: 'fox', that_thap: 'monkey' };
+  function ultInit() { for (const [k, v] of Object.entries(ULT_BY_KEY)) { const s = G.meta.SKILLS[k]; if (s) ULT[s.name] = v; } }
+  async function ultimate(kind, ev) {
+    const pts = ev.hits.map((h) => rectOf(h.t)).filter(Boolean); if (!pts.length) return;
+    const S = stage.getBoundingClientRect(), R = root.getBoundingClientRect();
+    const gx = pts.reduce((a, p) => a + p.x, 0) / pts.length, gy = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+    const layer = document.createElement('div'); layer.className = 'ult ult-' + kind;
+    layer.innerHTML = `<div class="ult-title">${esc(ev.s)}</div>`;
+    root.appendChild(layer);
+    const img = Art.special(kind).url, put = (x, y, w, cls, delay) => { const e = document.createElement('img'); e.src = img; e.className = 'ult-spr ' + cls; e.style.cssText = `left:${x - w / 2}px;top:${y}px;width:${w}px;animation-delay:${delay}ms`; layer.appendChild(e); return e; };
+    const sx = (x) => x - (R.left - S.left) * 0, sy = (y) => y + (S.top - R.top);
+    if (kind === 'buddha') { // năm tượng Phật hiện thành vòng cung quanh địch rồi toả kim quang
+      const n = 5; for (let i = 0; i < n; i++) { const a = Math.PI * (1.05 + (i / (n - 1)) * 0.9); put(gx + Math.cos(a) * 112, sy(gy) + Math.sin(a) * 70 - 40, 74, 'drop', i * 90); }
+      Sound.sfx('gold'); await sleep(620); FX.rays(gx, gy, '#ffe08a', 60, 220); FX.flash('#fff3c0', 14, 0.45); Sound.sfx('cutin'); await sleep(420);
+    } else if (kind === 'demon') { // ác quỷ lửa trồi lên dưới chân từng mục tiêu
+      pts.forEach((p, i) => { put(p.x - 22, sy(p.y) - 10, 70, 'rise', i * 80); put(p.x + 26, sy(p.y), 56, 'rise', 120 + i * 80); FX.pillar(p.x, p.y + 40, '#ff6a2a', 60, 46); });
+      Sound.sfx('fire'); FX.shake(9, 500); await sleep(820);
+    } else if (kind === 'fox') { // bóng cửu vĩ hồ lướt ngang qua đội địch
+      for (let i = 0; i < 3; i++) put(R.width + 60, sy(gy) - 30 + (i - 1) * 46, 120, 'dash', i * 140);
+      Sound.sfx('wind'); await sleep(520); pts.forEach((p) => FX.impact('shadow', p)); await sleep(420);
+    } else if (kind === 'monkey') { // phân thân Tề Thiên vây đánh
+      pts.forEach((p, i) => { for (let j = 0; j < 3; j++) { const a = (j / 3) * 6.283 + i; put(p.x + Math.cos(a) * 52, sy(p.y) - 20 + Math.sin(a) * 22, 56, 'pop', j * 70 + i * 50); } });
+      Sound.sfx('gold'); await sleep(700);
+    }
+    layer.classList.add('out'); setTimeout(() => layer.remove(), 420);
+  }
+  // ---------- liên kích ----------
+  let combo = 0, comboSide = -1;
+  function comboHit(side) {
+    if (side !== comboSide) { combo = 0; comboSide = side; }
+    combo++;
+    if (combo >= 2 && side === 0) {
+      let el = $('#b-combo'); if (!el) { el = document.createElement('div'); el.id = 'b-combo'; root.appendChild(el); }
+      el.innerHTML = `<small>Liên kích</small><b>×${combo}</b>`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+    }
+  }
+
   // bóng mờ khi lướt tới
   function ghosts(a, dx, dy) {
     if (FX.low) return;
@@ -419,9 +487,14 @@ const BattleUI = (() => {
     g.style.transform = `translate(${to.x - from.x}px, ${to.y - from.y - 30}px) rotate(-20deg)`;
     await sleep(480);
     FX.ring(to.x, to.y, '#ffd65a', 60, 24, 3);
-    g.classList.add('wobble');
     $('#b-log').textContent = `Tỷ lệ thu phục: ${ev.rate}%`;
-    await sleep(800);
+    const beats = ev.ok ? 3 : 1 + Math.floor(Math.random() * 3);   // thất bại có thể bung ra giữa chừng
+    for (let i = 0; i < beats; i++) {
+      g.classList.remove('wobble'); void g.offsetWidth; g.classList.add('wobble');
+      Sound.sfx('click'); FX.ring(to.x, to.y - 20, i === 2 ? '#fff6c8' : '#ffd65a', 30 + i * 12, 18, 2);
+      $('#b-log').textContent = `Tỷ lệ thu phục: ${ev.rate}% ${'●'.repeat(i + 1)}${'○'.repeat(2 - i)}`;
+      await sleep(i === 2 ? 620 : 520);
+    }
     if (ev.ok) {
       FX.impact('gold', to);
       els[ev.t]?.classList.add('caught');
@@ -438,6 +511,7 @@ const BattleUI = (() => {
     const titles = { win: 'Đại Thắng', lose: 'Thất Bại', flee: 'Thoát Thân', timeout: 'Kết Thúc' };
     Sound.sfx(win ? 'victory' : res.outcome === 'lose' ? 'defeat' : 'wind');
     clearTimeout(blinkT);
+    if (win && res.ups && res.ups.length) { const p = rectOf('p'); if (p) { FX.pillar(p.x, p.y + 40, '#ffe08a', 70, 70); FX.rays(p.x, p.y, '#fff0a0', 70, 180); } Sound.sfx('gong'); num('p', 'THĂNG CẤP!', 'lvup'); await sleep(900); }
     if (win) { FX.victory(); setTimeout(() => Sound.sfx('fireworks'), 300); snap?.units.forEach((u) => { if (u.side === 0 && !u.dead) setExpr(u.id, 'smile'); }); }
     else if (res.outcome === 'lose') { root.classList.add('defeat'); FX.flash('#3a0000', 40, 0.5); }
     const I = G.meta.ITEMS;
@@ -449,8 +523,8 @@ const BattleUI = (() => {
     if (res.lostBac) slots.push(['💸', `-${fmt(res.lostBac)}`, 'Bạc']);
     const loot = [
       ...res.items.map((id) => `<span class="loot"><i>${Sprites.itemIcon(id, I)}</i><small>${esc(I[id].name)}</small></span>`),
-      ...res.equips.map((e) => `<span class="loot" style="--q:${G.meta.QUALITIES[e.q].color}"><i>${G.meta.SLOTS[e.slot].icon}</i><small style="color:${Panels.PAPER_Q[e.q]}">${esc(e.name)}</small></span>`),
-      ...res.captured.map((p) => `<span class="loot" style="--q:${G.meta.GRADES[p.grade].color}"><i>${Sprites.petImg(p)}</i><small style="color:${Panels.PAPER_G[p.grade]}">${esc(p.name)}</small></span>`),
+      ...res.equips.map((e) => `<span class="loot ${e.q >= 3 ? 'rare q' + e.q : ''}" style="--q:${G.meta.QUALITIES[e.q].color}"><i>${G.meta.SLOTS[e.slot].icon}</i><small style="color:${Panels.PAPER_Q[e.q]}">${esc(e.name)}</small></span>`),
+      ...res.captured.map((p) => `<span class="loot ${p.grade >= 2 ? 'rare q' + (p.grade + 1) : ''}" style="--q:${G.meta.GRADES[p.grade].color}"><i>${Sprites.petImg(p)}</i><small style="color:${Panels.PAPER_G[p.grade]}">${esc(p.name)}</small></span>`),
     ];
     let html = `<div class="victory ${win ? 'win' : 'lose'}"><div class="v-title">${titles[res.outcome] || 'Kết Thúc'}</div></div>`;
     if (res.kind === 'world' && res.outcome !== 'lose') html += `<p class="muted center">Phần thưởng theo sát thương bạn gây ra cho boss.</p>`;

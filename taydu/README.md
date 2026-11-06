@@ -74,6 +74,13 @@ Người chơi khác trong cùng Wi-Fi chỉ cần mở cùng địa chỉ là v
 - **Âm thanh chiến đấu**: tiếng đòn đánh có lực dội trầm, chém gió, sấm rền, lửa nổ lách tách, băng vỡ leng keng, đá rơi rung đất, tiếng tụ khí khi niệm chú, trống và cồng khi cắt cảnh, tiếng gầm khi boss xuất hiện, tiếng nổ liên hoàn khi boss chết, pháo hoa lúc thắng.
 
 - **Nhân vật dáng cao (≈7 đầu, khung 72×140 điểm ảnh)**: 6 nhân vật người chơi, ~90 NPC/boss, lính và các Tiên sủng dạng người: áo giao lĩnh có nếp vải, tay áo rộng, đai lưng có ngọc bội và tua, giáp vảy cá có hộ tâm kính, thiên y bay, mắt có tròng màu và đốm sáng, viền sáng ánh trăng. Có **biểu cảm**: bình thường, vui (thắng trận, được hồi máu), giận (khi ra đòn, boss), đau (trúng đòn, máu thấp), nhắm mắt vận công (tung chiêu); **chớp mắt** và **thở** khi đứng yên. Tiên sủng dạng thú giữ kiểu cũ, màu đổi theo ngũ hành.
+- **6 kiểu thân, tỉ lệ 4–5 đầu** (khung chung 80×124 nên ai cao ai thấp thấy rõ): trẻ con (Na Tra, Hồng Hài Nhi, Thổ Địa), nữ thướt tha (Hằng Nga, Quan Âm), nam cân đối (Đường Tăng, Ngộ Không), vạm vỡ (Sa Tăng, Ma tộc), bụng to (Bát Giới, Di Lặc), khổng lồ (Ngưu Ma Vương, Như Lai). 6 nhân vật người chơi khác hẳn nhau: Thiên tướng giáp bạc, Tiên nữ thiên y, Ma vương sừng lớn cầm rìu, Hắc y nữ kiếm khách, Hồ yêu lãng khách, Cửu vĩ hồ ly. Ngộ Không có mũ phượng lông trĩ, Đường Tăng cầm tích trượng, Sa Tăng đeo chuỗi đầu lâu.
+- **Tiên sủng 3 cỡ** theo loài (thỏ, cáo nhỏ… / hổ, sói vừa / rồng, voi, kỳ lân lớn); phẩm Tiên trở lên có hào quang, phẩm Thánh có sao lấp lánh.
+- **Trận đấu nhìn ngang** kiểu cổ điển: địch bên trái, phe mình bên phải; lệnh hình thoi xếp so le thành cột cạnh nhân vật; Đạo cụ / Kỹ năng / Bắt pet mở bảng nhỏ ngay cạnh nút; khung tên kẻ địch mạnh nhất kèm cấp và máu; băng rôn tên trận; đồng hồ chuyển đỏ khi còn 5 giây.
+- **Tuyệt chiêu từng tộc**: Kim Quang Trận / Cửu Thiên Huyền Lôi gọi năm tượng Phật vàng; Ma Diễm Phần Thiên / Phá Thiên Cuồng Kích gọi ác quỷ lửa trồi lên; Yêu Phong Quyển / Nhiếp Hồn Thuật cho bóng cửu vĩ hồ lướt qua; Thất Thập Nhị Biến hiện phân thân Tề Thiên.
+- **Cảm xúc khi chơi**: đếm *Liên kích ×N*, cột sáng + tiếng chiêng khi thăng cấp, đồ quý rơi ra có tia sáng xoay theo màu phẩm, hồ lô bắt pet rung từng nhịp ●○○ (có thể bung ra giữa chừng).
+- **Bản đồ**: dấu "!" vàng nảy trên NPC giao nhiệm vụ (đỏ với boss); tên NPC tô màu theo vai trò (cửa hàng xanh, thầy thuốc lục); túi đồ hiện số ô x/200.
+- **Chat**: tên tô màu theo tộc kèm cấp, 12 biểu tượng cảm xúc pixel, nút **📣 Tuyển đội phụ bản** – người khác bấm **Xin vào** để gửi đơn, đội trưởng đồng ý là vào đội.
 - **Màn chào**: nền lửa thần thoại động (pixel), trăng máu, núi Hoa Quả, mây cát tường; logo thư pháp *Tây Du Ký* tự thiết kế; Tôn Ngộ Không cưỡi Cân Đẩu Vân ở góc trên; vòng Bát Quái xoay với nút **VÀO** và ba nút tròn **Đăng ký · Đăng nhập · Khôi phục**.
 - **Tạo nhân vật**: thẻ chân dung khung vàng cho từng chủng tộc, hiển thị *Chủng tộc* + *Môn phái* (Thiên Đình / Ma Giới / Yêu Giới), la bàn chỉ số kèm kiểu hình (Pháp sư hình, Lực sĩ hình, Mẫn tiệp hình…), nút tên ngẫu nhiên 🎲.
 - **Bảng nhân vật**: thanh Khí huyết / Pháp lực, bảng Công · Pháp công · Thủ · Kháng · Tốc · Né · Bạo · Sức chứa, nút [+]/[−] nổi khối, la bàn có nhãn kiểu hình.
@@ -127,7 +134,7 @@ TDK_TEST=1 TDK_REG_LIMIT=1000 TDK_CONN_LIMIT=100 TDK_EVENT=tet node server.js
 node tools/full-test.js
 ```
 
-81 ca kiểm thử: HTTP, tài khoản, mã khôi phục, dò mật khẩu, dữ liệu bẩn/gian lận, spam, hằng ngày, tháp, thú cưỡi, chế tạo, Tiên sủng, chợ (2 người, mua tranh nhau), tổ đội, sự kiện, 12 người chơi cùng lúc. **`TDK_TEST=1` chỉ dùng khi thử – không đặt biến này trên Render.**
+88 ca kiểm thử: HTTP, tài khoản, mã khôi phục, tuyển đội, dò mật khẩu, dữ liệu bẩn/gian lận, spam, hằng ngày, tháp, thú cưỡi, chế tạo, Tiên sủng, chợ (2 người, mua tranh nhau), tổ đội, sự kiện, 12 người chơi cùng lúc. **`TDK_TEST=1` chỉ dùng khi thử – không đặt biến này trên Render.**
 
 ## Quản lý dữ liệu
 

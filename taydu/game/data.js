@@ -252,7 +252,7 @@ const CONFIG = {
   maxLevel: 99,
   pointsPerLevel: 5,
   petBag: 8,
-  bagSize: 60,
+  bagSize: 200,
   dailyPeach: 5,
   dailyArena: 5,
   dailyTreasure: 10,

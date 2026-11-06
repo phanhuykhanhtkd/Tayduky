@@ -418,6 +418,20 @@ const GameMap = (() => {
   //  KHUNG HÌNH HD-2D: dựng cảnh 3D bằng WebGL, chữ/nhãn vẽ trên lớp 2D
   // =====================================================================
   const imgCache = {};
+  // màu tên NPC theo vai trò: nhiệm vụ vàng · cửa hàng xanh · thầy thuốc lục · boss đỏ
+  function nameCol(n) { return n.boss ? '#ff9a85' : n.role === 'shop' ? '#8ad8ff' : n.role === 'heal' ? '#9af0a0' : n.role ? '#ffb0e0' : '#f3d27a'; }
+  // dấu chấm than nhiệm vụ: vàng (nói chuyện) / đỏ (boss), nảy lên xuống
+  function bang(x, y, h, boss) {
+    const w = h * 0.42, col = boss ? '#ff4a3a' : '#ffd23a', dk = boss ? '#5a0a08' : '#6a3a08';
+    ctx.save(); ctx.shadowColor = boss ? 'rgba(255,80,40,.9)' : 'rgba(255,214,90,.95)'; ctx.shadowBlur = 12;
+    ctx.fillStyle = dk; ctx.beginPath(); ctx.moveTo(x - w / 2 - 2, y - h - 2); ctx.lineTo(x + w / 2 + 2, y - h - 2); ctx.lineTo(x + w * 0.28 + 1.5, y - h * 0.28 + 1.5); ctx.lineTo(x - w * 0.28 - 1.5, y - h * 0.28 + 1.5); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y - h * 0.08, w * 0.36 + 2, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0; const g = ctx.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, '#fff8c0'); g.addColorStop(0.5, col); g.addColorStop(1, boss ? '#b8201a' : '#d88a10');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - w / 2, y - h); ctx.lineTo(x + w / 2, y - h); ctx.lineTo(x + w * 0.28, y - h * 0.28); ctx.lineTo(x - w * 0.28, y - h * 0.28); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y - h * 0.08, w * 0.36, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(x - w * 0.32, y - h + 2, w * 0.16, h * 0.4);
+    ctx.restore();
+  }
   function frameHD(now) {
     const k = 1 / T, th = TH[M.theme];
     const h = new Date().getHours() + new Date().getMinutes() / 60;
@@ -467,15 +481,10 @@ const GameMap = (() => {
     }
     for (const [n, hgt] of npcPos) {
       const p = Hd2d.project(n.x + 0.5, 0, n.y + 1.05); if (!p) continue;
-      label(n.name, p.x, p.y, n.boss ? '#ff9a85' : '#f3d27a', 'rgba(15,9,6,.75)', true);
+      label(n.name, p.x, p.y, nameCol(n), 'rgba(15,9,6,.75)', true);
       if (questNpc === n.id) {
         const tt = 0.6, hh2 = hgt + 0.3 + Math.sin(now / 220) * 0.06; const q = Hd2d.project(n.x + 0.5, hh2 * Math.cos(tt), n.y + 0.9 - hh2 * Math.sin(tt)); if (!q) continue;
-        const s2 = T * 0.3;
-        ctx.save(); ctx.shadowColor = 'rgba(255,214,90,.9)'; ctx.shadowBlur = 10; ctx.fillStyle = n.boss ? '#a8322a' : '#c9962e';
-        ctx.beginPath(); ctx.moveTo(q.x, q.y - s2); ctx.lineTo(q.x + s2 * 0.75, q.y); ctx.lineTo(q.x, q.y + s2); ctx.lineTo(q.x - s2 * 0.75, q.y); ctx.closePath(); ctx.fill();
-        ctx.shadowBlur = 0; ctx.strokeStyle = '#fff2c0'; ctx.lineWidth = 1.5; ctx.stroke();
-        ctx.fillStyle = '#fff8e0'; ctx.font = `700 ${T * 0.3}px Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n.boss ? '⚔' : '!', q.x, q.y + 1);
-        ctx.restore();
+        bang(q.x, q.y, T * 0.5, n.boss);
       }
     }
     for (const [name, px, py, self, hh] of heroes) {
@@ -588,19 +597,8 @@ const GameMap = (() => {
       ctx.font = `${sz}px ${EMOJI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#000';
       ctx.fillText(n.icon, cx, by - T * 0.14 + bob);
     }
-    overlay.push(() => label(n.name, cx, by - T * 0.04, n.boss ? '#ff9a85' : '#f3d27a', 'rgba(15,9,6,.75)', true));
-    if (questNpc === n.id) overlay.push(() => {
-      const b2 = Math.sin(now / 220) * T * 0.08;
-      const yy = by - sz - T * 0.35 + b2;
-      ctx.save();
-      ctx.shadowColor = 'rgba(255,214,90,.9)'; ctx.shadowBlur = 10;
-      ctx.fillStyle = n.boss ? '#a8322a' : '#c9962e';
-      ctx.beginPath(); ctx.moveTo(cx, yy - T * 0.3); ctx.lineTo(cx + T * 0.22, yy); ctx.lineTo(cx, yy + T * 0.3); ctx.lineTo(cx - T * 0.22, yy); ctx.closePath(); ctx.fill();
-      ctx.shadowBlur = 0; ctx.strokeStyle = '#fff2c0'; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.fillStyle = '#fff8e0'; ctx.font = `700 ${T * 0.3}px Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(n.boss ? '⚔' : '!', cx, yy + 1);
-      ctx.restore();
-    });
+    overlay.push(() => label(n.name, cx, by - T * 0.04, nameCol(n), 'rgba(15,9,6,.75)', true));
+    if (questNpc === n.id) overlay.push(() => bang(cx, by - sz - T * 0.3 + Math.sin(now / 220) * T * 0.08, T * 0.5, n.boss));
   }
 
   function drawHero(race, gender, px, py, name, self, now, moving, face, gear) {

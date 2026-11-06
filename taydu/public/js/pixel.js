@@ -181,6 +181,10 @@ const Art = (() => {
     if (t === 'buns2') { b.ell(cx - 7, cy - 9, 3.5, 3.5, o.hair, 1); b.ell(cx + 7, cy - 9, 3.5, 3.5, o.hair, 1); b.rect(cx - 9, cy - 8, 4, 1, R, 0); b.rect(cx + 5, cy - 8, 4, 1, R, 0); }
     if (t === 'rabbitears') { b.ell(cx - 5, cy - 15, 2.6, 7, o.hair || '#ffffff', 1); b.ell(cx + 5, cy - 15, 2.6, 7, o.hair || '#ffffff', 1); b.ell(cx - 5, cy - 15, 1.2, 5, '#f4a8c8', 0); b.ell(cx + 5, cy - 15, 1.2, 5, '#f4a8c8', 0); }
     if (t === 'hood') { b.poly([[cx - 11, cy + 4], [cx - 10, cy - 7], [cx, cy - 12], [cx + 10, cy - 7], [cx + 11, cy + 4], [cx + 8, cy - 2], [cx, cy - 6], [cx - 8, cy - 2]], o.hoodc || '#3a2a40', 1); }
+    if (t === 'phoenix') { // mũ phượng sí tử kim quan: vành vàng + hai lông trĩ dài
+      for (const s2 of [-1, 1]) { b.curve([[cx + s2 * 3, cy - 9], [cx + s2 * 10, cy - 19], [cx + s2 * 20, cy - 19]], '#d8302a', (q) => 1.8 - q * 0.9, 0.4); b.curve([[cx + s2 * 20, cy - 19], [cx + s2 * 25, cy - 18], [cx + s2 * 27, cy - 13]], '#ff6a3a', 1, 0.3); }
+      b.rect(cx - 9, cy - 9, 18, 3, G, 0.7); b.poly([[cx - 4, cy - 9], [cx, cy - 14], [cx + 4, cy - 9]], G, 1); b.ell(cx, cy - 10.5, 1.4, 1.4, R, 0); }
+    if (t === 'smallhorns') { for (const s2 of [-1, 1]) b.curve([[cx + s2 * 5, cy - 7], [cx + s2 * 8, cy - 10], [cx + s2 * 7, cy - 14]], o.horn || '#2a2224', (q) => 2.4 - q * 1.8, 1); }
     if (t === 'mask') { b.rect(cx - 9, cy + 2, 18, 4, '#2a2228', 0.6); }
   }
 
@@ -343,6 +347,7 @@ const Art = (() => {
     if (w === 'club') { b.line(x, y - 18, x, y + 10, '#6a4422', 3); b.ell(x, y - 20, 3.5, 5, '#5a3a20', 1); }
     if (w === 'mace') { b.line(x, y - 16, x, y + 10, '#5a3a20', 2); b.ell(x, y - 19, 4, 4, '#8a96a8', 1); for (const [dx, dy] of [[-4, -19], [4, -19], [0, -23]]) b.px(x + dx, y + dy, '#c8d2dc'); }
     if (w === 'lantern') { b.line(x, y - 10, x, y, '#5a3a20', 1); b.ell(x, y + 3, 3, 4, '#e0402a', 1); b.rect(x - 2, y - 1, 4, 1, G, 0); }
+    if (w === 'khakkhara') { b.line(x, y - 28, x, y + 12, '#c89a2a', 2); b.ell(x, y - 31, 4.5, 4.5, G, 1); b.ell(x, y - 31, 2.6, 2.6, null); for (const d of [-4, 4]) b.ell(x + d, y - 27, 1.4, 1.4, '#fff0a0', 0.5); b.px(x, y - 36, G); }
     if (w === 'wheel') { /* vẽ ở chân */ }
   }
 
@@ -706,35 +711,39 @@ const Art = (() => {
   }
   function weaponTall(b, x, y, o, k = 1.85) { weapon(scaled(b, x, y, k), x, y, o); }
 
-  // mặt có cảm xúc: calm · smile · angry · hurt · cast · blink
-  function faceFn(o, expr) {
+  // mặt có cảm xúc: calm · smile · angry · hurt · cast · blink – k: hệ số cỡ đầu
+  function faceFn(o, expr, k = 1) {
     return (b, cx, cy) => {
-      const eye = o.eye || EYE, iris = o.eyeColor || '#5a3a24', ey = cy + 1;
+      const eye = o.eye || EYE, iris = o.eyeColor || '#5a3a24', ey = Math.round(cy + 1 * k);
       const brow = o.brows || drk(C(o.hair || '#2a1a10'), 0.1);
-      const L = cx - 4.5, R = cx + 2.5;
-      if (expr === 'hurt') { for (const [x, d] of [[L, 1], [R, -1]]) { b.line(x, ey - 1, x + 2, ey + (d > 0 ? 0.5 : 0.5), eye); b.line(x, ey + 2, x + 2, ey + 0.5, eye); } }
-      else if (expr === 'cast' || expr === 'blink' || o.closedEyes) { for (const x of [L, R]) { b.line(x, ey + 1, x + 2.5, ey + 1, eye); b.px(x - 0.5, ey, eye); b.px(x + 3, ey, eye); } }
-      else if (expr === 'smile') { for (const x of [L, R]) { b.line(x, ey + 1, x + 1.2, ey - 0.4, eye); b.line(x + 1.2, ey - 0.4, x + 2.5, ey + 1, eye); } }
-      else for (const x of [L, R]) { // mắt hạnh nhân: mi trên, tròng màu, đốm sáng
-        b.line(x - 0.5, ey - 1.2, x + 3, ey - 1.2, eye);
-        b.rect(x + 0.4, ey - 0.4, 2, 2.4, iris, 0); b.px(x + 0.9, ey + 0.4, eye);
-        b.px(x + 0.4, ey - 0.4, '#ffffff'); b.px(x + 2.4, ey + 1.4, lit(C(iris), 0.4));
-        if (o.lashes) { b.px(x - 0.8, ey - 1.8, eye); b.px(x + 3.2, ey - 1.8, eye); }
+      const gap = Math.round(3.6 * k), ew = k > 1.08 ? 3 : 2, eh = k > 1.08 ? 3 : 2.4;
+      const L = Math.round(cx - gap - ew + 0.5), R = Math.round(cx + gap - 0.5);
+      const fem = o.lashes || o.body === 'dress';
+      for (const x of [L, R]) {
+        if (expr === 'hurt') { b.line(x, ey - 1, x + ew, ey + 0.5, eye); b.line(x, ey + 2, x + ew, ey + 0.5, eye); }
+        else if (expr === 'cast' || expr === 'blink' || o.closedEyes) { b.line(x, ey + 1, x + ew, ey + 1, eye); b.px(x - 1, ey, eye); b.px(x + ew + 1, ey, eye); }
+        else if (expr === 'smile') { b.line(x, ey + 1, x + ew / 2, ey - 0.5, eye); b.line(x + ew / 2, ey - 0.5, x + ew, ey + 1, eye); }
+        else { // mắt to kiểu hoạt hình: mi trên đậm, tròng màu, hai đốm sáng
+          b.line(x - 1, ey - 1.5, x + ew, ey - 1.5, eye);
+          b.rect(x, ey - 0.5, ew, eh, iris, 0); b.rect(x + (ew > 2 ? 1 : 0.5), ey + 0.5, ew > 2 ? 1.5 : 1, eh - 1, eye, 0);
+          b.px(x, ey - 0.5, '#ffffff'); b.px(x + ew - 1, ey + eh - 1.5, lit(C(iris), 0.45));
+          if (fem) { b.px(x - 1.5, ey - 2.2, eye); b.px(x + ew + 0.5, ey - 2.2, eye); }
+        }
       }
-      // lông mày theo cảm xúc
-      if (expr === 'angry') { b.line(L - 0.5, ey - 3.4, L + 3, ey - 2, brow, 1); b.line(R - 0.5, ey - 2, R + 3, ey - 3.4, brow, 1); }
-      else if (expr === 'hurt') { b.line(L - 0.5, ey - 2.4, L + 3, ey - 3.6, brow, 1); b.line(R - 0.5, ey - 3.6, R + 3, ey - 2.4, brow, 1); }
-      else { b.line(L - 0.5, ey - 3.2, L + 2.8, ey - 3.6, brow, 1); b.line(R - 0.3, ey - 3.6, R + 3, ey - 3.2, brow, 1); }
-      // mũi, má, miệng
-      b.px(cx - 0.2, cy + 3.6, drk(C(o.skin || SKIN), 0.22));
-      if (!o.noBlush) { b.px(cx - 6, ey + 3, '#f2a090'); b.px(cx - 5, ey + 3, '#f6b8a4'); b.px(cx + 5, ey + 3, '#f6b8a4'); b.px(cx + 6, ey + 3, '#f2a090'); }
-      const m = o.mouth || '#b0503a';
-      if (expr === 'smile' || o.smile) { b.px(cx - 1.6, cy + 5.6, m); b.line(cx - 0.8, cy + 6.4, cx + 1, cy + 6.4, m); b.px(cx + 1.8, cy + 5.6, m); }
-      else if (expr === 'angry') { b.line(cx - 1.6, cy + 6.4, cx + 1.8, cy + 6.4, drk(C(m), 0.3)); b.px(cx - 0.5, cy + 6.4, '#ffffff'); b.px(cx + 0.7, cy + 6.4, '#ffffff'); }
-      else if (expr === 'hurt') { b.ell(cx, cy + 6.4, 1.4, 1.1, '#5a1a14', 0); }
-      else b.line(cx - 0.8, cy + 6.2, cx + 1, cy + 6.2, m);
-      if (o.thirdEye) { b.px(cx, cy - 4, '#d42a2a').px(cx, cy - 3, '#ffd65a'); }
-      if (o.mark) { b.px(cx, cy - 4, o.mark); b.px(cx, cy - 5, o.mark); }
+      const by = ey - Math.round(3.2 * k);
+      if (expr === 'angry') { b.line(L - 1, by - 1, L + ew, by + 1, brow, 1); b.line(R, by + 1, R + ew + 1, by - 1, brow, 1); }
+      else if (expr === 'hurt') { b.line(L - 1, by + 0.6, L + ew, by - 0.8, brow, 1); b.line(R, by - 0.8, R + ew + 1, by + 0.6, brow, 1); }
+      else if (!o.noBrows) { b.line(L - 0.5, by, L + ew, by - 0.6, brow, 1); b.line(R, by - 0.6, R + ew + 0.5, by, brow, 1); }
+      b.px(cx - 0.2, cy + 3.8 * k, drk(C(o.skin || SKIN), 0.24));
+      if (!o.noBlush) { const bx = Math.round(6 * k), byy = ey + Math.round(3 * k); b.px(cx - bx, byy, '#f2a090'); b.px(cx - bx + 1, byy, '#f6b8a4'); b.px(cx + bx - 1, byy, '#f6b8a4'); b.px(cx + bx, byy, '#f2a090'); }
+      const m = o.mouth || '#b0503a', my = Math.round(cy + 6.2 * k);
+      if (expr === 'smile' || (o.smile && expr === 'calm')) { b.px(cx - 2, my - 1, m); b.line(cx - 1, my, cx + 1, my, m); b.px(cx + 2, my - 1, m); }
+      else if (expr === 'angry') { b.line(cx - 2, my, cx + 2, my, drk(C(m), 0.3)); b.px(cx - 1, my, '#ffffff'); b.px(cx + 1, my, '#ffffff'); }
+      else if (expr === 'hurt') b.ell(cx, my, 1.5, 1.2, '#5a1a14', 0);
+      else b.line(cx - 1, my, cx + 1, my, m);
+      if (o.thirdEye) { b.px(cx, cy - 4 * k, '#d42a2a').px(cx, cy - 3 * k, '#ffd65a'); }
+      if (o.mark) { b.px(cx, cy - 4.5 * k, o.mark); b.px(cx, cy - 5.5 * k, o.mark); }
+      if (o.manyEyes) for (const [x, y] of [[-7, -3], [6, -3], [-2, -5], [2, -5]]) { b.px(cx + x * k, cy + y * k, '#ffd040'); b.px(cx + x * k, cy + (y + 1) * k, '#2a1a0a'); }
     };
   }
 
@@ -748,226 +757,258 @@ const Art = (() => {
     b.d = out; return b;
   }
 
+  // =====================================================================
+  //  DÁNG NGƯỜI 4–5 ĐẦU – 6 kiểu thân, khung chung 80×124 (chân chạm đáy)
+  //  → mọi nhân vật cùng một thước đo: trẻ con thấp, khổng lồ cao to
+  // =====================================================================
+  const BUILD = {
+    kid: { h: 74, k: 1.3, sh: 8, waist: 6, hip: 7, arm: 4.4, leg: 0.4, neck: 2 },
+    slim: { h: 100, k: 1.18, sh: 9.5, waist: 5.5, hip: 9.5, arm: 3.8, leg: 0.5, neck: 3.5 },
+    male: { h: 104, k: 1.2, sh: 12, waist: 8, hip: 9, arm: 5, leg: 0.48, neck: 3.5 },
+    brawny: { h: 108, k: 1.16, sh: 16, waist: 10.5, hip: 11, arm: 7, leg: 0.45, neck: 4 },
+    fat: { h: 98, k: 1.24, sh: 13, waist: 14, hip: 13, arm: 6, leg: 0.34, neck: 2, belly: 15 },
+    giant: { h: 120, k: 1.3, sh: 20, waist: 14, hip: 15, arm: 9, leg: 0.44, neck: 4 },
+  };
+  function buildOf(o) {
+    if (o.build && BUILD[o.build]) return o.build;
+    if (o.body === 'dress') return 'slim';
+    if (o.wide) return o.body === 'armor' ? 'brawny' : 'fat';
+    return 'male';
+  }
+
   function tallHumanoid(o, frame = 0, expr = 'calm') {
-    const W = 72, Hh = 140, b = new Buf(W, Hh);
-    const cx = 36, bob = frame ? -1 : 0, hy = 21 + bob, feet = 138;
-    const walk = frame === 1 ? 2 : frame === 2 ? -2 : 0;
+    const W = 80, Hh = 124, b = new Buf(W, Hh), cx = 40, F = 122;
+    const bt = buildOf(o), B = BUILD[bt], k = B.k;
+    const bob = frame ? -1 : 0, walk = frame === 1 ? 2 : frame === 2 ? -2 : 0, sway = walk * 0.7;
+    const top = F - B.h, hy = Math.round(top + 10.5 * k) + bob;
+    const t = Math.round(hy + 8.5 * k + B.neck) + bob;                     // đường vai
+    const crotch = Math.round(F - (F - t) * B.leg), sy = Math.round(t + (crotch - t) * 0.62); // đáy quần, thắt lưng
+    const extra = o.wide && bt !== 'brawny' && bt !== 'fat' && bt !== 'giant' ? 2 : 0;
+    const sh = B.sh + extra, waist = B.waist + extra, hip = B.hip + extra;
     const main = o.robe || '#b84a3a', trim = o.trim || '#e8c45a', inner = o.inner || drk(C(main), 0.28);
-    const style = o.body || 'robe', big = o.wide ? 3 : 0, fem = style === 'dress';
-    const sh = (fem ? 10 : 12) + big, waist = (fem ? 6.5 : 8.5) + big, t = 34 + bob;   // vai, eo, đường vai
-    const hemY = feet - 5, sway = walk * 0.8;
+    const style = o.body || 'robe', fem = bt === 'slim', hemY = F - 4;
     const skin = o.skin || SKIN, hand = o.hand || skin, sleeve = o.sleeve || main;
-    const fold = drk(C(main), 0.2), fold2 = lit(C(main), 0.16);
+    const fold = drk(C(main), 0.2), fold2 = lit(C(main), 0.16), sash = o.sash || trim;
+    const legW = Math.max(4, B.arm * 0.95);
+    b.meta = { cx, hy, k, t, sy };
 
     // ---------- lớp sau ----------
-    if (o.halo) { b.ell(cx, hy - 1, 15, 15, o.halo, 0); b.ell(cx, hy - 1, 13.4, 13.4, null); for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.283; b.px(cx + Math.cos(a) * 16.5, hy - 1 + Math.sin(a) * 16.5, lit(C(o.halo), 0.3)); } }
-    if (o.wings) { b.poly([[cx - 6, t + 4], [cx - 30, t - 18], [cx - 34, t + 6], [cx - 26, t + 30], [cx - 8, t + 22]], o.wings, 0.8); b.poly([[cx + 6, t + 4], [cx + 30, t - 18], [cx + 34, t + 6], [cx + 26, t + 30], [cx + 8, t + 22]], o.wings, 0.8);
-      for (const s2 of [-1, 1]) for (let i = 0; i < 4; i++) b.line(cx + s2 * 8, t + 8 + i * 4, cx + s2 * (30 - i * 2), t - 12 + i * 10, drk(C(o.wings), 0.25)); }
-    if (o.cape) { b.poly([[cx - sh + 1, t + 1], [cx + sh - 1, t + 1], [cx + sh + 7 + sway, feet - 12], [cx + sh + 2 + sway, feet - 8], [cx - sh - 2 + sway, feet - 8], [cx - sh - 7 + sway, feet - 12]], o.cape, 0.7);
-      for (let i = -2; i <= 2; i++) b.line(cx + i * 4, t + 10, cx + i * 6 + sway, feet - 12, drk(C(o.cape), 0.2)); }
-    if (o.hairBack || o.hairStyle === 'long' || o.hairStyle === 'twinlong') { const hb = o.hair || '#24160e';
-      b.poly([[cx - 10, hy - 2], [cx + 10, hy - 2], [cx + 11, hy + 18], [cx + 9 + sway, t + 40], [cx + 3 + sway, t + 46], [cx - 3 + sway, t + 46], [cx - 9 + sway, t + 40], [cx - 11, hy + 18]], hb, 0.7);
-      for (let i = -2; i <= 2; i++) b.line(cx + i * 3, hy + 10, cx + i * 3.6 + sway, t + 42, lit(C(hb), 0.12)); }
-    if (o.ribbon) for (const s2 of [-1, 1]) { // thiên y bay: từ sau vai vòng qua khuỷu, buông tới gối
-      b.curve([[cx + s2 * (sh - 4), t + 1], [cx + s2 * (sh + 13), t + 18], [cx + s2 * (sh + 8) + sway, t + 52]], o.ribbon, (k) => 3 - k * 0.8, 0.5);
-      b.curve([[cx + s2 * (sh + 8) + sway, t + 52], [cx + s2 * (sh + 4) + sway, t + 66], [cx + s2 * (sh + 10) + sway * 1.5, t + 80]], o.ribbon, (k) => 2.2 - k, 0.5);
+    if (o.halo) { const r = 15 * k; b.ell(cx, hy - 1, r, r, o.halo, 0); b.ell(cx, hy - 1, r - 1.6, r - 1.6, null); for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.283; b.px(cx + Math.cos(a) * (r + 1.6), hy - 1 + Math.sin(a) * (r + 1.6), lit(C(o.halo), 0.3)); } }
+    if (o.wings) for (const s2 of [-1, 1]) { b.poly([[cx + s2 * 5, t + 4], [cx + s2 * 32, t - 20], [cx + s2 * 37, t + 4], [cx + s2 * 28, t + 28], [cx + s2 * 8, t + 20]], o.wings, 0.8); for (let i = 0; i < 4; i++) b.line(cx + s2 * 8, t + 8 + i * 4, cx + s2 * (32 - i * 2), t - 14 + i * 10, drk(C(o.wings), 0.25)); }
+    if (o.cape) { b.poly([[cx - sh + 2, t + 1], [cx + sh - 2, t + 1], [cx + sh + 6 + sway, F - 10], [cx + sh + 1 + sway, F - 6], [cx - sh - 1 + sway, F - 6], [cx - sh - 6 + sway, F - 10]], o.cape, 0.7);
+      for (let i = -2; i <= 2; i++) b.line(cx + i * (sh / 4), t + 8, cx + i * (sh / 2.6) + sway, F - 10, drk(C(o.cape), 0.2)); }
+    const longHair = o.hairBack || o.hairStyle === 'long' || o.hairStyle === 'twinlong';
+    if (longHair && !o.head) { const hb = o.hair || '#24160e', hr = 10 * k, hl = sy + (fem ? 10 : 2);
+      b.poly([[cx - hr, hy - 2], [cx + hr, hy - 2], [cx + hr + 1, hy + 14 * k], [cx + hr - 1 + sway, hl - 4], [cx + 3 + sway, hl + 2], [cx - 3 + sway, hl + 2], [cx - hr + 1 + sway, hl - 4], [cx - hr - 1, hy + 14 * k]], hb, 0.7);
+      for (let i = -2; i <= 2; i++) b.line(cx + i * 3, hy + 10 * k, cx + i * 3.4 + sway, hl - 2, lit(C(hb), 0.12)); }
+    if (o.ribbon) for (const s2 of [-1, 1]) { // thiên y / hỗn thiên lăng bay quanh người
+      b.curve([[cx + s2 * (sh - 3), t + 1], [cx + s2 * (sh + 12), t + (sy - t) * 0.5], [cx + s2 * (sh + 7) + sway, sy + 8]], o.ribbon, (q) => 2.8 - q * 0.7, 0.5);
+      b.curve([[cx + s2 * (sh + 7) + sway, sy + 8], [cx + s2 * (sh + 3) + sway, sy + 22], [cx + s2 * (sh + 9) + sway * 1.5, Math.min(F - 6, sy + 36)]], o.ribbon, (q) => 2.1 - q, 0.5);
     }
     if (o.tail) {
-      const ty = t + 40;
-      if (o.tail === 'fox') for (const a of [1, 0]) b.curve([[cx + 8, ty + 14], [cx + 24 + a * 4, ty + 22 - a * 4], [cx + 22 + a * 8, ty - 4 - a * 6]], o.tailc || '#f4eefe', (k) => 3 + Math.sin(k * 3.1) * 3.4, 0.9);
-      if (o.tail === 'monkey') b.curve([[cx + 6, ty + 4], [cx + 30, ty + 8], [cx + 26, ty - 20]], o.fur, 2.6, 0.8);
-      if (o.tail === 'pig') b.curve([[cx + 8, ty], [cx + 15, ty - 2], [cx + 12, ty - 7]], o.fur, 2, 0.5);
-      if (o.tail === 'bull' || o.tail === 'tiger' || o.tail === 'wolf' || o.tail === 'rat') b.curve([[cx + 8, ty + 4], [cx + 28, ty + 10], [cx + 27, ty - 10]], o.tail === 'wolf' ? o.fur : o.tailc || o.fur, o.tail === 'wolf' ? (k) => 2.6 + k * 4 : 2.2, 0.7);
-      if (o.tail === 'scorpion') { const seg = [[cx + 10, ty], [cx + 20, ty - 8], [cx + 25, ty - 22], [cx + 25, ty - 36], [cx + 20, ty - 48], [cx + 13, ty - 54]]; seg.forEach(([x, y], i) => b.ell(x, y, 4.5 - i * 0.35, 3.8, o.tailc || '#8a3a2a', 1)); b.poly([[cx + 13, ty - 58], [cx + 5, ty - 61], [cx + 9, ty - 53]], '#2a1010', 0.4); }
+      const ty = sy + 4, tc = o.tailc || o.fur || '#f4eefe';
+      if (o.tail === 'fox') { const n = o.tails || 1; for (let i = 0; i < n; i++) { const a = n === 1 ? 0 : (i / (n - 1) - 0.5) * 2; // xoè hình quạt sau lưng
+        b.curve([[cx + 3, ty + 6], [cx + 14 + a * 12, ty - 4 - Math.abs(a) * 4], [cx + a * 26 + (n === 1 ? 20 : 0), ty - 30 + Math.abs(a) * 12]], tc, (q) => 2.6 + Math.sin(q * 3.1) * 3.2, 0.9);
+        b.px(cx + a * 26 + (n === 1 ? 20 : 0), ty - 30 + Math.abs(a) * 12, '#ffffff'); } }
+      if (o.tail === 'monkey') b.curve([[cx + 6, ty + 4], [cx + 30, ty + 8], [cx + 27, ty - 22]], o.fur, 2.6, 0.8);
+      if (o.tail === 'pig') b.curve([[cx + 9, ty], [cx + 16, ty - 2], [cx + 13, ty - 7]], o.fur, 2, 0.5);
+      if (o.tail === 'bull' || o.tail === 'tiger' || o.tail === 'wolf' || o.tail === 'rat') b.curve([[cx + 8, ty + 4], [cx + 28, ty + 10], [cx + 28, ty - 10]], o.tail === 'wolf' ? o.fur : tc, o.tail === 'wolf' ? (q) => 2.6 + q * 4 : 2.2, 0.7);
+      if (o.tail === 'scorpion') { const seg = [[cx + 10, ty], [cx + 20, ty - 8], [cx + 25, ty - 22], [cx + 25, ty - 34], [cx + 20, ty - 44], [cx + 13, ty - 50]]; seg.forEach(([x, y], i) => b.ell(x, y, 4.5 - i * 0.35, 3.8, o.tailc || '#8a3a2a', 1)); b.poly([[cx + 13, ty - 54], [cx + 5, ty - 57], [cx + 9, ty - 49]], '#2a1010', 0.4); }
     }
-    if (o.spiderLegs) for (const s2 of [-1, 1]) for (let i = 0; i < 3; i++) { b.line(cx + s2 * 6, t + 14, cx + s2 * (22 + i * 3), t + i * 10, o.spiderLegs, 3); b.line(cx + s2 * (22 + i * 3), t + i * 10, cx + s2 * (29 + i * 2), t + 16 + i * 10, o.spiderLegs, 2); }
-    if (o.flameAura) for (let i = 0; i < 9; i++) { const a = (i / 8) * Math.PI; b.ell(cx + Math.cos(a) * 24, t + 50 - Math.sin(a) * 40, 4, 6, i % 2 ? '#ff8a2a' : '#ffd04a', 0.4); }
+    if (o.spiderLegs) for (const s2 of [-1, 1]) for (let i = 0; i < 3; i++) { b.line(cx + s2 * 6, t + 12, cx + s2 * (24 + i * 3), t + i * 9 - 4, o.spiderLegs, 3); b.line(cx + s2 * (24 + i * 3), t + i * 9 - 4, cx + s2 * (31 + i * 2), t + 12 + i * 9, o.spiderLegs, 2); }
+    if (o.flameAura) for (let i = 0; i < 9; i++) { const a = (i / 8) * Math.PI; b.ell(cx + Math.cos(a) * (sh + 14), F - 30 - Math.sin(a) * (F - top - 20) * 0.6, 4, 6, i % 2 ? '#ff8a2a' : '#ffd04a', 0.4); }
 
     // ---------- chân ----------
     const boot = o.boot || '#3a2418', pants = o.pants || drk(C(main), 0.38);
+    const legX = [cx - hip * 0.55 - legW / 2, cx + hip * 0.55 - legW / 2];
     if (style === 'short' || style === 'armor') {
-      for (const [x, d] of [[cx - 7, walk], [cx + 2, -walk]]) {
-        b.rect(x + d * 0.5, t + 46, 5.5, 44, pants, 0.8);
-        for (let yy = t + 74; yy < t + 92; yy += 4) b.line(x + d * 0.5, yy, x + 5 + d * 0.5, yy + 2, lit(C(pants), 0.2)); // xà cạp
-      }
+      legX.forEach((x, i) => { const d = i ? -walk : walk;
+        b.rect(x + d * 0.5, crotch - 6, legW, F - crotch, pants, 0.8);
+        if (bt !== 'kid') for (let yy = crotch + (F - crotch) * 0.45; yy < F - 8; yy += 3.5) b.line(x + d * 0.5, yy, x + legW + d * 0.5, yy + 1.6, lit(C(pants), 0.2)); }); // xà cạp
     }
-    for (const [x, d] of [[cx - 8, walk], [cx + 1.5, -walk]]) { b.rect(x + d, feet - 8, 7, 7, boot, 0.8); b.rect(x + d - 0.5, feet - 2, 8, 2, drk(C(boot), 0.3), 0); if (style === 'armor') b.rect(x + d, feet - 16, 7, 9, o.metal || '#8a96a8', 0.9); }
-    if (o.wheels) for (const x of [cx - 8, cx + 8]) { b.ell(x, feet - 1, 7, 2.6, '#ff8a2a', 0.5); b.ell(x, feet - 1, 3.6, 1.3, '#ffe04a', 0); }
+    legX.forEach((x, i) => { const d = i ? -walk : walk, bw = legW + 2;
+      b.rect(x + d - 1, F - 7, bw, 6, boot, 0.8); b.rect(x + d - 1.5, F - 2, bw + 1, 2, drk(C(boot), 0.3), 0);
+      if (style === 'armor') b.rect(x + d - 1, F - 14, bw, 7, o.metal || '#8a96a8', 0.9); });
+    if (o.wheels) for (const x of [cx - 9, cx + 9]) { b.ell(x, F - 1, 7.5, 2.6, '#ff8a2a', 0.5); b.ell(x, F - 1, 3.8, 1.3, '#ffe04a', 0); }
 
     // ---------- thân ----------
-    // cổ
-    b.rect(cx - 2.5, hy + 8, 5, t - hy - 7, skin, 0.6); b.line(cx - 2.5, t - 1, cx + 2.5, t - 1, drk(C(skin), 0.2));
+    const nw = Math.max(4, B.neck + 2);
+    b.rect(cx - nw / 2, hy + 7 * k, nw, t - hy - 7 * k + 2, skin, 0.6); b.line(cx - nw / 2, t, cx + nw / 2, t, drk(C(skin), 0.2));
+    const shoulders = (y0) => [[cx - sh, y0 + 5], [cx - sh + 4, y0 + 0.5], [cx - 4, y0 - 1.5], [cx + 4, y0 - 1.5], [cx + sh - 4, y0 + 0.5], [cx + sh, y0 + 5]];
     if (style === 'robe' || style === 'monk' || style === 'dress') {
-      const flare = (fem ? 19 : 16) + big;
-      // áo trên tới eo
-      b.poly([[cx - sh, t + 5], [cx - sh + 4, t + 0.5], [cx - 4, t - 1.5], [cx + 4, t - 1.5], [cx + sh - 4, t + 0.5], [cx + sh, t + 5], [cx + waist + 1, t + (fem ? 18 : 24)], [cx - waist - 1, t + (fem ? 18 : 24)]], main, 1);
-      // váy / vạt dưới xoè
-      const sk = t + (fem ? 17 : 23);
-      b.poly([[cx - waist - 1, sk], [cx + waist + 1, sk], [cx + flare * 0.7 + sway, sk + 40], [cx + flare + sway, hemY], [cx - flare + sway, hemY], [cx - flare * 0.7 + sway, sk + 40]], main, 1);
-      for (let i = -3; i <= 3; i++) if (i) b.line(cx + i * 2.2, sk + 4, cx + i * (flare / 3.6) + sway, hemY - 2, i % 2 ? fold : fold2); // nếp vải
-      // vạt trong
-      b.poly([[cx - 2.5, sk], [cx + 2.5, sk], [cx + 5 + sway, hemY], [cx - 5 + sway, hemY]], inner, 0.4);
-      // viền gấu
+      const flare = hip + (F - sy) * (fem ? 0.3 : 0.2);
+      b.poly([...shoulders(t), [cx + waist + 1, sy + 2], [cx - waist - 1, sy + 2]], main, 1);
+      b.poly([[cx - waist - 1, sy], [cx + waist + 1, sy], [cx + hip + 1 + sway * 0.5, crotch], [cx + flare + sway, hemY], [cx - flare + sway, hemY], [cx - hip - 1 + sway * 0.5, crotch]], main, 1);
+      for (let i = -3; i <= 3; i++) if (i) b.line(cx + i * 2, sy + 5, cx + i * (flare / 3.4) + sway, hemY - 2, i % 2 ? fold : fold2); // nếp vải
+      b.poly([[cx - 2.5, sy + 2], [cx + 2.5, sy + 2], [cx + 4.5 + sway, hemY], [cx - 4.5 + sway, hemY]], inner, 0.4);
       b.rect(cx - flare + sway, hemY - 3, flare * 2, 3, trim, 0.4); b.line(cx - flare + sway, hemY - 4, cx + flare + sway, hemY - 4, drk(C(trim), 0.3));
-      if (fem) { b.rect(cx - flare + 3 + sway, hemY - 16, flare * 2 - 6, 1.6, lit(C(main), 0.32), 0); b.rect(cx - flare + 1 + sway, hemY - 9, flare * 2 - 2, 1, lit(C(main), 0.25), 0); }
-      // cổ áo giao lĩnh (chữ V chéo)
-      b.poly([[cx - 6, t - 1], [cx - 1, t - 1], [cx + 4, t + 12], [cx + 1, t + 14]], o.inner || lit(C(main), 0.35), 0.3);
-      b.line(cx - 6, t - 1, cx + 2, t + 14, trim); b.line(cx + 5, t - 1, cx + 2, t + 14, trim);
-      // đai lưng, nút thắt, ngọc bội + tua
-      const sy = t + (fem ? 14 : 20);
-      b.rect(cx - waist - 1.5, sy, (waist + 1.5) * 2, 4, o.sash || trim, 0.6); b.line(cx - waist - 1, sy, cx + waist + 1, sy, lit(C(o.sash || trim), 0.4));
-      b.ell(cx - 2, sy + 2, 2.4, 2, drk(C(o.sash || trim), 0.15), 0.6);
-      b.line(cx - 3, sy + 4, cx - 5 + sway, sy + 22, o.sash || trim, 2); b.line(cx - 1, sy + 4, cx - 1 + sway, sy + 20, o.sash || trim, 2);
-      if (o.jade !== false) { b.ell(cx + 3, sy + 9, 2.2, 2.6, '#4ac29a', 0.8); b.px(cx + 2.6, sy + 8, '#c8fff0'); b.line(cx + 3, sy + 12, cx + 3 + sway, sy + 20, '#c8302a'); b.line(cx + 4, sy + 12, cx + 4.5 + sway, sy + 19, '#e0402a'); }
+      if (fem) { b.rect(cx - flare + 3 + sway, hemY - 12, flare * 2 - 6, 1.4, lit(C(main), 0.32), 0); b.rect(cx - flare + 1 + sway, hemY - 7, flare * 2 - 2, 1, lit(C(main), 0.25), 0); }
+      b.poly([[cx - 5, t - 1], [cx - 1, t - 1], [cx + 3.5, t + 10], [cx + 0.5, t + 12]], o.inner || lit(C(main), 0.35), 0.3);   // cổ áo giao lĩnh
+      b.line(cx - 5, t - 1, cx + 1.5, t + 12, trim); b.line(cx + 4.5, t - 1, cx + 1.5, t + 12, trim);
       if (style === 'monk') {
-        b.poly([[cx - sh + 1, t], [cx - sh + 6, t - 1], [cx + flare - 2 + sway, hemY - 18], [cx + flare - 6 + sway, hemY - 6], [cx - 4, t + 30]], o.kasaya || '#d4402a', 0.6);
-        for (let i = 0; i < 7; i++) b.line(cx - 7 + i * 3.4, t + 3 + i * 7, cx - 2 + i * 3.4, t + 3 + i * 7, '#ffd65a');
-        for (let i = 0; i < 4; i++) b.line(cx - 4 + i * 6, t + 4 + i * 8, cx + i * 6, t + 26 + i * 8, '#ffd65a');
+        b.poly([[cx - sh + 1, t], [cx - sh + 6, t - 1], [cx + flare - 2 + sway, hemY - 14], [cx + flare - 6 + sway, hemY - 5], [cx - 4, sy + 6]], o.kasaya || '#d4402a', 0.6);
+        for (let i = 0; i < 6; i++) b.line(cx - 7 + i * 3.6, t + 3 + i * (hemY - t) / 8, cx - 2 + i * 3.6, t + 3 + i * (hemY - t) / 8, '#ffd65a');
+        for (let i = 0; i < 4; i++) b.line(cx - 4 + i * 5.5, t + 4 + i * 6, cx + i * 5.5, t + 22 + i * 6, '#ffd65a');
       }
     } else if (style === 'short') {
-      b.poly([[cx - sh, t + 3], [cx - sh + 3, t - 1], [cx + sh - 3, t - 1], [cx + sh, t + 3], [cx + waist + 4, t + 48], [cx - waist - 4, t + 48]], main, 1);
-      for (let i = -2; i <= 2; i++) if (i) b.line(cx + i * 3, t + 26, cx + i * 4.4, t + 46, fold);
-      b.rect(cx - waist - 4, t + 45, (waist + 4) * 2, 3, trim, 0.4);
-      b.rect(cx - waist - 1, t + 22, (waist + 1) * 2, 3.5, o.sash || trim, 0.5);
-      b.line(cx - 5, t - 1, cx, t + 10, trim); b.line(cx + 5, t - 1, cx, t + 10, trim);
+      b.poly([...shoulders(t), [cx + hip + 3, crotch + 4], [cx - hip - 3, crotch + 4]], main, 1);
+      for (let i = -2; i <= 2; i++) if (i) b.line(cx + i * 3, sy + 4, cx + i * 4.2, crotch + 2, fold);
+      b.rect(cx - hip - 3, crotch + 1, (hip + 3) * 2, 3, trim, 0.4);
+      b.line(cx - 5, t - 1, cx, t + 9, trim); b.line(cx + 5, t - 1, cx, t + 9, trim);
     } else if (style === 'armor') {
       const m = o.metal || '#8a96a8', pl = o.plate || '#e8c45a';
-      // giáp ngực + vảy cá
-      b.poly([[cx - sh, t + 3], [cx - sh + 3, t - 1], [cx + sh - 3, t - 1], [cx + sh, t + 3], [cx + waist + 2, t + 24], [cx - waist - 2, t + 24]], m, 1);
-      for (let r = 0; r < 6; r++) for (let k = -3; k <= 3; k++) { const yy = t + 4 + r * 3.4, xx = cx + k * 3.4 + (r % 2) * 1.7; if (Math.abs(xx - cx) < sh - 2 - r * 0.6) b.rect(xx - 1.4, yy, 2.8, 2.6, r % 2 ? drk(C(m), 0.12) : lit(C(m), 0.1), 0.5); }
-      b.ell(cx, t + 9, 4.5, 4, pl, 1); b.ell(cx - 0.8, t + 8, 1.4, 1.2, lit(C(pl), 0.5), 0);   // hộ tâm kính
-      // đai giáp, đầu thú
-      b.rect(cx - waist - 3, t + 23, (waist + 3) * 2, 4, trim, 0.6); b.ell(cx, t + 25, 3, 2.6, pl, 1); b.px(cx - 1, t + 24, '#ffffff');
-      // vạt giáp (tasset) + vải
-      b.poly([[cx - waist - 3, t + 27], [cx + waist + 3, t + 27], [cx + waist + 7 + sway, t + 50], [cx - waist - 7 + sway, t + 50]], main, 1);
-      for (let k = -2; k <= 2; k++) b.rect(cx + k * 5.2 - 2.4 + sway * 0.5, t + 29, 4.6, 15, k % 2 ? drk(C(m), 0.1) : m, 0.6);
-      b.line(cx - waist - 7 + sway, t + 50, cx + waist + 7 + sway, t + 50, trim);
-      // giáp vai
-      for (const s2 of [-1, 1]) { b.ell(cx + s2 * (sh + 1), t + 3, 6.5, 5, m, 1); b.ell(cx + s2 * (sh + 1), t + 5, 6, 2.2, pl, 0.4); b.line(cx + s2 * (sh - 4), t + 7, cx + s2 * (sh + 6), t + 7, trim); }
+      b.poly([...shoulders(t), [cx + waist + 2, sy + 2], [cx - waist - 2, sy + 2]], m, 1);
+      for (let r = 0; r * 3.4 < sy - t - 4; r++) for (let q = -4; q <= 4; q++) { const yy = t + 4 + r * 3.4, xx = cx + q * 3.4 + (r % 2) * 1.7; if (Math.abs(xx - cx) < sh - 2 - r * 0.6) b.rect(xx - 1.4, yy, 2.8, 2.6, r % 2 ? drk(C(m), 0.12) : lit(C(m), 0.1), 0.5); }
+      const mr = 3.5 + sh * 0.1; b.ell(cx, t + 8, mr, mr * 0.9, pl, 1); b.ell(cx - 0.8, t + 7, 1.4, 1.2, lit(C(pl), 0.5), 0);   // hộ tâm kính
+      b.poly([[cx - waist - 3, sy + 4], [cx + waist + 3, sy + 4], [cx + hip + 5 + sway, crotch + 8], [cx - hip - 5 + sway, crotch + 8]], main, 1);
+      const nT = Math.max(3, Math.round(hip / 2.6)); for (let q = 0; q < nT; q++) { const xx = cx - hip - 2 + q * ((hip * 2 + 4) / nT); b.rect(xx + sway * 0.5, sy + 6, (hip * 2 + 4) / nT - 0.6, (crotch - sy) * 0.8, q % 2 ? drk(C(m), 0.1) : m, 0.6); }
+      b.line(cx - hip - 5 + sway, crotch + 8, cx + hip + 5 + sway, crotch + 8, trim);
+      for (const s2 of [-1, 1]) { const pr = 4.5 + sh * 0.14; b.ell(cx + s2 * (sh + 1), t + 3, pr, pr * 0.78, m, 1); b.ell(cx + s2 * (sh + 1), t + 5, pr * 0.92, 2.2, pl, 0.4); b.line(cx + s2 * (sh - 4), t + 7, cx + s2 * (sh + pr), t + 7, trim); }
     }
-    if (o.necklace) for (let i = 0; i < 9; i++) { const a = Math.PI * (0.12 + 0.76 * (i / 8)); b.ell(cx + Math.cos(a) * 8, t + 2 + Math.sin(a) * 7, 1.6, 1.6, o.necklace, 0.6); }
+    if (B.belly) { // bụng phệ
+      const by0 = sy + 2; b.ell(cx, by0, B.belly, B.belly * 0.82, style === 'armor' ? (o.metal || '#8a96a8') : main, 1);
+      b.ell(cx - B.belly * 0.35, by0 - B.belly * 0.4, B.belly * 0.3, B.belly * 0.22, lit(C(style === 'armor' ? (o.metal || '#8a96a8') : main), 0.25), 0);
+      if (o.bareBelly) { const bs = o.head ? hand : skin; b.ell(cx, by0 + 1, B.belly * 0.6, B.belly * 0.58, bs, 1); b.px(cx, by0 + 3, drk(C(bs), 0.3)); }
+    }
+    // đai lưng, nút thắt, ngọc bội + tua
+    const syy = B.belly ? sy + 2 + B.belly * 0.62 : sy, bw2 = B.belly ? B.belly * 0.8 : waist + 1.5;
+    b.rect(cx - bw2, syy, bw2 * 2, 4, sash, 0.6); b.line(cx - bw2 + 0.5, syy, cx + bw2 - 0.5, syy, lit(C(sash), 0.4));
+    b.ell(cx - 2, syy + 2, 2.4, 2, drk(C(sash), 0.15), 0.6);
+    b.line(cx - 3, syy + 4, cx - 5 + sway, syy + 18, sash, 2); b.line(cx - 1, syy + 4, cx - 1 + sway, syy + 16, sash, 2);
+    if (o.jade !== false && bt !== 'kid') { b.ell(cx + 3, syy + 8, 2.2, 2.6, '#4ac29a', 0.8); b.px(cx + 2.6, syy + 7, '#c8fff0'); b.line(cx + 3, syy + 11, cx + 3 + sway, syy + 18, '#c8302a'); b.line(cx + 4, syy + 11, cx + 4.5 + sway, syy + 17, '#e0402a'); }
+    if (o.necklace) for (let i = 0; i < 9; i++) { const a = Math.PI * (0.12 + 0.76 * (i / 8)), nr = 6 + sh * 0.2; b.ell(cx + Math.cos(a) * nr, t + 2 + Math.sin(a) * nr * 0.9, 1.6, 1.6, o.necklace, 0.6); }
+    if (o.skulls) for (let i = 0; i < 7; i++) { const a = Math.PI * (0.15 + 0.7 * (i / 6)), nr = 7 + sh * 0.25; const x = cx + Math.cos(a) * nr, y = t + 3 + Math.sin(a) * nr * 0.95; b.ell(x, y, 2.2, 2, '#efe6d0', 1); b.px(x - 0.8, y, '#2a1a14'); b.px(x + 0.8, y, '#2a1a14'); }
 
-    // ---------- tay (tay áo rộng kiểu cổ trang) ----------
+    // ---------- tay ----------
     const wideSleeve = style === 'robe' || style === 'monk' || style === 'dress';
-    const handL = [cx - sh - 3, t + 31], handR = [cx + sh + 3, t + 29];
+    const hx = sh + 2 + B.arm * 0.3, hdy = Math.max(sy + 4, Math.min(crotch, sy + (crotch - sy) * 0.6));
+    const handL = [cx - hx, hdy + 1], handR = [cx + hx, hdy - 1];
     for (const s2 of [-1, 1]) {
-      const [hx, hy2] = s2 < 0 ? handL : handR;
+      const [hX, hY] = s2 < 0 ? handL : handR;
       if (wideSleeve) {
-        b.poly([[cx + s2 * (sh - 3), t - 1], [cx + s2 * (sh + 3), t + 3], [cx + s2 * (sh + 7), t + 26], [hx + s2 * 4, hy2 + 3], [hx - s2 * 5, hy2 + 2], [cx + s2 * (sh - 2), t + 16]], sleeve, 1);
-        b.line(hx + s2 * 4, hy2 + 3, hx - s2 * 5, hy2 + 2, trim, 2);
-        b.line(cx + s2 * (sh + 1), t + 8, cx + s2 * (sh + 4), t + 24, drk(C(sleeve), 0.2));
+        b.poly([[cx + s2 * (sh - 3), t - 1], [cx + s2 * (sh + 3), t + 3], [cx + s2 * (sh + B.arm + 1), hY - 6], [hX + s2 * (B.arm - 0.5), hY + 3], [hX - s2 * (B.arm + 0.5), hY + 2], [cx + s2 * (sh - 2), t + (hY - t) * 0.6]], sleeve, 1);
+        b.line(hX + s2 * (B.arm - 0.5), hY + 3, hX - s2 * (B.arm + 0.5), hY + 2, trim, 2);
+        b.line(cx + s2 * (sh + 1), t + 7, cx + s2 * (sh + B.arm - 1), hY - 4, drk(C(sleeve), 0.2));
       } else {
-        b.curve([[cx + s2 * (sh - 1), t + 2], [cx + s2 * (sh + 4), t + 14], [hx, hy2 - 3]], sleeve, (k) => 7 - k * 2.4, 1);
-        if (style === 'armor') b.rect(hx - 3, hy2 - 9, 6, 6, o.metal || '#8a96a8', 0.8);
+        b.curve([[cx + s2 * (sh - 1), t + 3], [cx + s2 * (sh + B.arm * 0.6), t + (hY - t) * 0.45], [hX, hY - 3]], sleeve, (q) => B.arm + 1.6 - q * 2, 1);
+        if (style === 'armor') b.rect(hX - B.arm / 2 - 0.5, hY - 9, B.arm + 1, 6, o.metal || '#8a96a8', 0.8);
+        if (bt === 'brawny' || bt === 'giant') b.ell(cx + s2 * (sh + B.arm * 0.45), t + (hY - t) * 0.42, B.arm * 0.5, B.arm * 0.8, skin === hand ? hand : sleeve, 0.9);
       }
-      b.ell(hx, hy2, 2.8, 2.6, hand, 0.7); b.px(hx - s2, hy2 + 1, drk(C(hand), 0.2));
+      const hr = 2.3 + B.arm * 0.12; b.ell(hX, hY, hr, hr * 0.92, hand, 0.7); b.px(hX - s2, hY + 1, drk(C(hand), 0.2));
     }
-    if (o.offhand) weaponTall(b, handL[0], handL[1], { weapon: o.offhand, fanc: o.fanc }, 1.6);
+    const wk = 1.55 * (B.h / 102);
+    if (o.offhand) weaponTall(b, handL[0], handL[1], { weapon: o.offhand, fanc: o.fanc }, wk * 0.85);
 
     // ---------- đầu ----------
-    const ho = { ...o, _face: o.head ? null : faceFn(o, expr) };
-    if (o.head) { beastHead(scaled(b, cx, hy + 2, 1.22), cx, hy + 2, o.head, o); if (expr === 'angry') { b.line(cx - 7, hy - 4, cx - 2, hy - 2, '#1a0a0a'); b.line(cx + 2, hy - 2, cx + 7, hy - 4, '#1a0a0a'); } }
-    else { humanHead(b, cx, hy, ho); hair(b, cx, hy, o); }
-    if (o.beard) { b.poly([[cx - 6, hy + 6], [cx + 6, hy + 6], [cx + 4, hy + 18], [cx + 1, hy + 28], [cx - 1, hy + 28], [cx - 4, hy + 18]], o.beard, 0.6); for (let i = -2; i <= 2; i++) b.line(cx + i * 1.5, hy + 9, cx + i * 1.1, hy + 24, lit(C(o.beard), 0.15)); if (!o.head) b.line(cx - 1, hy + 6, cx + 1, hy + 6, '#b0503a'); }
-    if (o.mustache) { b.curve([[cx, hy + 5], [cx - 6, hy + 5], [cx - 10, hy + 11]], o.mustache, 1.4, 0); b.curve([[cx, hy + 5], [cx + 6, hy + 5], [cx + 10, hy + 11]], o.mustache, 1.4, 0); }
-    hat(b, cx, hy, o);
-    if (expr === 'cast') for (let i = 0; i < 6; i++) { const a = (i / 6) * 6.283; const v = [...C('#fff6c8')]; v.noOutline = true; b.set(cx + Math.cos(a) * 12, hy + Math.sin(a) * 12, v); }
+    if (o.head) { beastHead(scaled(b, cx, hy + 2, 1.18 * k), cx, hy + 2, o.head, o); if (expr === 'angry') { b.line(cx - 7 * k, hy - 4, cx - 2, hy - 2, '#1a0a0a'); b.line(cx + 2, hy - 2, cx + 7 * k, hy - 4, '#1a0a0a'); } }
+    else { const sk = scaled(b, cx, hy, k); humanHead(sk, cx, hy, { ...o, _face: () => {} }); faceFn(o, expr, k)(b, cx, hy); hair(sk, cx, hy, o); }
+    if (o.beard) { const q = k; b.poly([[cx - 6 * q, hy + 6 * q], [cx + 6 * q, hy + 6 * q], [cx + 4 * q, hy + 16 * q], [cx + 1, hy + 24 * q], [cx - 1, hy + 24 * q], [cx - 4 * q, hy + 16 * q]], o.beard, 0.6); for (let i = -2; i <= 2; i++) b.line(cx + i * 1.5, hy + 9 * q, cx + i * 1.1, hy + 21 * q, lit(C(o.beard), 0.15)); if (!o.head) b.line(cx - 1, hy + 6 * q, cx + 1, hy + 6 * q, '#b0503a'); }
+    if (o.mustache) { b.curve([[cx, hy + 5 * k], [cx - 6 * k, hy + 5 * k], [cx - 10 * k, hy + 11 * k]], o.mustache, 1.4, 0); b.curve([[cx, hy + 5 * k], [cx + 6 * k, hy + 5 * k], [cx + 10 * k, hy + 11 * k]], o.mustache, 1.4, 0); }
+    hat(scaled(b, cx, hy, o.head ? 1.18 * k : k), cx, hy, o);
+    if (expr === 'cast') for (let i = 0; i < 6; i++) { const a = (i / 6) * 6.283; const v = [...C('#fff6c8')]; v.noOutline = true; b.set(cx + Math.cos(a) * 13 * k, hy + Math.sin(a) * 13 * k, v); }
 
     // ---------- vũ khí tay phải ----------
-    weaponTall(b, handR[0], handR[1], o, /fan|vase|gourd|abacus|lantern|whisk/.test(o.weapon || '') ? 1.35 : 1.9);
+    weaponTall(b, handR[0], handR[1], o, /fan|vase|gourd|abacus|lantern|whisk/.test(o.weapon || '') ? wk * 0.72 : wk);
     return rimLight(b);
   }
 
   const HEROES = {
-    than_m: { body: 'robe', robe: '#f4ecd6', inner: '#e8d6a8', trim: '#e0b040', sash: '#b8302a', hair: '#24160e', hairStyle: 'bun', hat: 'crown', weapon: 'staff', ribbon: '#f07a6a', boot: '#6a4422' },
-    than_f: { body: 'dress', robe: '#f8eedc', inner: '#e86a8a', trim: '#e0b040', sash: '#d24a5a', hair: '#24160e', hairStyle: 'twinlong', hairBack: true, hat: 'tiara', weapon: 'staff', ribbon: '#ff9ab0', pin: '#e8c45a', smile: true },
-    ma_m: { body: 'armor', robe: '#8a1e1e', metal: '#3e3842', plate: '#c8302a', trim: '#d4a040', hair: '#1a0e10', hairStyle: 'spiky', hat: 'horns', weapon: 'saber', cape: '#4a0c10', eye: '#5a0a0a', eyeColor: '#ff3a2a', brows: '#1a0a0a', mark: '#e0262a', noBlush: true, boot: '#1d1416', pants: '#2a1616' },
-    ma_f: { body: 'armor', robe: '#8a1e2e', metal: '#3e3842', plate: '#c8302a', trim: '#d4a040', hair: '#2a0e18', hairStyle: 'long', hairBack: true, hat: 'horns', weapon: 'saber', cape: '#4a0c18', eyeColor: '#ff3a2a', mark: '#e0262a', boot: '#1d1416', pants: '#2a1620' },
-    yeu_m: { body: 'robe', robe: '#6a4ac0', inner: '#2a1a5a', trim: '#7fe0c0', sash: '#e0b04a', hair: '#efe6fb', hairStyle: 'short', hat: 'foxears', tail: 'fox', weapon: 'fan', eyeColor: '#8a4ae8', boot: '#2a1d44' },
-    yeu_f: { body: 'dress', robe: '#8a5ad0', inner: '#2a1a5a', trim: '#7fe0c0', sash: '#e0b04a', hair: '#f4eefe', hairStyle: 'long', hairBack: true, hat: 'foxears', tail: 'fox', weapon: 'fan', eyeColor: '#8a4ae8', smile: true },
+    // Thần nam – Thiên tướng: giáp bạc viền vàng, mũ có chóp, giáo, áo choàng trắng
+    than_m: { build: 'male', body: 'armor', robe: '#2a4a8a', metal: '#c8d2e4', plate: '#ffd65a', trim: '#e0b040', sash: '#e0b040', hair: '#24160e', hairStyle: 'topknot', hat: 'crown', weapon: 'spear', cape: '#c8302a', ribbon: '#ffe08a', boot: '#6a4422', pants: '#3a4a7a', brows: '#1a0e08', eyeColor: '#3a5a8a' },
+    // Thần nữ – Tiên nữ: váy hồng trắng, thiên y dài, búi tóc cài trâm, phất trần
+    than_f: { build: 'slim', body: 'dress', robe: '#fbf0f2', inner: '#f08aa8', trim: '#e8b84a', sash: '#e05a7a', sleeve: '#fff6f8', hair: '#1e1016', hairStyle: 'bun', hairBack: true, pin: '#e8c45a', hat: 'flower', weapon: 'whisk', ribbon: '#ffb6c8', smile: true, eyeColor: '#7a3a5a' },
+    // Ma nam – Ma vương vạm vỡ: giáp đen đỏ, sừng lớn, rìu chiến, áo choàng rách
+    ma_m: { build: 'brawny', body: 'armor', robe: '#6a1414', metal: '#34303a', plate: '#c8302a', trim: '#c89030', hair: '#140a0c', hairStyle: 'wild', hat: 'horns', horn: '#e8dcc0', weapon: 'axe', cape: '#3a080c', eye: '#3a0606', eyeColor: '#ff3a2a', brows: '#0a0404', mark: '#e0262a', noBlush: true, boot: '#1d1416', pants: '#241014', skin: '#e8c0a0', hand: '#e8c0a0' },
+    // Ma nữ – Hắc y kiếm khách: giáp đen bó, tóc dài đỏ thẫm, sừng nhỏ, đao cong
+    ma_f: { build: 'slim', body: 'armor', robe: '#3a0c18', metal: '#2a2630', plate: '#d8304a', trim: '#c89030', hair: '#5a0a1e', hairStyle: 'long', hairBack: true, hat: 'smallhorns', weapon: 'saber', cape: '#6a0c1c', eyeColor: '#ff3a4a', mark: '#e0262a', boot: '#140e10', pants: '#1a1016', lashes: true },
+    // Yêu nam – Lãng khách hồ yêu: áo tím mở vạt, tóc bạc dài, tai cáo, một đuôi lớn, quạt
+    yeu_m: { build: 'male', body: 'robe', robe: '#5a3aa8', inner: '#1e1440', trim: '#7fe0c0', sash: '#2a8a7a', sleeve: '#6a4ac0', hair: '#e8e2f4', hairStyle: 'long', hairBack: true, hat: 'foxears', tail: 'fox', tails: 1, tailc: '#f0ecfa', weapon: 'fan', fanc: '#9ff0d8', eyeColor: '#a05af0', boot: '#2a1d44' },
+    // Yêu nữ – Cửu vĩ hồ ly: váy tím nhạt, chín đuôi xoè, tai cáo, quạt
+    yeu_f: { build: 'slim', body: 'dress', robe: '#c8a8f0', inner: '#5a3aa0', trim: '#7fe0c0', sash: '#a05ae0', sleeve: '#d8c0f8', hair: '#fbf6ff', hairStyle: 'long', hairBack: true, hat: 'foxears', tail: 'fox', tails: 9, tailc: '#fff6ff', weapon: 'fan', fanc: '#ffb0e0', eyeColor: '#c040e0', smile: true },
   };
 
+
   const NPCS = {
-    thaibach: { body: 'robe', robe: '#f2f0ea', inner: '#c8c0b0', trim: '#e0b040', hair: '#f6f6f2', hairStyle: 'topknot', beard: '#f6f6f2', weapon: 'whisk', brows: '#f6f6f2', closedEyes: true },
-    tho_dao: { body: 'robe', robe: '#a8743a', inner: '#6a4422', trim: '#e0b040', hair: '#f2eee6', hairStyle: 'bald', hat: 'scholar', beard: '#f2eee6', weapon: 'staff', closedEyes: true, wide: true },
-    duocsu1: { body: 'short', robe: '#e8f0e0', trim: '#4aae7a', hair: '#24160e', hairStyle: 'twin', weapon: 'gourd', smile: true },
+    thaibach: { build: 'male', body: 'robe', robe: '#f2f0ea', inner: '#c8c0b0', trim: '#e0b040', hair: '#f6f6f2', hairStyle: 'topknot', beard: '#f6f6f2', weapon: 'whisk', brows: '#f6f6f2', closedEyes: true },
+    tho_dao: { build: 'kid', body: 'robe', robe: '#a8743a', inner: '#6a4422', trim: '#e0b040', hair: '#f2eee6', hairStyle: 'bald', hat: 'scholar', beard: '#f2eee6', weapon: 'staff', closedEyes: true, wide: true },
+    duocsu1: { build: 'kid', body: 'short', robe: '#e8f0e0', trim: '#4aae7a', hair: '#24160e', hairStyle: 'twin', weapon: 'gourd', smile: true },
     shop1: { body: 'robe', robe: '#3a5a8a', inner: '#24365a', trim: '#e0b040', hair: '#24160e', hairStyle: 'short', hat: 'cap', capc: '#2a2a3a', weapon: 'abacus', mustache: '#24160e', smile: true },
-    hangnga: { body: 'dress', robe: '#fbf4fa', inner: '#f4b8d0', trim: '#c8b0f0', sash: '#e88ab0', hair: '#1a1018', hairStyle: 'bun', hairBack: true, pin: '#e8c45a', hat: 'flower', ribbon: '#bfe6ff', smile: true },
-    culinh: { body: 'armor', robe: '#5a6a3a', metal: '#7a6a4a', plate: '#e0b040', trim: '#c8302a', head: 'demon', fur: '#6a9a5a', beard: '#2a2a1a', weapon: 'axe', wide: true, cape: '#3a2a1a' },
-    nata: { body: 'short', robe: '#f2d0a0', trim: '#e0b040', sash: '#e02a2a', ribbon: '#ff3a3a', hair: '#1a1010', hairStyle: 'short', hat: 'buns2', weapon: 'firespear', wheels: true, mark: '#e0262a', pants: '#e02a2a' },
-    nhilang: { body: 'armor', robe: '#3a4a8a', metal: '#c8cad8', plate: '#e0b040', trim: '#e0b040', hair: '#1a1010', hat: 'helmet', helm: '#e0b040', plume: '#e02a2a', weapon: 'trident', thirdEye: true, cape: '#c8302a', brows: '#1a0a0a' },
-    duongtang: { body: 'monk', robe: '#e8b040', inner: '#c8862a', kasaya: '#c8302a', trim: '#ffe08a', hairStyle: 'bald', hat: 'monk5', weapon: 'staff', closedEyes: true },
-    quanam: { body: 'dress', robe: '#ffffff', inner: '#e8eef6', trim: '#8ac8e8', sash: '#a8d8f0', hair: '#1a1018', hairStyle: 'bun', hairBack: true, hat: 'tiara', halo: '#ffe08a', weapon: 'vase', closedEyes: true, ribbon: '#bfe6ff' },
+    hangnga: { build: 'slim', body: 'dress', robe: '#fbf4fa', inner: '#f4b8d0', trim: '#c8b0f0', sash: '#e88ab0', hair: '#1a1018', hairStyle: 'bun', hairBack: true, pin: '#e8c45a', hat: 'flower', ribbon: '#bfe6ff', smile: true },
+    culinh: { build: 'brawny', body: 'armor', robe: '#5a6a3a', metal: '#7a6a4a', plate: '#e0b040', trim: '#c8302a', head: 'demon', fur: '#6a9a5a', beard: '#2a2a1a', weapon: 'axe', wide: true, cape: '#3a2a1a' },
+    nata: { build: 'kid', body: 'short', robe: '#f2d0a0', trim: '#e0b040', sash: '#e02a2a', ribbon: '#ff3a3a', hair: '#1a1010', hairStyle: 'short', hat: 'buns2', weapon: 'firespear', wheels: true, mark: '#e0262a', pants: '#e02a2a', necklace: '#ffd04a' },
+    nhilang: { build: 'male', body: 'armor', robe: '#3a4a8a', metal: '#c8cad8', plate: '#e0b040', trim: '#e0b040', hair: '#1a1010', hat: 'helmet', helm: '#e0b040', plume: '#e02a2a', weapon: 'trident', thirdEye: true, cape: '#c8302a', brows: '#1a0a0a' },
+    duongtang: { build: 'male', body: 'monk', robe: '#f0c050', inner: '#c8862a', kasaya: '#c8302a', trim: '#ffe08a', hairStyle: 'bald', hat: 'monk5', weapon: 'khakkhara', closedEyes: true, smile: true },
+    quanam: { build: 'slim', body: 'dress', robe: '#ffffff', inner: '#e8eef6', trim: '#8ac8e8', sash: '#a8d8f0', hair: '#1a1018', hairStyle: 'bun', hairBack: true, hat: 'tiara', halo: '#ffe08a', weapon: 'vase', closedEyes: true, ribbon: '#bfe6ff' },
     laoong: { body: 'robe', robe: '#8a7a6a', inner: '#5a4a3a', trim: '#c8b090', hair: '#e8e4dc', hairStyle: 'topknot', beard: '#e8e4dc', weapon: 'staff', closedEyes: true },
     duocsu2: { body: 'robe', robe: '#4a8a6a', inner: '#2a5a44', trim: '#e0b040', hair: '#3a2a22', hairStyle: 'short', hat: 'scholar', beard: '#3a2a22', weapon: 'gourd' },
-    shop2: { body: 'robe', robe: '#8a3a2a', inner: '#5a2418', trim: '#e0b040', hair: '#24160e', hat: 'cap', capc: '#3a2418', weapon: 'abacus', mustache: '#24160e', wide: true, smile: true },
+    shop2: { build: 'fat', body: 'robe', robe: '#8a3a2a', inner: '#5a2418', trim: '#e0b040', hair: '#24160e', hat: 'cap', capc: '#3a2418', weapon: 'abacus', mustache: '#24160e', wide: true, smile: true },
     casino: { body: 'robe', robe: '#2a2a3a', inner: '#c8302a', trim: '#e0b040', hair: '#1a1010', hat: 'scholar', mustache: '#1a1010', weapon: 'fan', fanc: '#e8c45a', smile: true },
-    hachhung: { body: 'armor', robe: '#2a2a32', metal: '#4a4a56', plate: '#c8302a', trim: '#e0b040', head: 'bear', fur: '#23232a', crescent: true, weapon: 'spear', wide: true, cape: '#5a1a1a', hand: '#23232a' },
-    hoangphong: { body: 'armor', robe: '#c89a2a', metal: '#8a6a2a', plate: '#ffe08a', trim: '#6a4422', head: 'rat', fur: '#d8b04a', weapon: 'trident', cape: '#e8c45a', tail: 'rat', tailc: '#d8b04a', hand: '#d8b04a', flameAura: false },
+    hachhung: { build: 'giant', body: 'armor', robe: '#2a2a32', metal: '#4a4a56', plate: '#c8302a', trim: '#e0b040', head: 'bear', fur: '#23232a', crescent: true, weapon: 'spear', wide: true, cape: '#5a1a1a', hand: '#23232a' },
+    hoangphong: { build: 'male', body: 'armor', robe: '#c89a2a', metal: '#8a6a2a', plate: '#ffe08a', trim: '#6a4422', head: 'rat', fur: '#d8b04a', weapon: 'trident', cape: '#e8c45a', tail: 'rat', tailc: '#d8b04a', hand: '#d8b04a', flameAura: false },
     laohau: { body: 'robe', robe: '#8a6a4a', inner: '#5a4430', trim: '#c8b090', head: 'monkey', fur: '#c8c0b0', face: '#f0c8a8', band: false, beard: '#e8e4dc', weapon: 'staff', tail: 'monkey', hand: '#f0c8a8' },
     duocsu3: { body: 'short', robe: '#e8f0e0', trim: '#4aae7a', head: 'monkey', fur: '#a8743a', band: false, weapon: 'gourd', tail: 'monkey', hand: '#f0c0a0' },
     shop3: { body: 'short', robe: '#3a6a8a', trim: '#e0b040', head: 'monkey', fur: '#8a5a2a', band: false, weapon: 'abacus', tail: 'monkey', hand: '#f0c0a0' },
-    batgioi: { body: 'monk', robe: '#2a2a3a', inner: '#1a1a24', kasaya: '#3a5a8a', trim: '#e0b040', head: 'pig', fur: '#f2a8b0', weapon: 'rake', tail: 'pig', hand: '#f2a8b0', wide: true },
-    satang: { body: 'monk', robe: '#4a5a6a', inner: '#2a3440', kasaya: '#8a3a2a', trim: '#c8b090', skin: '#7aa0c0', hand: '#7aa0c0', hair: '#c83a2a', hairStyle: 'wild', beard: '#c83a2a', necklace: '#f0e8d8', weapon: 'spade', brows: '#c83a2a', eyeColor: '#ffe04a' },
-    bachcot: { body: 'dress', robe: '#f4f0f4', inner: '#c8a0c8', trim: '#8a4a8a', sash: '#6a2a6a', skin: '#f4ecf0', hand: '#f4ecf0', hair: '#f8f4fa', hairStyle: 'long', hairBack: true, hat: 'flower', eyeColor: '#c82a8a', ribbon: '#c8a0f0', weapon: 'sword' },
+    batgioi: { build: 'fat', bareBelly: true, body: 'monk', robe: '#2a2a3a', inner: '#1a1a24', kasaya: '#3a5a8a', trim: '#e0b040', head: 'pig', fur: '#f2a8b0', weapon: 'rake', tail: 'pig', hand: '#f2a8b0', wide: true },
+    satang: { build: 'brawny', skulls: true, body: 'monk', robe: '#4a5a6a', inner: '#2a3440', kasaya: '#8a3a2a', trim: '#c8b090', skin: '#7aa0c0', hand: '#7aa0c0', hair: '#c83a2a', hairStyle: 'wild', beard: '#c83a2a', necklace: '#f0e8d8', weapon: 'spade', brows: '#c83a2a', eyeColor: '#ffe04a' },
+    bachcot: { build: 'slim', body: 'dress', robe: '#f4f0f4', inner: '#c8a0c8', trim: '#8a4a8a', sash: '#6a2a6a', skin: '#f4ecf0', hand: '#f4ecf0', hair: '#f8f4fa', hairStyle: 'long', hairBack: true, hat: 'flower', eyeColor: '#c82a8a', ribbon: '#c8a0f0', weapon: 'sword' },
     laonhan: { body: 'robe', robe: '#c88a4a', inner: '#8a5a2a', trim: '#e8d0a0', hair: '#f0ece4', hairStyle: 'topknot', beard: '#f0ece4', weapon: 'staff', closedEyes: true, hat: 'turban', turban: '#f2ead8' },
-    thodia: { body: 'robe', robe: '#8a6a3a', inner: '#5a4422', trim: '#e0b040', hair: '#f2eee6', hairStyle: 'bald', hat: 'scholar', beard: '#f2eee6', weapon: 'staff', closedEyes: true, wide: true },
+    thodia: { build: 'kid', body: 'robe', robe: '#8a6a3a', inner: '#5a4422', trim: '#e0b040', hair: '#f2eee6', hairStyle: 'bald', hat: 'scholar', beard: '#f2eee6', weapon: 'staff', closedEyes: true, wide: true },
     duocsu4: { body: 'monk', robe: '#e0a040', inner: '#b0782a', kasaya: '#c8302a', trim: '#ffe08a', hair: '#1a1010', hat: 'turban', turban: '#f2e0c0', weapon: 'gourd', skin: '#d8a880', hand: '#d8a880' },
     shop4: { body: 'robe', robe: '#3a6a5a', inner: '#24443a', trim: '#e0b040', hat: 'turban', turban: '#e8402a', skin: '#d8a880', hand: '#d8a880', mustache: '#1a1010', weapon: 'lantern', hair: '#1a1010' },
-    honghai: { body: 'short', robe: '#e02a2a', trim: '#ffd04a', sash: '#ffd04a', hair: '#1a1010', hat: 'buns2', weapon: 'firespear', flameAura: true, pants: '#a81a1a', mark: '#ffd04a', smile: true },
-    thietphien: { body: 'dress', robe: '#e04a3a', inner: '#8a1a1a', trim: '#ffd04a', sash: '#ffd04a', hair: '#1a1010', hairStyle: 'bun', hairBack: true, pin: '#ffd04a', hat: 'tiara', weapon: 'bigfan', fanc: '#2a8a5a', ribbon: '#ff8a5a' },
-    nguuma: { body: 'armor', robe: '#3a2a2a', metal: '#2a2a32', plate: '#e0b040', trim: '#e0b040', head: 'bull', fur: '#3a2a26', weapon: 'mace', wide: true, cape: '#8a1a1a', hand: '#3a2a26', tail: 'bull' },
-    lucnhi: { body: 'armor', robe: '#5a3a2a', metal: '#c8a04a', plate: '#ffe08a', trim: '#c8302a', head: 'monkey', fur: '#7a4a2a', face: '#f0c0a0', eyeGlow: '#ff3a3a', weapon: 'goldstaff', cape: '#c8302a', tail: 'monkey', hand: '#f0c0a0' },
+    honghai: { build: 'kid', body: 'short', robe: '#e02a2a', trim: '#ffd04a', sash: '#ffd04a', hair: '#1a1010', hat: 'buns2', weapon: 'firespear', flameAura: true, pants: '#a81a1a', mark: '#ffd04a', smile: true },
+    thietphien: { build: 'slim', body: 'dress', robe: '#e04a3a', inner: '#8a1a1a', trim: '#ffd04a', sash: '#ffd04a', hair: '#1a1010', hairStyle: 'bun', hairBack: true, pin: '#ffd04a', hat: 'tiara', weapon: 'bigfan', fanc: '#2a8a5a', ribbon: '#ff8a5a' },
+    nguuma: { build: 'giant', body: 'armor', robe: '#3a2a2a', metal: '#2a2a32', plate: '#e0b040', trim: '#e0b040', head: 'bull', fur: '#3a2a26', weapon: 'mace', wide: true, cape: '#8a1a1a', hand: '#3a2a26', tail: 'bull' },
+    lucnhi: { build: 'male', body: 'armor', robe: '#5a3a2a', metal: '#c8a04a', plate: '#ffe08a', trim: '#c8302a', head: 'monkey', fur: '#7a4a2a', face: '#f0c0a0', eyeGlow: '#ff3a3a', weapon: 'goldstaff', cape: '#c8302a', tail: 'monkey', hand: '#f0c0a0' },
   };
   // boss trùng tên NPC dùng chung preset
   const BOSS_ALIAS = { culinh: 'culinh', nata: 'nata', nhilang: 'nhilang', hachhung: 'hachhung', hoangphong: 'hoangphong', batgioi: 'batgioi', satang: 'satang', bachcot: 'bachcot', honghai: 'honghai', thietphien: 'thietphien', nguuma: 'nguuma', lucnhi: 'lucnhi' };
 
   const HUMANS = {
     thienbinh: { body: 'armor', robe: '#c8302a', metal: '#c8cad8', plate: '#e0b040', trim: '#e0b040', hair: '#1a1010', hat: 'helmet', helm: '#c8cad8', plume: '#e02a2a', weapon: 'spear', brows: '#1a0a0a' },
-    sontac: { body: 'short', robe: '#5a4a3a', trim: '#8a3a2a', sash: '#8a3a2a', hair: '#1a1010', hairStyle: 'wild', hat: 'mask', weapon: 'saber', brows: '#1a0a0a', pants: '#3a2a22' },
-    hoayeu: { body: 'short', robe: '#3a1a1a', trim: '#ff8a2a', head: 'demon', fur: '#e04a2a', beard: '#3a0a0a', weapon: 'club', hand: '#e04a2a', pants: '#2a1010', flameAura: true },
+    sontac: { build: 'brawny', body: 'short', robe: '#5a4a3a', trim: '#8a3a2a', sash: '#8a3a2a', hair: '#1a1010', hairStyle: 'wild', hat: 'mask', weapon: 'saber', brows: '#1a0a0a', pants: '#3a2a22' },
+    hoayeu: { build: 'male', body: 'short', robe: '#3a1a1a', trim: '#ff8a2a', head: 'demon', fur: '#e04a2a', beard: '#3a0a0a', weapon: 'club', hand: '#e04a2a', pants: '#2a1010', flameAura: true },
   };
 
   Object.assign(NPCS, {
-    nhulai: { body: 'monk', robe: '#e8b040', inner: '#c8862a', kasaya: '#c8302a', trim: '#ffe08a', skin: '#f0c878', hand: '#f0c878', hair: '#2a3a7a', hairStyle: 'bun', halo: '#ffe08a', closedEyes: true, mark: '#d42a2a', wide: true },
+    nhulai: { build: 'giant', body: 'monk', robe: '#e8b040', inner: '#c8862a', kasaya: '#c8302a', trim: '#ffe08a', skin: '#f0c878', hand: '#f0c878', hair: '#2a3a7a', hairStyle: 'bun', halo: '#ffe08a', closedEyes: true, mark: '#d42a2a', wide: true },
     tiepdan: { body: 'monk', robe: '#f0d070', inner: '#c8a040', kasaya: '#e8802a', trim: '#fff0b0', skin: '#f0c878', hand: '#f0c878', hair: '#2a3a7a', hairStyle: 'bun', halo: '#ffe08a', closedEyes: true, weapon: 'staff' },
-    ngokhong: { body: 'short', robe: '#e8c45a', trim: '#c8302a', sash: '#c8302a', head: 'monkey', fur: '#b8783a', weapon: 'goldstaff', tail: 'monkey', hand: '#f0c0a0', pants: '#8a3a2a', cape: '#c8302a' },
+    ngokhong: { build: 'male', body: 'armor', robe: '#c8302a', metal: '#e8b840', plate: '#fff0a0', trim: '#c8302a', sash: '#c8302a', head: 'monkey', fur: '#c8803a', hat: 'phoenix', weapon: 'goldstaff', tail: 'monkey', hand: '#f0c0a0', pants: '#8a2a1a', cape: '#d83a2a', boot: '#3a1a10' },
     luuhong: { body: 'short', robe: '#2a3a4a', trim: '#8a2a2a', sash: '#8a2a2a', hair: '#1a1010', hairStyle: 'wild', mustache: '#1a1010', brows: '#1a0a0a', weapon: 'saber', pants: '#1a2430', noBlush: true },
-    dantuong: { body: 'armor', robe: '#8a5a1a', metal: '#c8a04a', plate: '#ffe08a', trim: '#c8302a', head: 'tiger', fur: '#e8902a', weapon: 'spear', hand: '#e8902a', tail: 'tiger', tailc: '#e8902a', cape: '#6a2a1a', wide: true },
+    dantuong: { build: 'brawny', body: 'armor', robe: '#8a5a1a', metal: '#c8a04a', plate: '#ffe08a', trim: '#c8302a', head: 'tiger', fur: '#e8902a', weapon: 'spear', hand: '#e8902a', tail: 'tiger', tailc: '#e8902a', cape: '#6a2a1a', wide: true },
     tieubachlong: { kind: 'serp', main: '#f4f8ff', light: '#ffffff', acc: '#8ac8ff', dragon: true },
     kimtri: { body: 'monk', robe: '#8a6a4a', inner: '#5a4430', kasaya: '#a8322a', trim: '#e0b040', hairStyle: 'bald', weapon: 'staff', beard: '#e8e4dc', closedEyes: true },
     linhcat: { body: 'robe', robe: '#f0d070', inner: '#c88a2a', trim: '#ffffff', hair: '#1a1018', hairStyle: 'bun', hat: 'tiara', halo: '#ffe08a', weapon: 'staff', closedEyes: true, ribbon: '#ffe8b0' },
     laomau: { body: 'robe', robe: '#6a4a8a', inner: '#3a2a5a', trim: '#e0b040', hair: '#e8e4ec', hairStyle: 'bun', pin: '#e8c45a', weapon: 'staff', closedEyes: true, smile: true },
-    tranguyen: { body: 'robe', robe: '#e8a040', inner: '#8a4a1a', trim: '#ffffff', hair: '#1a1010', hairStyle: 'topknot', hat: 'crown', beard: '#1a1010', weapon: 'whisk', wide: true },
+    tranguyen: { build: 'fat', body: 'robe', robe: '#e8a040', inner: '#8a4a1a', trim: '#ffffff', hair: '#1a1010', hairStyle: 'topknot', hat: 'crown', beard: '#1a1010', weapon: 'whisk', wide: true },
     congchua: { body: 'dress', robe: '#f8c8d8', inner: '#e86a8a', trim: '#e0b040', sash: '#e86a8a', hair: '#1a1018', hairStyle: 'bun', hairBack: true, hat: 'tiara', ribbon: '#ffb0c8' },
-    hoangbao: { body: 'armor', robe: '#c89a2a', metal: '#6a5a3a', plate: '#ffe08a', trim: '#c8302a', head: 'demon', fur: '#4a6ab8', beard: '#1a1a3a', weapon: 'saber', cape: '#8a2a2a', hand: '#4a6ab8', wide: true },
+    hoangbao: { build: 'brawny', body: 'armor', robe: '#c89a2a', metal: '#6a5a3a', plate: '#ffe08a', trim: '#c8302a', head: 'demon', fur: '#4a6ab8', beard: '#1a1a3a', weapon: 'saber', cape: '#8a2a2a', hand: '#4a6ab8', wide: true },
     tieuphu: { body: 'short', robe: '#8a7a5a', trim: '#5a4a3a', sash: '#5a4a3a', hair: '#2a1e14', hairStyle: 'short', hat: 'cap', capc: '#c8b080', weapon: 'axe', pants: '#5a4a3a' },
     ngangiac: { body: 'robe', robe: '#c8cad8', inner: '#6a6a7a', trim: '#e0e0e8', head: 'demon', fur: '#8aa0c0', beard: '#3a3a4a', weapon: 'sword', hand: '#8aa0c0', offhand: 'gourd' },
     kimgiac: { body: 'robe', robe: '#e8c45a', inner: '#8a5a1a', trim: '#ffffff', head: 'demon', fur: '#d8a040', beard: '#5a3a1a', weapon: 'sword', hand: '#d8a040', offhand: 'gourd', wide: true },
     vuaoke: { body: 'robe', robe: '#c8c0e0', inner: '#8a80a8', trim: '#e0b040', skin: '#d8dcf0', hand: '#d8dcf0', hair: '#2a2a3a', hat: 'crown', closedEyes: true, noBlush: true },
-    giavuong: { body: 'robe', robe: '#e8b040', inner: '#c8302a', trim: '#ffffff', head: 'lion', fur: '#4a9a8a', mane: '#2a6a5a', hat: 'crown', weapon: 'staff', hand: '#4a9a8a', wide: true },
-    dalong: { body: 'armor', robe: '#2a4a5a', metal: '#3a6a6a', plate: '#8ad8c8', trim: '#e0b040', head: 'croc', fur: '#4a7a5a', weapon: 'trident', hand: '#4a7a5a', cape: '#1a2a3a', tail: 'tiger', tailc: '#4a7a5a' },
+    giavuong: { build: 'brawny', body: 'robe', robe: '#e8b040', inner: '#c8302a', trim: '#ffffff', head: 'lion', fur: '#4a9a8a', mane: '#2a6a5a', hat: 'crown', weapon: 'staff', hand: '#4a9a8a', wide: true },
+    dalong: { build: 'brawny', body: 'armor', robe: '#2a4a5a', metal: '#3a6a6a', plate: '#8ad8c8', trim: '#e0b040', head: 'croc', fur: '#4a7a5a', weapon: 'trident', hand: '#4a7a5a', cape: '#1a2a3a', tail: 'tiger', tailc: '#4a7a5a' },
     tangnhan: { body: 'monk', robe: '#8a7a6a', inner: '#5a4a3a', kasaya: '#a87a4a', trim: '#c8b090', hairStyle: 'bald' },
-    vua: { body: 'robe', robe: '#e8c040', inner: '#c8302a', trim: '#ffffff', hair: '#1a1010', hat: 'crown', mustache: '#1a1010', wide: true },
-    daodong: { body: 'robe', robe: '#4a6a8a', inner: '#2a3a5a', trim: '#e8e4dc', hair: '#1a1010', hairStyle: 'bun', weapon: 'sword' },
-    holuc: { body: 'robe', robe: '#e8c45a', inner: '#8a5a1a', trim: '#2a2a2a', head: 'tiger', fur: '#e8902a', weapon: 'whisk', hand: '#e8902a', wide: true },
-    duongluc: { body: 'robe', robe: '#f2ead8', inner: '#8a8a7a', trim: '#4a6a8a', head: 'ram', fur: '#f0ece0', weapon: 'whisk', hand: '#f0ece0', wide: true },
-    laoquan: { body: 'robe', robe: '#f4f0e4', inner: '#c8b890', trim: '#5a7aa8', hair: '#ffffff', hairStyle: 'topknot', beard: '#ffffff', brows: '#ffffff', closedEyes: true, weapon: 'gourd', offhand: 'fan', fanc: '#e8c45a' },
-    linhcam: { body: 'armor', robe: '#e86a2a', metal: '#e8a040', plate: '#ffe08a', trim: '#c8302a', head: 'fish', fur: '#f0a030', fin: '#e8502a', weapon: 'mace', hand: '#f0a030', cape: '#c8302a' },
-    docgiac: { body: 'armor', robe: '#2a4a5a', metal: '#3a5a6a', plate: '#e0b040', trim: '#e0b040', head: 'bull', fur: '#3a6a7a', singleHorn: true, weapon: 'spear', hand: '#3a6a7a', tail: 'bull', wide: true },
+    vua: { build: 'fat', body: 'robe', robe: '#e8c040', inner: '#c8302a', trim: '#ffffff', hair: '#1a1010', hat: 'crown', mustache: '#1a1010', wide: true },
+    daodong: { build: 'kid', body: 'robe', robe: '#4a6a8a', inner: '#2a3a5a', trim: '#e8e4dc', hair: '#1a1010', hairStyle: 'bun', weapon: 'sword' },
+    holuc: { build: 'brawny', body: 'robe', robe: '#e8c45a', inner: '#8a5a1a', trim: '#2a2a2a', head: 'tiger', fur: '#e8902a', weapon: 'whisk', hand: '#e8902a', wide: true },
+    duongluc: { build: 'fat', body: 'robe', robe: '#f2ead8', inner: '#8a8a7a', trim: '#4a6a8a', head: 'ram', fur: '#f0ece0', weapon: 'whisk', hand: '#f0ece0', wide: true },
+    laoquan: { build: 'male', body: 'robe', robe: '#f4f0e4', inner: '#c8b890', trim: '#5a7aa8', hair: '#ffffff', hairStyle: 'topknot', beard: '#ffffff', brows: '#ffffff', closedEyes: true, weapon: 'gourd', offhand: 'fan', fanc: '#e8c45a' },
+    linhcam: { build: 'fat', body: 'armor', robe: '#e86a2a', metal: '#e8a040', plate: '#ffe08a', trim: '#c8302a', head: 'fish', fur: '#f0a030', fin: '#e8502a', weapon: 'mace', hand: '#f0a030', cape: '#c8302a' },
+    docgiac: { build: 'brawny', body: 'armor', robe: '#2a4a5a', metal: '#3a5a6a', plate: '#e0b040', trim: '#e0b040', head: 'bull', fur: '#3a6a7a', singleHorn: true, weapon: 'spear', hand: '#3a6a7a', tail: 'bull', wide: true },
     nuquan: { body: 'dress', robe: '#e88ab0', inner: '#a83a6a', trim: '#e0b040', hair: '#1a1018', hairStyle: 'bun', hairBack: true, pin: '#e8c45a', smile: true },
     nuvuong: { body: 'dress', robe: '#d42a5a', inner: '#8a1a3a', trim: '#ffd04a', sash: '#ffd04a', hair: '#1a1018', hairStyle: 'bun', hairBack: true, hat: 'crown', ribbon: '#ff8ab0', smile: true },
     bocap: { body: 'dress', robe: '#6a2a5a', inner: '#2a0a2a', trim: '#e0b040', hair: '#2a0a1a', hairStyle: 'long', hairBack: true, tail: 'scorpion', tailc: '#8a3a2a', eyeColor: '#ff3a2a', weapon: 'trident' },
     hanhtien: { body: 'dress', robe: '#ffd0e0', inner: '#f0a0c0', trim: '#9ad07a', hair: '#3a1a1a', hairStyle: 'bun', hairBack: true, hat: 'flower', ribbon: '#ffe0f0', smile: true },
     cuudau: { kind: 'king', main: '#2a4a8a', light: '#8ab0e8', acc: '#e8c45a' },
-    hoangmi: { body: 'monk', robe: '#e8c45a', inner: '#a8782a', kasaya: '#8a4a1a', trim: '#ffe08a', hairStyle: 'bald', brows: '#ffd040', eyeColor: '#ffd040', weapon: 'staff', wide: true },
+    hoangmi: { build: 'fat', bareBelly: true, smile: true, body: 'monk', robe: '#e8c45a', inner: '#a8782a', kasaya: '#8a4a1a', trim: '#ffe08a', hairStyle: 'bald', brows: '#ffd040', eyeColor: '#ffd040', weapon: 'staff', wide: true },
     manxa: { kind: 'serp', main: '#c8302a', light: '#ffd0a0', acc: '#6a1a10', pattern: '#ffd04a' },
-    kimmao: { body: 'armor', robe: '#e8a040', metal: '#c8862a', plate: '#ffe08a', trim: '#c8302a', head: 'lion', fur: '#e8b040', mane: '#c86a1a', weapon: 'mace', hand: '#e8b040', cape: '#c8302a', wide: true },
+    kimmao: { build: 'giant', body: 'armor', robe: '#e8a040', metal: '#c8862a', plate: '#ffe08a', trim: '#c8302a', head: 'lion', fur: '#e8b040', mane: '#c86a1a', weapon: 'mace', hand: '#e8b040', cape: '#c8302a', wide: true },
     nhentinh: { body: 'dress', robe: '#7a3a9a', inner: '#3a1a5a', trim: '#e0b040', hair: '#1a0a1a', hairStyle: 'long', hairBack: true, spiderLegs: '#4a2a4a', eyeColor: '#c82a8a', smile: true },
     bachnhan: { body: 'robe', robe: '#2a5a3a', inner: '#1a3a24', trim: '#e0b040', hair: '#1a1010', hairStyle: 'topknot', manyEyes: true, beard: '#1a1010', weapon: 'sword', skin: '#d8e0a8', hand: '#d8e0a8' },
-    thanhsu: { body: 'armor', robe: '#2a6a5a', metal: '#3a8a7a', plate: '#e0b040', trim: '#e0b040', head: 'lion', fur: '#5ab0a0', mane: '#2a6a5a', weapon: 'saber', hand: '#5ab0a0', wide: true, cape: '#1a3a34' },
-    bachtuong: { body: 'armor', robe: '#8a8a9a', metal: '#c8c8d8', plate: '#e0b040', trim: '#e0b040', head: 'elephant', fur: '#d8d8e4', weapon: 'spear', hand: '#d8d8e4', wide: true, cape: '#5a5a7a' },
-    daibang: { body: 'armor', robe: '#c8862a', metal: '#e8c45a', plate: '#fff0a0', trim: '#c8302a', head: 'eagle', fur: '#e8b040', weapon: 'trident', hand: '#e8b040', wings: '#c89a2a', wide: true },
+    thanhsu: { build: 'brawny', body: 'armor', robe: '#2a6a5a', metal: '#3a8a7a', plate: '#e0b040', trim: '#e0b040', head: 'lion', fur: '#5ab0a0', mane: '#2a6a5a', weapon: 'saber', hand: '#5ab0a0', wide: true, cape: '#1a3a34' },
+    bachtuong: { build: 'giant', body: 'armor', robe: '#8a8a9a', metal: '#c8c8d8', plate: '#e0b040', trim: '#e0b040', head: 'elephant', fur: '#d8d8e4', weapon: 'spear', hand: '#d8d8e4', wide: true, cape: '#5a5a7a' },
+    daibang: { build: 'brawny', body: 'armor', robe: '#c8862a', metal: '#e8c45a', plate: '#fff0a0', trim: '#c8302a', head: 'eagle', fur: '#e8b040', weapon: 'trident', hand: '#e8b040', wings: '#c89a2a', wide: true },
     quoctruong: { body: 'robe', robe: '#f4f0e4', inner: '#8a7a5a', trim: '#e0b040', head: 'deer', fur: '#f0ece0', weapon: 'staff', hand: '#f0ece0' },
     chuottinh: { body: 'dress', robe: '#f4f0f4', inner: '#c8a0b0', trim: '#e0b040', head: 'rat', fur: '#f0ece8', hat: 'flower', weapon: 'sword', hand: '#f0ece8', tail: 'rat', tailc: '#e8a8b0' },
     thieunu: { body: 'dress', robe: '#fff4f8', inner: '#f4c8d8', trim: '#c8a0b0', hair: '#1a1018', hairStyle: 'bun', hairBack: true, hat: 'flower', smile: true },
@@ -975,24 +1016,24 @@ const Art = (() => {
     quan: { body: 'robe', robe: '#c8302a', inner: '#8a1a1a', trim: '#e0b040', hair: '#1a1010', hat: 'scholar', mustache: '#1a1010' },
     hoangsu: { body: 'armor', robe: '#c89a3a', metal: '#a87a2a', plate: '#ffe08a', trim: '#c8302a', head: 'lion', fur: '#e8c050', mane: '#c88a2a', weapon: 'rake', hand: '#e8c050', wide: true },
     cuulinh: { kind: 'quad', main: '#e8a040', light: '#ffe0a0', acc: '#8a3a1a', mane: '#c84a2a', maneSize: 1.25, tail: 'tuft', legs: 10, legW: 4.5, headR: 6.6, ears: 'round', snout: 'short', collar: '#e0b040', size: 1.15 },
-    teguu: { body: 'armor', robe: '#3a4a6a', metal: '#5a6a8a', plate: '#e0b040', trim: '#e0b040', head: 'rhino', fur: '#7a8a9a', weapon: 'axe', hand: '#7a8a9a', wide: true },
+    teguu: { build: 'brawny', body: 'armor', robe: '#3a4a6a', metal: '#5a6a8a', plate: '#e0b040', trim: '#e0b040', head: 'rhino', fur: '#7a8a9a', weapon: 'axe', hand: '#7a8a9a', wide: true },
     ngoctho: { body: 'dress', robe: '#ffffff', inner: '#f4d0e0', trim: '#e0b040', sash: '#e86a8a', hair: '#f4f0f8', hairStyle: 'long', hairBack: true, hat: 'rabbitears', eyeColor: '#e02a5a', weapon: 'club', smile: true },
     khau: { body: 'robe', robe: '#8a5a3a', inner: '#5a3a24', trim: '#e0b040', hair: '#e8e4dc', hairStyle: 'topknot', beard: '#e8e4dc', hat: 'cap', capc: '#3a2a20', closedEyes: true },
     laongoan: { kind: 'quad', main: '#e8e4dc', light: '#ffffff', acc: '#8a9aac', shell: '#f4f0e8', legs: 5, legW: 4.5, tail: 'snake', tailc: '#c8c4bc', headR: 4.8, snout: 'short', size: 1.15 },
-    tieuyeu: { body: 'short', robe: '#5a3a2a', trim: '#8a8a3a', sash: '#8a8a3a', head: 'demon', fur: '#6aa04a', beard: '#2a2a1a', weapon: 'club', hand: '#6aa04a', pants: '#3a2a1a' },
+    tieuyeu: { build: 'kid', body: 'short', robe: '#5a3a2a', trim: '#8a8a3a', sash: '#8a8a3a', head: 'demon', fur: '#6aa04a', beard: '#2a2a1a', weapon: 'club', hand: '#6aa04a', pants: '#3a2a1a' },
   });
   Object.assign(HUMANS, {
-    thuytac: { body: 'short', robe: '#2a4a5a', trim: '#c8302a', sash: '#c8302a', hair: '#1a1010', hairStyle: 'wild', hat: 'mask', weapon: 'saber', pants: '#1a2a34' },
+    thuytac: { build: 'male', body: 'short', robe: '#2a4a5a', trim: '#c8302a', sash: '#c8302a', hair: '#1a1010', hairStyle: 'wild', hat: 'mask', weapon: 'saber', pants: '#1a2a34' },
     tieuyeu: NPCS.tieuyeu, daodong: NPCS.daodong,
   });
 
   // 28 hình thái Tiên sủng: [kiểu, tuỳ chọn]  – E = bảng màu theo ngũ hành
   const FORMS = {
-    hautinh: (E) => ['hum', { body: 'short', robe: E.main, trim: E.light, head: 'monkey', fur: '#a8743a', weapon: 'goldstaff', tail: 'monkey', hand: '#f0c0a0', pants: E.acc }],
-    truyeu: (E) => ['hum', { body: 'short', robe: E.main, trim: E.light, head: 'pig', fur: '#e89aa0', weapon: 'club', tail: 'pig', hand: '#e89aa0', wide: true, pants: E.acc }],
+    hautinh: (E) => ['hum', { build: 'kid', body: 'short', robe: E.main, trim: E.light, head: 'monkey', fur: '#a8743a', weapon: 'goldstaff', tail: 'monkey', hand: '#f0c0a0', pants: E.acc }],
+    truyeu: (E) => ['hum', { build: 'fat', body: 'short', robe: E.main, trim: E.light, head: 'pig', fur: '#e89aa0', weapon: 'club', tail: 'pig', hand: '#e89aa0', wide: true, pants: E.acc }],
     holy: (E) => ['quad', { main: E.main, light: '#fff6ee', acc: E.acc, tail: 'fox', tails: 3, ears: 'point', snout: 'long', size: 0.85, legs: 8, legW: 2.6 }],
-    hoyeu: (E) => ['hum', { body: 'armor', robe: E.acc, metal: E.main, plate: E.light, trim: '#e0b040', head: 'tiger', fur: '#e8902a', weapon: 'saber', tail: 'tiger', tailc: '#e8902a', hand: '#e8902a', cape: E.main }],
-    langyeu: (E) => ['hum', { body: 'short', robe: E.main, trim: E.light, head: 'wolf', fur: '#7a7a86', weapon: 'saber', tail: 'wolf', hand: '#7a7a86', pants: E.acc, cape: E.acc }],
+    hoyeu: (E) => ['hum', { build: 'brawny', body: 'armor', robe: E.acc, metal: E.main, plate: E.light, trim: '#e0b040', head: 'tiger', fur: '#e8902a', weapon: 'saber', tail: 'tiger', tailc: '#e8902a', hand: '#e8902a', cape: E.main }],
+    langyeu: (E) => ['hum', { build: 'male', body: 'short', robe: E.main, trim: E.light, head: 'wolf', fur: '#7a7a86', weapon: 'saber', tail: 'wolf', hand: '#7a7a86', pants: E.acc, cape: E.acc }],
     xatinh: (E) => ['serp', { main: E.main, light: E.light, acc: E.acc, pattern: E.acc }],
     thiemthu: (E) => ['toad', { main: E.main, light: E.light, acc: E.acc }],
     tienhac: (E) => ['bird', { main: '#ffffff', light: '#f6f2ea', wing: '#ffffff', wingTip: E.acc, tail: '#1a1a22', headc: '#ffffff', cap: '#e02a2a', beak: '#6a6a5a', beakLen: 6, neckLen: 12, neckX: 9, neckc: '#ffffff', legs: true, headR: 3 }],
@@ -1000,23 +1041,81 @@ const Art = (() => {
     thanhlong: (E) => ['serp', { main: E.main, light: E.light, acc: E.acc, dragon: true }],
     kylan: (E) => ['quad', { main: E.main, light: E.light, acc: E.acc, mane: '#ff8a2a', maneSize: 0.7, horn: 'single', scales: true, tail: 'tuft', legs: 11, neck: 5, hoof: '#3a2418', snout: 'long', ears: 'point' }],
     huyenquy: (E) => ['quad', { main: '#6a8a5a', light: '#c8d8a8', acc: E.acc, shell: E.main, legs: 5, legW: 4.5, tail: 'snake', tailc: E.acc, headR: 4.6, snout: 'short', size: 1.05 }],
-    nguuma: (E) => ['hum', { body: 'armor', robe: E.acc, metal: E.main, plate: E.light, trim: '#e0b040', head: 'bull', fur: '#5a3a2a', weapon: 'mace', hand: '#5a3a2a', tail: 'bull', wide: true }],
+    nguuma: (E) => ['hum', { build: 'brawny', body: 'armor', robe: E.acc, metal: E.main, plate: E.light, trim: '#e0b040', head: 'bull', fur: '#5a3a2a', weapon: 'mace', hand: '#5a3a2a', tail: 'bull', wide: true }],
     thongoc: (E) => ['quad', { main: '#ffffff', light: '#fff4f4', acc: E.main, ears: 'long', tail: 'cotton', size: 0.7, legs: 5, legW: 3, headR: 5.6, snout: 'short', collar: E.main, eye: '#e02a5a' }],
     battuong: (E) => ['quad', { main: '#9aa0aa', light: '#c8ccd4', acc: E.main, ears: 'big', snout: 'trunk', tusk: true, size: 1.15, legs: 9, legW: 5, headR: 7.5, tail: 'long', tailc: '#9aa0aa', saddle: E.main, noBelly: true }],
     kimbang: (E) => ['bird', { main: E.main, light: E.light, wing: E.main, wingTip: E.acc, tail: E.acc, crest: E.light, hook: true, talons: true, headc: E.light, neckLen: 5, neckX: 7, headR: 4, beak: '#ffd040' }],
-    hachung: (E) => ['hum', { body: 'armor', robe: E.acc, metal: E.main, plate: E.light, trim: '#e0b040', head: 'bear', fur: '#3a2a22', weapon: 'spear', hand: '#3a2a22', wide: true }],
-    thutinh: (E) => ['hum', { body: 'short', robe: E.main, trim: E.light, head: 'rat', fur: '#8a8a92', weapon: 'sword', tail: 'rat', tailc: '#e8a8b0', hand: '#e8a8b0', pants: E.acc }],
+    hachung: (E) => ['hum', { build: 'brawny', body: 'armor', robe: E.acc, metal: E.main, plate: E.light, trim: '#e0b040', head: 'bear', fur: '#3a2a22', weapon: 'spear', hand: '#3a2a22', wide: true }],
+    thutinh: (E) => ['hum', { build: 'kid', body: 'short', robe: E.main, trim: E.light, head: 'rat', fur: '#8a8a92', weapon: 'sword', tail: 'rat', tailc: '#e8a8b0', hand: '#e8a8b0', pants: E.acc }],
     nhentinh: (E) => ['spider', { main: drk(H(E.acc), 0.2), acc: E.main }],
     hatinh: (E) => ['scorp', { main: E.main, acc: E.acc }],
     longma: (E) => ['quad', { main: '#f6f2ea', light: '#ffffff', acc: E.main, mane: E.main, tail: 'horse', legs: 12, legW: 3, neck: 7, headR: 5, snout: 'long', ears: 'point', horn: 'antler', hornc: E.main, hoof: '#3a2418', saddle: E.acc }],
     suvuong: (E) => ['quad', { main: '#e8b050', light: '#f8e0b0', acc: E.main, mane: E.main, maneSize: 1.1, tail: 'tuft', legs: 10, legW: 4, headR: 6.4, ears: 'round', snout: 'short', collar: '#e0b040' }],
     viemthu: (E) => ['quad', { main: E.main, light: E.light, acc: E.acc, tail: 'flame', backFlame: true, legs: 6, legW: 3.5, headR: 5.6, snout: 'long', scales: true, size: 1.05, eye: '#ffd040' }],
-    bachcot: (E) => ['hum', { body: 'robe', robe: E.acc, inner: '#1a1a22', trim: E.main, head: 'skull', eyeGlow: E.glow, weapon: 'sword', hand: '#efe8d8', cape: '#2a2230' }],
+    bachcot: (E) => ['hum', { build: 'slim', body: 'robe', robe: E.acc, inner: '#1a1a22', trim: E.main, head: 'skull', eyeGlow: E.glow, weapon: 'sword', hand: '#efe8d8', cape: '#2a2230' }],
     thuyquai: (E) => ['octo', { main: E.main, light: E.light, acc: E.acc }],
     doiyeu: (E) => ['bat', { main: drk(H(E.acc), 0.3), wing: drk(H(E.acc), 0.1), light: E.main }],
     khongtuoc: (E) => ['bird', { main: '#2a6ac8', light: '#4ab8c8', wing: '#2a8a6a', wingTip: E.main, fanTail: E.main, crest: '#ffd04a', neckLen: 7, neckX: 7, headR: 3.2, legs: true, legc: '#8a7a6a', headc: '#2a6ac8' }],
     quyhoa: (E) => ['ghost', { main: E.main, light: '#e8f0ff', glow: E.glow }],
   };
+
+  // ---------- hình cho tuyệt chiêu ----------
+  // tượng Phật vàng ngồi thiền trên toà sen (tự vẽ)
+  function statue() {
+    const b = new Buf(52, 60), cx = 26, G = '#e8b840', GL = '#fff0a0';
+    b.ell(cx, 13, 13, 13, '#ffe08a', 0); b.ell(cx, 13, 11.4, 11.4, null);                 // vòng hào quang
+    for (let i = 0; i < 7; i++) { const x = cx - 18 + i * 6; b.ell(x, 53, 4.6, 4, i % 2 ? '#f2a0b0' : '#f8c8d0', 0.7); b.px(x, 50, '#fff0f4'); } // toà sen
+    b.ell(cx, 56, 20, 3.4, '#d8708a', 0.6);
+    b.ell(cx, 46, 17, 7, G, 1);                                                                 // chân xếp bằng
+    b.poly([[cx - 11, 22], [cx + 11, 22], [cx + 14, 44], [cx - 14, 44]], G, 1);                  // thân
+    b.poly([[cx - 11, 22], [cx - 4, 22], [cx + 8, 44], [cx + 2, 44]], '#d8902a', 0.6);           // cà sa vắt chéo
+    b.ell(cx, 41, 6, 3.6, '#f4d070', 0.8); b.ell(cx, 40, 2, 1.6, '#fff4c0', 0);                 // tay kết ấn
+    b.ell(cx - 9, 17, 2.2, 3, G, 0.7); b.ell(cx + 9, 17, 2.2, 3, G, 0.7);                        // tai dài
+    b.ell(cx, 15, 8, 8.5, '#f4c860', 0.9);                                                      // đầu
+    b.ell(cx, 7, 5.5, 3.5, '#a86a1a', 0.8); b.ell(cx, 4, 2.6, 2.4, '#a86a1a', 0.8);             // búi tóc
+    for (let x = -4; x <= 4; x += 2) b.px(cx + x, 8, '#c8862a');
+    b.line(cx - 4, 15, cx - 2, 15, '#8a5a14'); b.line(cx + 2, 15, cx + 4, 15, '#8a5a14');       // mắt khép
+    b.px(cx, 11, '#d42a2a'); b.line(cx - 1, 19, cx + 1, 19, '#a8601a');
+    for (const [x, y] of [[cx - 6, 26], [cx - 8, 34], [cx + 7, 30]]) b.px(x, y, GL);
+    return rimLight(b);
+  }
+  const SPECIAL = {
+    buddha: () => statue(),
+    demon: () => tallHumanoid({ build: 'brawny', body: 'short', robe: '#2a0808', trim: '#ff8a2a', sash: '#ff5a1a', head: 'demon', fur: '#e8341a', beard: '#3a0a0a', weapon: 'club', hand: '#e8341a', pants: '#1a0606', flameAura: true, boot: '#1a0606' }, 0, 'angry'),
+    fox: () => build('quad', { main: '#c8b8ff', light: '#ffffff', acc: '#8a5ae0', tail: 'fox', tails: 9, ears: 'point', snout: 'long', size: 0.9, legs: 8, legW: 2.6 }, 1),
+    monkey: () => tallHumanoid(NPCS.ngokhong, 1, 'angry'),
+  };
+  function special(id, scale = 3) { const k = 'sp:' + id + '|' + scale; if (!cache.has(k)) { const cv = render(SPECIAL[id](), scale); cache.set(k, { cv, url: cv.toDataURL() }); } return cache.get(k); }
+
+  // ---------- biểu tượng cảm xúc pixel cho kênh chat (tự vẽ) ----------
+  const EMOTES = ['cuoi', 'haha', 'khoc', 'gian', 'ngac', 'tim', 'ngau', 'ngu', 'ngai', 'like', 'hoa', 'khi'];
+  const EMO_UNI = ['🙂', '😆', '😭', '😠', '😲', '❤️', '😎', '😴', '😳', '👍', '🌸', '🐵'];
+  function emoteBuf(i) {
+    const b = new Buf(18, 18), Y = '#ffd23a', K = '#4a2a10', W = '#ffffff', R = '#e8402a';
+    const id = EMOTES[i];
+    if (id === 'tim') { b.ell(6, 7, 4, 4, '#ff4a6a', 1); b.ell(12, 7, 4, 4, '#ff4a6a', 1); b.poly([[2.5, 8], [15.5, 8], [9, 16]], '#ff4a6a', 1); b.px(5, 5, W); return b; }
+    if (id === 'like') { b.rect(3, 8, 3, 7, '#3a6ab8', 0.6); b.ell(10, 11, 5, 4.5, '#f6c8a0', 1); b.rect(8, 2, 3.5, 8, '#f6c8a0', 0.8); b.line(8, 10, 14, 10, '#c88a6a'); b.line(8, 12.5, 14, 12.5, '#c88a6a'); return b; }
+    if (id === 'hoa') { for (let k = 0; k < 5; k++) { const a = (k / 5) * 6.283 - 1.57; b.ell(9 + Math.cos(a) * 4.2, 9 + Math.sin(a) * 4.2, 3, 3, '#ff9ac0', 0.8); } b.ell(9, 9, 2.4, 2.4, '#ffd23a', 0.8); return b; }
+    if (id === 'khi') { b.ell(3, 9, 2.4, 3, '#c8803a', 0.8); b.ell(15, 9, 2.4, 3, '#c8803a', 0.8); b.ell(9, 9, 7, 7, '#c8803a', 1); b.ell(9, 10.5, 5, 4.5, '#f6c8a0', 0.6); b.px(7, 9, K).px(11, 9, K); b.line(8, 13, 10, 13, K); b.rect(3, 4, 12, 1.5, '#e8c45a', 0); return b; }
+    b.ell(9, 9, 7.6, 7.6, Y, 1);
+    const eyes = (l, r) => { l(); r(); };
+    if (id === 'cuoi') { b.px(6, 7, K).px(6, 8, K).px(12, 7, K).px(12, 8, K); b.px(5, 11, K); b.line(6, 12, 12, 12, K); b.px(13, 11, K); }
+    if (id === 'haha') { b.line(5, 7, 7, 6, K); b.line(7, 6, 8, 7, K); b.line(10, 7, 11, 6, K); b.line(11, 6, 13, 7, K); b.ell(9, 12, 4, 2.6, '#8a1a10', 0); b.rect(6, 10, 6, 1, W, 0); }
+    if (id === 'khoc') { b.line(5, 8, 8, 8, K); b.line(10, 8, 13, 8, K); b.rect(5, 9, 1.4, 6, '#5ab8ff', 0); b.rect(12, 9, 1.4, 6, '#5ab8ff', 0); b.ell(9, 13, 2.2, 1.4, '#8a1a10', 0); }
+    if (id === 'gian') { b.ell(9, 9, 7.6, 7.6, '#ff7a3a', 1); b.line(4, 5, 8, 7, K); b.line(10, 7, 14, 5, K); b.px(6, 9, K).px(12, 9, K); b.line(6, 13, 12, 13, K); b.px(14, 3, R).px(15, 4, R); }
+    if (id === 'ngac') { b.ell(6.5, 7.5, 1.6, 2, W, 0); b.ell(11.5, 7.5, 1.6, 2, W, 0); b.px(6.5, 8, K).px(11.5, 8, K); b.ell(9, 13, 1.8, 2, '#8a1a10', 0); }
+    if (id === 'ngau') { b.rect(3.5, 6.5, 11, 3, '#1a1a22', 0.4); b.px(5, 7, '#6a7a9a'); b.line(6, 12.5, 12, 11.5, K); }
+    if (id === 'ngu') { b.line(5, 8, 8, 8, K); b.line(10, 8, 13, 8, K); b.ell(9, 12.5, 1.5, 1.2, K, 0); b.px(14, 3, '#5ab8ff'); b.px(16, 1, '#5ab8ff'); }
+    if (id === 'ngai') { b.px(6, 8, K).px(12, 8, K); b.ell(5, 11, 2, 1.2, '#ff7a8a', 0); b.ell(13, 11, 2, 1.2, '#ff7a8a', 0); b.line(8, 13, 10, 13, K); }
+    b.px(5, 4, '#fff6c0'); b.px(6, 3.5, '#fff6c0');
+    return b;
+  }
+  function emote(i) { const k = 'emo:' + i; if (!cache.has(k)) { const cv = render(emoteBuf(i), 2); cache.set(k, { cv, url: cv.toDataURL() }); } return cache.get(k); }
+
+  // cỡ người/thú theo loài: s nhỏ · m vừa · l lớn
+  const FORM_SIZE = { thongoc: 's', holy: 's', thiemthu: 's', doiyeu: 's', quyhoa: 's', thutinh: 's', nhentinh: 's', hatinh: 's', hautinh: 's',
+    battuong: 'l', kylan: 'l', thanhlong: 'l', longma: 'l', suvuong: 'l', kimbang: 'l', phuong: 'l', huyenquy: 'l', viemthu: 'l', nguuma: 'l', hachung: 'l', xatinh: 'l' };
+  const sizeOf = (form) => FORM_SIZE[form] || 'm';
 
   // ---------- bộ nhớ đệm ----------
   const cache = new Map();
@@ -1107,7 +1206,8 @@ const Art = (() => {
     const [id, o] = heroOpts(race, gender, gear);
     const key = 'face:' + id + ':' + (gear ? [gear.w, gear.aq, gear.hq].join(',') : '') + '|' + expr;
     if (!cache.has(key)) {
-      const full = build('hum', { ...o, weapon: null, offhand: null, wings: null, _expr: expr }, 0), x0 = 12, y0 = 0, w = 48, h = 52, b = new Buf(w, h);
+      const full = build('hum', { ...o, weapon: null, offhand: null, wings: null, _expr: expr }, 0), m = full.meta || { cx: 40, hy: 24, k: 1 };
+      const w = Math.round(42 * m.k), h = Math.round(46 * m.k), x0 = Math.round(m.cx - w / 2), y0 = Math.max(0, Math.round(m.hy - 19 * m.k)), b = new Buf(w, h);
       for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) b.d[y * w + x] = full.get(x + x0, y + y0);
       const cv = render(b, 3); cache.set(key, { cv, url: cv.toDataURL() });
     }
@@ -1134,5 +1234,5 @@ const Art = (() => {
   }
   const kindOf = (formId) => (FORMS[formId] ? FORMS[formId](ELEM.tho)[0] : 'hum');
 
-  return { get, build, face, hero, npc, form, human, boss, unit, mount, kindOf, HEROES, NPCS, FORMS, ELEM, MOUNTS };
+  return { EMOTES, EMO_UNI, emote, special, sizeOf, get, build, face, hero, npc, form, human, boss, unit, mount, kindOf, HEROES, NPCS, FORMS, ELEM, MOUNTS };
 })();
