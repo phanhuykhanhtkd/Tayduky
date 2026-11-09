@@ -63,30 +63,32 @@
   <!-- ===== Tạo nhân vật ===== -->
   <section id="scr-create" class="screen" hidden>
     <div class="scene dim" id="create-bg"></div>
-    <div class="create-wrap">
-      <h2 class="title-gilt">Tạo Nhân Vật</h2>
-      <div class="cr-stage">
-        <div class="cr-aura" id="cr-aura"></div>
-        <svg class="cr-circle" viewBox="0 0 200 60" aria-hidden="true"><ellipse cx="100" cy="30" rx="96" ry="26" fill="none" stroke="#ffd76a" stroke-width="1.6"/><ellipse cx="100" cy="30" rx="80" ry="20" fill="none" stroke="#ffd76a" stroke-width=".8" stroke-dasharray="3 4"/><ellipse cx="100" cy="30" rx="60" ry="14" fill="rgba(255,215,106,.18)"/></svg>
-        <img id="create-hero" alt="">
-        <div class="cr-gender seg gender" role="group" aria-label="Giới tính">
-          <button type="button" class="seg-b on" data-g="m" aria-label="Nam">♂<small>Nam</small></button>
-          <button type="button" class="seg-b" data-g="f" aria-label="Nữ">♀<small>Nữ</small></button>
+    <div class="create-wrap cs">
+      <div class="cs-head"><b id="cs-title">Chọn Nhân Vật</b></div>
+      <div class="cs-top">
+        <div class="cs-stage">
+          <div class="cr-aura" id="cr-aura"></div>
+          <svg class="cr-circle" viewBox="0 0 200 60" aria-hidden="true"><ellipse cx="100" cy="30" rx="96" ry="26" fill="none" stroke="#ffd76a" stroke-width="1.6"/><ellipse cx="100" cy="30" rx="80" ry="20" fill="none" stroke="#ffd76a" stroke-width=".8" stroke-dasharray="3 4"/><ellipse cx="100" cy="30" rx="60" ry="14" fill="rgba(255,215,106,.18)"/></svg>
+          <img id="create-hero" alt="">
         </div>
-        <div class="cr-type" id="cr-type"></div>
+        <div class="cs-side">
+          <div class="cs-portrait"><img id="cs-face" alt=""></div>
+          <div class="cs-meta"><span>Phái: <b id="cs-phai"></b></span><span>Giới: <b id="cs-gioi"></b></span></div>
+          <div class="cs-lore"><b id="cs-name"></b><small id="cs-lore"></small></div>
+        </div>
       </div>
-      <div id="race-list" class="race-list"></div>
+      <div class="cs-cols" id="race-list"></div>
       <div class="cr-info ornate-gold" id="cr-info"></div>
-      <div class="create-foot scroll-card ornate">
+      <div class="create-foot scroll-card ornate" id="cs-foot">
         <label>Đạo hiệu<span class="cr-name"><input id="c-name" maxlength="12" placeholder="2–12 ký tự" autocomplete="off"><button type="button" class="cr-dice" id="c-dice" aria-label="Tên ngẫu nhiên">🎲</button></span></label>
-        <button class="btn-seal wide" id="b-create">Bước vào Tam Giới</button>
         <p class="form-err" id="create-err" role="alert"></p>
       </div>
+      <div class="cs-bar"><button type="button" id="b-create">Chọn</button><button type="button" id="b-random">Ngẫu nhiên</button></div>
     </div>
   </section>
 
   <!-- ===== Màn hình chính ===== -->
-  <section id="scr-game" class="screen" hidden>
+  <section id="scr-game" class="screen paint-ui" hidden>
     <header class="hud">
       <button class="hud-ava" id="hud-ava" aria-label="Nhân vật"><img id="hud-img" alt=""><span class="hud-lvl" id="hud-lv"></span></button>
       <div class="hud-mid">
@@ -99,8 +101,8 @@
         <span title="Bạc"><b class="coin silver"></b><em id="hud-bac"></em></span>
         <span title="Vàng"><b class="coin gold"></b><em id="hud-vang"></em></span>
         <span title="Túi đồ" class="hud-bag"><b>🎒</b><em id="hud-bag"></em></span>
-        <button class="hud-gear" id="hud-gear" aria-label="Cài đặt"></button>
       </div>
+      <button class="hud-gear" id="hud-gear" aria-label="Cài đặt"></button>
     </header>
     <div class="hud-sub">
       <button class="map-chip" id="map-chip"><span id="map-name"></span></button>
@@ -112,9 +114,29 @@
       <canvas id="map"></canvas>
       <div class="map-title" id="map-title"></div>
       <div class="pt-badge" id="pt-badge" hidden></div>
+      <div class="mm" id="mm"><canvas id="mm-cv" width="208" height="208"></canvas><i class="mm-n">N</i></div>
+      <div class="evts">
+        <button class="evt r" id="evt-welfare"><span class="ic">🧧</span><b>Phúc Lợi</b></button>
+        <button class="evt" id="evt-daily"><span class="ic">📜</span><b>Điểm danh</b></button>
+        <button class="evt b" id="evt-act"><span class="ic">🎁</span><b>Hoạt động</b></button>
+      </div>
+      <div class="evts rt">
+        <button class="evt sm g" id="evt-pass"><span class="ic">🏮</span><b>Tu Hành</b></button>
+        <button class="evt sm j" id="evt-dg"><span class="ic">🏯</span><b>Phó Bản</b></button>
+        <button class="evt sm v" id="evt-than"><span class="ic">✨</span><b>Thần Sủng</b></button>
+      </div>
+      <button class="wev" id="wev" aria-label="Thiên Địa Dị Tượng"></button>
+      <div class="dbtns">
+        <button class="dbtn" id="btn-menu"><span class="ic" data-i="gear"></span><b>Menu</b></button>
+        <button class="dbtn" id="btn-quick"><span class="ic" data-i="bag"></span><b>Túi đồ</b></button>
+      </div>
+      <div class="joy" id="joy"><i></i></div>
     </div>
 
-    <div class="ticker-row"><button class="soc-btn" id="soc-btn" aria-label="Giao lưu"><span data-i="social"></span><small>Giao lưu</small></button><button class="ticker" id="ticker" aria-label="Mở kênh chat"></button></div>
+    <div class="ticker-row chatp">
+      <div class="ctabs"><button data-ch="khu" class="on">Khu</button><button data-ch="doi">Đội</button><button data-ch="phai">Phái</button><button data-ch="shop">Chợ</button><button class="soc-btn" id="soc-btn" aria-label="Giao lưu">Bạn</button></div>
+      <button class="ticker" id="ticker" aria-label="Mở kênh chat"></button>
+    </div>
 
     <nav class="nav">
       <button data-p="bag"><span class="ni" data-i="bag"></span>Túi đồ</button>
@@ -123,12 +145,20 @@
       <button data-p="quest"><span class="ni" data-i="quest"></span>Nhiệm vụ</button>
       <button data-p="mounts"><span class="ni" data-i="mount"></span>Cưỡi</button>
       <button data-p="act"><span class="ni" data-i="act"></span>Hoạt động</button>
+      <button data-p="than"><span class="ni" data-i="than3"></span>Thần sủng</button>
+      <button data-p="ach"><span class="ni" data-i="ach"></span>Thành tựu</button>
+      <button data-p="codex"><span class="ni" data-i="codex"></span>Đồ giám</button>
+      <button data-p="nm"><span class="ni" data-i="nm"></span>Ác Mộng</button>
+      <button data-p="dg"><span class="ni" data-i="dg"></span>Phó bản</button>
+      <button data-p="stall"><span class="ni" data-i="stall"></span>Bày sạp</button>
     </nav>
   </section>
 
   <!-- ===== Chiến đấu ===== -->
   <section id="battle" hidden>
     <div class="b-bg" id="b-bg"></div>
+    <canvas class="b-3d" id="b-3d"></canvas>
+    <div class="b-shade" aria-hidden="true"></div>
     <div class="b-sbanner" id="b-sbanner" aria-hidden="true"><b>Chiến Đấu</b><span></span></div>
     <div class="b-bossplate" id="b-bossplate" hidden></div>
     <div class="b-top">
@@ -147,15 +177,17 @@
       <div class="b-banner" id="b-banner"></div>
       <div class="b-intro" id="b-intro" hidden></div>
     </div>
-    <div class="b-log" id="b-log"></div>
-    <div class="b-hint" id="b-hint"></div>
-    <div class="b-cmds ring" id="b-cmds">
-      <button class="seal" data-c="attack"><i data-i="attack"></i><span>Tấn công</span></button>
-      <button class="seal" data-c="skill"><i data-i="skill"></i><span>Kỹ năng</span></button>
-      <button class="seal" data-c="defend"><i data-i="defend"></i><span>Phòng thủ</span></button>
-      <button class="seal" data-c="item"><i data-i="item"></i><span>Đạo cụ</span></button>
-      <button class="seal" data-c="catch"><i data-i="catch"></i><span>Bắt pet</span></button>
+    <div class="b-dock" id="b-dock">
+    <div class="b-dock-l"><div class="b-hint" id="b-hint"></div><div class="b-log" id="b-log"></div></div>
+    <div class="b-cmds wheel" id="b-cmds">
+      <button class="seal" data-c="attack"><i data-i="attack"></i><span>Công</span></button>
+      <button class="seal" data-c="skill"><i data-i="skill"></i><span>Kỹ</span></button>
+      <button class="seal" data-c="catch"><i data-i="catch"></i><span>Bắt</span></button>
+      <button class="seal" data-c="item"><i data-i="item"></i><span>Túi</span></button>
+      <button class="seal" data-c="pet"><i data-i="pet"></i><span>Sủng</span></button>
       <button class="seal" data-c="flee"><i data-i="flee"></i><span>Chạy</span></button>
+      <button class="seal" data-c="defend"><i data-i="defend"></i><span>Nghỉ</span></button>
+    </div>
     </div>
   </section>
 
@@ -189,9 +221,11 @@
 
 <script src="js/net.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/chibi.js"></script>
+<script src="js/beast.js"></script>
 <script src="js/pixel.js"></script>
 <script src="js/tiles.js"></script>
-<script src="js/hd2d.js"></script>
+<script src="js/paint.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/ui.js"></script>
@@ -199,6 +233,7 @@
 <script src="js/battle.js"></script>
 <script src="js/panels.js"></script>
 <script src="js/panels2.js"></script>
+<script src="js/panels3.js"></script>
 <script src="js/tutorial.js"></script>
 <script src="js/title.js"></script>
 <script src="js/main.js"></script>

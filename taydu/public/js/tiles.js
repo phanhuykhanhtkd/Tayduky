@@ -34,6 +34,7 @@ const Tiles = (() => {
     cave: { ground: ['#7a6a82', '#5e5068', '#4a3e54', '#2e2638'], grass: ['#6ac0a8', '#3e9080', '#2a6a60', '#1a4a44'], water: ['#3a5aa0', '#243e7a', '#18285a', '#0c1638'], bank: ['#2e2638', '#1a1424'] },
     snow: { ground: ['#ffffff', '#eef4fa', '#d6e2f0', '#b0c4dc'], grass: ['#ffffff', '#e4eef6', '#c4d6e6', '#5a8a7a'], water: ['#e8f8ff', '#b8e0f4', '#88c0e0', '#5a98c8'], bank: ['#8aa0b8', '#5a7090'] },
   };
+  PAL.sea = PAL.river; PAL.hell = PAL.cave; PAL.void = PAL.cave; // cõi hậu truyện (bản vẽ cổ điển dùng tạm bảng màu gần nhất)
   const FLOWERS = ['#ff8fb4', '#ffe066', '#ffffff', '#b48aff'];
 
   // ---------- lớp nền ----------

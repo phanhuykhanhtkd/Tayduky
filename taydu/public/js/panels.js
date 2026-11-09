@@ -9,7 +9,7 @@ const Panels = (() => {
   const qColor = (q) => M().QUALITIES[q].color;
   // màu đọc được trên nền giấy
   const PAPER_Q = ['#2b2018', '#2f7d2f', '#2b62a8', '#7b3fb5', '#b35f00', '#b8241c'];
-  const PAPER_G = ['#5e4a38', '#2f7d2f', '#2b62a8', '#7b3fb5', '#b35f00'];
+  const PAPER_G = ['#5e4a38', '#2f7d2f', '#2b62a8', '#7b3fb5', '#b35f00', '#c8102a'];
   const icon = (id) => Sprites.itemIcon(id, M().ITEMS);
   const statLine = (o) => Object.entries(o).map(([k, v]) => `${M().STAT_NAMES[k] || k} +${v}`).join(' · ');
 
@@ -26,7 +26,8 @@ const Panels = (() => {
           <div><h4 style="margin:0;font-size:20px">${esc(c.name)}</h4>
           <div class="muted">${R.name} · Cấp ${c.lvl} · Lực chiến ${fmt(c.power)}</div>
           <div class="muted">Tu vi ${fmt(c.exp)} / ${fmt(c.need)}</div><div class="pbar"><i style="width:${100 * c.exp / c.need}%"></i></div>
-          <div class="muted" style="margin-top:4px">Kiếp nạn đã vượt: <b>${c.nan}/81</b></div></div></div>
+          <div class="muted" style="margin-top:4px">Kiếp nạn đã vượt: <b>${c.nan}/81</b>${c.lvl >= c.cap && !c.asc ? ' · <b style="color:#b8241c">Tu vi đầy – cần Phi Thăng</b>' : ''}</div></div></div>
+        ${Panels3.charBlock()}
         <div class="sec">Chỉ số</div>
         <div class="st-card ornate-gold">
           <div class="st-bars">
@@ -38,7 +39,9 @@ const Panels = (() => {
             <tr><th>🛡 Thủ</th><td>${d.def}</td><th>☯ Kháng phép</th><td>${d.mdef}</td></tr>
             <tr><th>💨 Tốc</th><td>${d.spd}</td><th>🍃 Né tránh</th><td>${d.dodge}%</td></tr>
             <tr><th>💥 Bạo kích</th><td>${d.crit}%</td><th>🎒 Sức chứa</th><td>${c.pets.length}/${M().CONFIG?.petBag || '—'}</td></tr>
+            ${c.resist ? `<tr><th>🔒 Kháng P.Ấn</th><td>${c.resist.seal}%</td><th>🌀 Kháng L.Hồn</th><td>${c.resist.chaos}%</td></tr><tr><th>🧊 Kháng Đ.Thân</th><td>${c.resist.stun}%</td><th>🏯 Phái</th><td>${M().RACES[c.race].name}</td></tr>` : ''}
             ${c.spouse ? '<tr><th>💞 Phu thê</th><td>+5%</td><th></th><td></td></tr>' : ''}
+            <tr><th>⚡ Tinh lực</th><td>${c.energy}/${c.energyMax}</td><th>⛏️ Khai thác</th><td>${c.gskill ? c.gskill.lv : 1}/10</td></tr>
           </tbody></table>
         </div>
         <div class="sec">Điểm tiềm năng <span class="pts ${left ? 'has' : ''}">${left}</span></div>
@@ -68,6 +71,7 @@ const Panels = (() => {
       $('#al-ok').onclick = async () => { const r = await G.call('stat:alloc', { ...pending }); if (r.ok) Object.keys(pending).forEach((k) => (pending[k] = 0)); UI.refreshSheet(); };
       $('#al-reset').onclick = async () => { if (await UI.confirm('<p>Tẩy toàn bộ điểm tiềm năng về ban đầu với giá <b>20 vàng</b>?</p>')) { await G.call('stat:reset'); UI.refreshSheet(); } };
       $('#t-peace').onclick = async () => { await G.call('char:peace'); UI.refreshSheet(); };
+      Panels3.bindCharBlock(body);
       $('#t-logout').onclick = async () => { if (await UI.confirm('<p>Đăng xuất khỏi thiết bị này?</p>', 'Đăng xuất')) { localStorage.removeItem('tdk_token'); location.reload(); } };
     } else if (tab === 'equip') {
       const S = M().SLOTS;
@@ -163,7 +167,9 @@ const Panels = (() => {
     const c = G.me, E = M().ELEMENTS, Gr = M().GRADES;
     if (!c.pets.length) {
       body.innerHTML = `<p class="muted">Chưa có Tiên sủng nào. Khi gặp quái ngoài dã ngoại, đánh cho thật yếu rồi bấm <b>Bắt</b> và chọn Bầu Bạc hoặc Bầu Vàng.</p>
-        <p class="muted">Tam Giới có ${M().SPECIES_COUNT} loài: ${M().FORMS.length} hình thái × 5 ngũ hành × 5 phẩm (Phàm → Thánh), thêm biến thể Biến Dị hiếm.</p>`;
+        <p class="muted">Tam Giới có ${M().SPECIES_COUNT} loài: ${M().FORMS.length} hình thái × 5 ngũ hành × 5 phẩm (Phàm → Thánh), thêm biến thể Biến Dị hiếm – và 12 Thần sủng là nhân vật cốt truyện.</p>
+        <div class="btns"><button class="btn-seal jade" id="p-than">✨ Thần sủng</button><button class="btn-seal ghost" id="p-codex">📖 Đồ giám</button></div>`;
+      $('#p-than').onclick = () => Panels3.than(); $('#p-codex').onclick = () => Panels3.codex();
       return;
     }
     if (!c.pets.find((p) => p.uid === selPet)) selPet = c.activePet || c.pets[0].uid;
@@ -171,27 +177,32 @@ const Panels = (() => {
     const st = p.stats;
     body.innerHTML = `<div class="list">${c.pets.map((x) => `<button class="li ${x.uid === selPet ? 'on' : ''}" data-u="${x.uid}">
         <span class="ico pet-ico ${x.mut ? 'mut' : ''}">${Sprites.petImg(x)}</span>
-        <div class="grow"><div class="t">${esc(x.name)} ${x.uid === c.activePet ? '<span class="tag">Xuất chiến</span>' : ''}</div>
+        <div class="grow"><div class="t">${esc(x.name)} ${(c.activePets || []).includes(x.uid) ? `<span class="tag">${x.uid === c.activePet ? 'Dẫn đầu' : 'Xuất chiến ' + ((c.activePets || []).indexOf(x.uid) + 1)}</span>` : ''}</div>
         <div class="s"><b style="color:${PAPER_G[x.grade]}">${Gr[x.grade].name}</b> · ${E[x.element].name} · Cấp ${x.lvl}</div></div></button>`).join('')}</div>
       <div class="pet-show">${Sprites.petImg(p, 'big')}</div><div class="sec">${esc(p.name)}</div>
-      <div class="muted">Loài: ${esc(p.species)}${p.mut ? ' (Biến Dị, +25% chỉ số)' : ''} · Ngũ hành ${E[p.element].name} khắc ${E[E[p.element].beats].name}</div>
+      <div class="muted">${p.than ? `<b style="color:#b8241c">${p.chan ? 'Chân ' : ''}Thần sủng</b>` : 'Loài: ' + esc(p.species)}${p.mut ? ' (Biến Dị, +25% chỉ số)' : ''} · Ngũ hành ${E[p.element].name} khắc ${E[E[p.element].beats].name}</div>
       <div class="muted">Kinh nghiệm ${fmt(p.exp)}/${fmt(p.need)} · tối đa cấp ${c.lvl + 5}</div><div class="pbar"><i style="width:${100 * p.exp / p.need}%"></i></div>
       <div class="stat-grid" style="margin-top:8px">
         <div><span>Khí huyết</span><b>${fmt(st.maxHp)}</b></div><div><span>Tốc độ</span><b>${st.spd}</b></div>
         <div><span>Công vật lý</span><b>${st.atk}</b></div><div><span>Công phép</span><b>${st.matk}</b></div>
         <div><span>Phòng thủ</span><b>${st.def}</b></div><div><span>Kháng phép</span><b>${st.mdef}</b></div></div>
-      <div class="muted" style="margin-top:6px">Kỹ năng: ${p.skills.map((k) => M().SKILLS[k].name).join(', ')}</div>
+      <div class="muted" style="margin-top:6px">Kỹ năng: ${p.skills.map((k) => `${M().SKILLS[k].sig ? '<b style="color:#b8241c">✦ ' : ''}${M().SKILLS[k].name}${M().SKILLS[k].sig ? '</b>' : ''}`).join(', ')}</div>
+      ${Panels3.traitLine(p)}
       <div class="btns">
-        ${p.uid === c.activePet ? '<button class="btn-seal ghost sm" data-a="rest">Cho nghỉ</button>' : '<button class="btn-seal sm" data-a="active">Xuất chiến</button>'}
+        ${(c.activePets || []).includes(p.uid) ? `<button class="btn-seal ghost sm" data-a="rest">Cho nghỉ</button>${p.uid !== c.activePet ? '<button class="btn-seal sm" data-a="lead">Dẫn đầu</button>' : ''}` : `<button class="btn-seal sm" data-a="active">Xuất chiến (${(c.activePets || []).length}/3)</button>`}
         <button class="btn-seal jade sm" data-a="rename">Đổi tên</button>
         <button class="btn-seal ghost sm" data-a="release">Phóng sinh</button></div>
-      <div class="btns"><button class="btn-seal" data-a="lab">🔮 Bồi dưỡng: học chiêu · tiến hoá · hợp thể</button></div>`;
+      <div class="btns"><button class="btn-seal" data-a="lab">🔮 Bồi dưỡng: học chiêu · tiến hoá · hợp thể</button><button class="btn-seal jade" data-a="than">✨ Thần sủng</button><button class="btn-seal ghost sm" data-a="codex">📖 Đồ giám</button></div>`;
+    body.querySelectorAll('[data-trait]').forEach((b) => (b.onclick = () => Panels3.reroll(b.dataset.trait)));
     body.querySelectorAll('[data-u]').forEach((b) => (b.onclick = () => { selPet = b.dataset.u; UI.refreshSheet(); }));
     body.querySelectorAll('[data-a]').forEach((b) => (b.onclick = async () => {
       const a = b.dataset.a;
-      if (a === 'lab') return Panels2.petLab(p.uid, 'learn');
-      if (a === 'active') await G.call('pet:active', { uid: p.uid });
-      if (a === 'rest') await G.call('pet:active', { uid: null });
+      if (a === 'lab') return p.than ? Panels3.than() : Panels2.petLab(p.uid, 'learn');
+      if (a === 'than') return Panels3.than();
+      if (a === 'codex') return Panels3.codex();
+      if (a === 'active') await G.call('pet:team', { uid: p.uid, on: true });
+      if (a === 'lead') await G.call('pet:active', { uid: p.uid });
+      if (a === 'rest') await G.call('pet:team', { uid: p.uid, on: false });
       if (a === 'rename') { const n = await UI.prompt('Đặt tên Tiên sủng', p.name); if (n) await G.call('pet:rename', { uid: p.uid, name: n }); }
       if (a === 'release' && await UI.confirm(`<p>Phóng sinh <b>${esc(p.name)}</b>? Không thể lấy lại.</p>`, 'Phóng sinh')) await G.call('pet:release', { uid: p.uid });
       UI.refreshSheet();
@@ -239,14 +250,16 @@ const Panels = (() => {
   function renderQuest(body, tab) {
     const c = G.me, q = c.quest, QS = M().QUESTS;
     if (tab === 'main') {
-      if (q.done) { body.innerHTML = `<p style="text-align:center;font-size:40px;margin:10px 0">🙏</p><p style="text-align:center">Đã vượt đủ 81 kiếp nạn. Chân kinh đã thỉnh về!</p><p class="muted" style="text-align:center">Bạn vẫn có thể tái chiến các boss, săn Tiên sủng, Tam Giới Đấu và Boss thế giới.</p>`; return; }
+      if (q.done) { body.innerHTML = `<p style="text-align:center;font-size:40px;margin:10px 0">☯️</p><p style="text-align:center">Đã vượt 81 kiếp nạn và đánh tan Hỗn Độn Ma Tổ – Kiếp Nạn Thứ 82!<br><b>Hộ Kinh Sứ của Tam Giới.</b></p><p class="muted" style="text-align:center">Tiếp tục với Ác Mộng, Phó bản, Thần sủng, Tu Hành Lệnh, Tam Giới Đấu và Boss thế giới.</p>`; return; }
       const mapName = M().MAPS[q.map].name;
-      body.innerHTML = `<div class="detail"><div class="muted">Chương ${M().MAPS[q.map].chapter} · ${mapName} · ${esc(M().MAPS[q.map].sub || '')}</div><h4>${q.no ? `<span style="color:var(--cinnabar)">Nạn thứ ${q.no}:</span> ` : ''}${esc(q.title)}</h4><p style="margin:4px 0">${esc(q.text)}</p>
+      body.innerHTML = `<div class="detail"><div class="muted">${q.post ? 'Hậu truyện ' + (M().MAPS[q.map].chapter - 15) : 'Chương ' + M().MAPS[q.map].chapter} · ${mapName} · ${esc(M().MAPS[q.map].sub || '')}</div><h4>${q.no ? `<span style="color:var(--cinnabar)">Nạn thứ ${q.no}:</span> ` : ''}${esc(q.title)}</h4><p style="margin:4px 0">${esc(q.text)}</p>
         ${q.type === 'kill' ? `<div class="muted">Tiến độ ${q.prog}/${q.count}</div><div class="pbar"><i style="width:${100 * q.prog / q.count}%"></i></div>` : ''}
-        <div class="muted" style="margin-top:6px">${q.nan ? `Hoàn thành để vượt nạn thứ ${q.no}/81.` : 'Tiền truyện – chưa tính kiếp nạn.'}</div>
+        <div class="muted" style="margin-top:6px">${q.nan ? `Hoàn thành để vượt nạn thứ ${q.no}/81.` : q.post ? 'Hậu truyện · Hỗn Độn Kiếp – kiếp nạn thứ 82.' : 'Tiền truyện – chưa tính kiếp nạn.'}</div>
+        ${q.needAsc && !c.asc ? `<div class="detail" style="margin-top:8px;background:rgba(200,48,42,.08)"><b>⚡ Cần Phi Thăng</b><div class="muted">Đạt cấp 120 rồi gặp Thái Thượng Lão Quân (hoặc Hoạt động › Phi Thăng) để độ Tam Cửu Thiên Kiếp.</div><div class="btns"><button class="btn-seal sm jade" id="q-asc">Xem Phi Thăng</button></div></div>` : ''}
         <div class="btns"><button class="btn-seal" id="q-go">${c.map === q.map ? (q.type === 'kill' ? 'Đi săn quái' : 'Tự tìm đường') : 'Truyền tống tới ' + mapName}</button></div></div>
         <div class="sec">Kiếp nạn ${c.nan}/81</div><div class="pbar" style="height:12px"><i style="width:${100 * c.nan / 81}%"></i></div>`;
       $('#q-go').onclick = () => { UI.closeSheet(); G.goQuest(); };
+      $('#q-asc') && ($('#q-asc').onclick = () => Panels3.asc());
     } else if (tab === 'secret') {
       const S = M().SECRETS;
       body.innerHTML = `<p class="muted">Nhiệm vụ ẩn tự kích hoạt khi bạn đáp ứng điều kiện bí mật: đứng đúng toạ độ vào đúng giờ, mang theo Tiên sủng đặc biệt, hoặc trò chuyện kiên nhẫn với NPC. Hãy nghe ngóng lời đồn từ dân chúng.</p>
@@ -255,7 +268,7 @@ const Panels = (() => {
     } else {
       body.innerHTML = M().MAP_ORDER.map((mid) => {
         const steps = QS.map((x, i) => ({ ...x, i })).filter((x) => x.map === mid);
-        return `<div class="sec">Chương ${M().MAPS[mid].chapter}: ${M().MAPS[mid].name}</div><div class="muted" style="margin:-4px 0 6px">${esc(M().MAPS[mid].sub || '')}</div><div class="list">${steps.map((s) => {
+        return `<div class="sec">${M().MAPS[mid].post ? 'Hậu truyện ' + (M().MAPS[mid].chapter - 15) : 'Chương ' + M().MAPS[mid].chapter}: ${M().MAPS[mid].name}</div><div class="muted" style="margin:-4px 0 6px">${esc(M().MAPS[mid].sub || '')}</div><div class="list">${steps.map((s) => {
           const st = q.done || s.i < q.idx ? 'done' : s.i === q.idx ? 'cur' : 'lock';
           return `<div class="li ${st === 'cur' ? 'on' : ''}" style="${st === 'lock' ? 'opacity:.5' : ''}"><span class="ico">${st === 'done' ? '✅' : st === 'cur' ? '📜' : '🔒'}</span><div class="grow"><div class="t">${s.no ? `${s.no}. ` : ''}${esc(s.title)}</div><div class="s">${st === 'lock' ? 'Chưa mở' : esc(s.text)}</div></div></div>`;
         }).join('')}</div>`;
@@ -280,10 +293,18 @@ const Panels = (() => {
         <div class="cards2">
           <button class="act-card hot ${c.dailyBadge ? 'dot' : ''}" data-a="daily"><span class="ico">📅</span><b>Điểm danh & Nhiệm vụ ngày</b><small>Quà mỗi ngày, 5 việc nhỏ đổi tu vi, bạc, vàng.</small></button>
           <button class="act-card hot" data-a="tower"><span class="ico">🗼</span><b>Trấn Yêu Tháp</b><small>Leo tầng, boss mỗi 5 tầng. Cao nhất: tầng ${c.towerBest}.</small></button>
+          <button class="act-card hot" data-a="dg"><span class="ico">🏯</span><b>Phó Bản</b><small>3 đợt quái + boss, rủ tổ đội cùng vào. Rơi Hồn Phách, Chân Linh.</small></button>
+          <button class="act-card hot" data-a="nm"><span class="ico">👁️</span><b>Ác Mộng</b><small>Boss cốt truyện 3 giai đoạn. Từ cấp 60.</small></button>
+          <button class="act-card ${c.badges3 && c.badges3.than ? 'dot' : ''}" data-a="than"><span class="ico">✨</span><b>Thần Sủng</b><small>Triệu hồi nhân vật cốt truyện, Chân Hoá.</small></button>
+          <button class="act-card ${c.badges3 && c.badges3.pass ? 'dot' : ''}" data-a="pass"><span class="ico">📜</span><b>Tu Hành Lệnh</b><small>Mỗi tháng một mùa, 30 cấp quà.</small></button>
+          <button class="act-card ${c.badges3 && c.badges3.welfare ? 'dot' : ''}" data-a="welfare"><span class="ico">🎁</span><b>Phúc Lợi</b><small>Tân thủ 7 ngày, quà online, bế quan.</small></button>
+          <button class="act-card" data-a="asc"><span class="ico">${c.asc ? '🌈' : '⚡'}</span><b>Phi Thăng</b><small>${c.asc ? 'Đã thành tiên – giới hạn cấp ' + c.cap : 'Cấp 120: độ Tam Cửu Thiên Kiếp.'}</small></button>
+          <button class="act-card" data-a="stall"><span class="ico">🏮</span><b>Bày Sạp</b><small>${c.stall ? 'Sạp đang mở – ' + esc(c.stall.title) : 'Bán đồ tại chỗ cho người chơi khác.'}</small></button>
+          <button class="act-card" data-a="wev"><span class="ico">${c.wev ? c.wev.icon : '🌟'}</span><b>Thiên Địa Dị Tượng</b><small>${c.wev && c.wev.active ? 'Đang có: ' + esc(c.wev.name) : 'Sắp tới: ' + (c.wev ? esc(c.wev.name) : '')}</small></button>
           <button class="act-card" data-a="party"><span class="ico">👥</span><b>Tổ đội</b><small>${Panels2.party ? `${Panels2.party.members.length}/3 người` : 'Rủ bạn bè cùng xuất trận.'}</small></button>
           <button class="act-card" data-a="market"><span class="ico">🏪</span><b>Chợ giao dịch</b><small>Mua bán đồ, Tiên sủng với người chơi khác.</small></button>
           <button class="act-card" data-a="craft"><span class="ico">⚗️</span><b>Lò Bát Quái & Lò Rèn</b><small>Luyện đan, linh đan, sách kỹ năng, rèn trang bị.</small></button>
-          <button class="act-card" data-a="mounts"><span class="ico">🐎</span><b>Thú cưỡi</b><small>${c.gear && c.gear.mount ? 'Đang cưỡi ' + esc(M().MOUNTS[c.gear.mount].name) : 'Đi nhanh hơn, cộng chỉ số.'}</small></button>
+          <button class="act-card" data-a="mounts"><span class="ico">🐎</span><b>Thú cưỡi</b><small>${c.gear && c.gear.mount ? 'Đang cưỡi ' + esc(M().MOUNTS[c.gear.mount].name) + ' · cấp ' + ((c.mountLv || {})[c.gear.mount] || 1) : 'Đi nhanh hơn, cộng chỉ số, nuôi lên cấp.'}</small></button>
           <button class="act-card ${G.event ? 'hot' : ''}" data-a="event"><span class="ico">${G.event ? G.event.icon : '🎉'}</span><b>${G.event ? esc(G.event.name) : 'Sự kiện'}</b><small>${G.event ? 'Đang diễn ra – nhận quà mỗi ngày!' : 'Tết, Trung Thu… sắp tới.'}</small></button>
           <button class="act-card" data-a="arena"><span class="ico">⚔️</span><b>Tam Giới Đấu</b><small>Đấu bóng người chơi khác. Còn ${CF.dailyArena - c.daily.arena}/${CF.dailyArena} lượt. Điểm: ${c.arena}</small></button>
           <button class="act-card" data-a="peach"><span class="ico">🍑</span><b>Trộm Đào</b><small>Vườn Bàn Đào ở Thiên Cung. Còn ${CF.dailyPeach - c.daily.peach}/${CF.dailyPeach} lượt.</small></button>
@@ -293,7 +314,7 @@ const Panels = (() => {
           <button class="act-card" data-a="shop"><span class="ico">🛒</span><b>Cửa hàng</b><small>Đan dược, bầu bạc, ngọc, trang bị.</small></button>
         </div>`;
       $('#a-boss').onclick = async () => { const r = await G.call('boss:join', {}); if (r.battle) { UI.closeSheet(); G.startBattle(r.battle); } };
-      body.querySelectorAll('[data-a]').forEach((b2) => (b2.onclick = () => ({ daily, tower, arena, peach, treasure, dice, rps, shop, party: Panels2.partyPanel, market: () => Panels2.market(), craft: () => Panels2.craft(), mounts: Panels2.mounts, event: Panels2.event })[b2.dataset.a]()));
+      body.querySelectorAll('[data-a]').forEach((b2) => (b2.onclick = () => ({ daily, tower, arena, peach, treasure, dice, rps, shop, party: Panels2.partyPanel, market: () => Panels2.market(), craft: () => Panels2.craft(), mounts: Panels3.mounts, event: Panels2.event, dg: Panels3.dg, nm: Panels3.nm, than: Panels3.than, pass: () => Panels3.pass(), welfare: () => Panels3.welfare(), asc: Panels3.asc, stall: Panels3.stall, wev: Panels3.wevInfo })[b2.dataset.a]()));
     } else if (tab === 'travel') {
       Panels2.renderWorld(body);
     } else if (tab === 'travel-old') {
@@ -306,7 +327,7 @@ const Panels = (() => {
       const r = await Net.emit('rank:list', { type: rankType });
       const box = $('#rk'); if (!box || !r.ok) return;
       box.className = 'list';
-      box.innerHTML = r.list.map((x, i) => `<div class="li ${x.id === c.id ? 'on' : ''}"><span class="ico" style="font-size:18px;font-weight:700;font-family:var(--font)">${i + 1}</span><img src="${Sprites.faceURL(x.race, 'm')}" style="width:28px" alt=""><div class="grow"><div class="t">${esc(x.name)}</div><div class="s">Cấp ${x.lvl} · Lực chiến ${fmt(x.power)} · ${rankType === 'tower' ? `Tháp tầng ${x.tower}` : `Đấu ${x.arena} · Nạn ${x.nan}/81`}</div></div></div>`).join('');
+      box.innerHTML = r.list.map((x, i) => `<div class="li ${x.id === c.id ? 'on' : ''}"><span class="ico" style="font-size:18px;font-weight:700;font-family:var(--font)">${i + 1}</span><img src="${Sprites.faceURL(x.race, 'm', x.gear)}" style="width:28px" alt=""><div class="grow"><div class="t">${esc(x.name)}</div><div class="s">Cấp ${x.lvl} · Lực chiến ${fmt(x.power)} · ${rankType === 'tower' ? `Tháp tầng ${x.tower}` : `Đấu ${x.arena} · Nạn ${x.nan}/81`}</div></div></div>`).join('');
     }
   }
 
@@ -360,7 +381,7 @@ const Panels = (() => {
         <div class="btns"><button class="btn-seal" id="tw-go" ${t.failsLeft > 0 ? '' : 'disabled'}>Khiêu chiến tầng ${fi.floor}</button></div>
         <p class="muted">Vào tháp được hồi đầy khí huyết. Thắng thì đi tiếp không giới hạn, thua mất 1 lượt. Cứ 5 tầng có một boss trong truyện, 10 tầng thưởng trang bị.</p>
         <div class="sec">Bảng vàng Trấn Yêu Tháp</div>
-        <div class="list">${t.top.length ? t.top.map((x, i) => `<div class="li ${x.id === G.me.id ? 'on' : ''}"><span class="ico" style="font-size:18px;font-weight:700;font-family:var(--font)">${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span><img src="${Sprites.faceURL(x.race, 'm')}" style="width:28px" alt=""><div class="grow"><div class="t">${esc(x.name)}</div><div class="s">Cấp ${x.lvl}</div></div><b>Tầng ${x.best}</b></div>`).join('') : '<p class="muted">Chưa ai leo tháp – hãy là người đầu tiên!</p>'}</div>`;
+        <div class="list">${t.top.length ? t.top.map((x, i) => `<div class="li ${x.id === G.me.id ? 'on' : ''}"><span class="ico" style="font-size:18px;font-weight:700;font-family:var(--font)">${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span><img src="${Sprites.faceURL(x.race, 'm', x.gear)}" style="width:28px" alt=""><div class="grow"><div class="t">${esc(x.name)}</div><div class="s">Cấp ${x.lvl}</div></div><b>Tầng ${x.best}</b></div>`).join('') : '<p class="muted">Chưa ai leo tháp – hãy là người đầu tiên!</p>'}</div>`;
       $('#tw-go').onclick = async () => { const x = await G.call('tower:fight', {}); if (x.battle) { UI.closeSheet(); G.startBattle(x.battle); } };
     });
   }
@@ -371,7 +392,7 @@ const Panels = (() => {
       const r = await Net.emit('arena:list');
       if (!r.ok) return;
       body.innerHTML = `<p class="muted">Đấu với bóng (AI) của người chơi khác hoặc tâm ma. Thắng +điểm đấu, +2 vàng. Lượt hôm nay: ${r.left}. Khí huyết được hồi đầy khi vào trận.</p>
-        <div class="list">${r.list.map((o) => `<div class="li"><img src="${Sprites.faceURL(o.race, o.gender)}" style="width:36px" alt=""><div class="grow"><div class="t">${esc(o.name)} ${o.bot ? '<span class="tag">Tâm ma</span>' : ''}</div><div class="s">Cấp ${o.lvl} · Lực chiến ${fmt(o.power)} · Điểm ${o.arena}</div></div><button class="btn-seal sm" data-id="${esc(o.id)}" ${r.left > 0 ? '' : 'disabled'}>Khiêu chiến</button></div>`).join('')}</div>`;
+        <div class="list">${r.list.map((o) => `<div class="li"><img src="${Sprites.faceURL(o.race, o.gender, o.gear)}" style="width:36px" alt=""><div class="grow"><div class="t">${esc(o.name)} ${o.bot ? '<span class="tag">Tâm ma</span>' : ''}</div><div class="s">Cấp ${o.lvl} · Lực chiến ${fmt(o.power)} · Điểm ${o.arena}</div></div><button class="btn-seal sm" data-id="${esc(o.id)}" ${r.left > 0 ? '' : 'disabled'}>Khiêu chiến</button></div>`).join('')}</div>`;
       body.querySelectorAll('[data-id]').forEach((b) => (b.onclick = async () => { const x = await G.call('arena:fight', { id: b.dataset.id }); if (x.battle) { UI.closeSheet(); G.startBattle(x.battle); } }));
     });
   }
@@ -473,7 +494,7 @@ const Panels = (() => {
   const CHN = { khu: 'Khu', doi: 'Đội', phai: 'Phái', shop: 'Shop', he: 'Hệ thống' };
   // biểu tượng cảm xúc: mã [e0]…[e11] → hình pixel
   const emoHTML = (s) => s.replace(/\[e(\d{1,2})\]/g, (all, n) => (Art.EMOTES[+n] ? `<img class="emo-i" src="${Art.emote(+n).url}" alt="${Art.EMO_UNI[+n]}">` : all));
-  const RCOL = { than: '#ffd76a', ma: '#ff8a7a', yeu: '#d0a8ff' };
+  const RCOL = { phat: '#ffd76a', tien: '#8ac8ff', yeu: '#d0a8ff', than: '#8ac8ff', ma: '#ffd76a' };
   function chatLine(m) {
     const t = new Date(m.t).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     const who = m.fromId ? `<span class="who" style="color:${RCOL[m.race] || '#e8c08a'}">${esc(m.from)}${m.lvl ? `<small>${m.lvl}</small>` : ''}:</span> ` : '';
@@ -506,11 +527,12 @@ const Panels = (() => {
         const r = await Net.emit('guild:info'); if (!r.ok) return;
         const g = r.guild;
         const lr = await Net.emit('guild:list');
-        body.innerHTML = `<div class="detail"><h4>${esc(g.name)}</h4><div class="muted">Chưởng môn ${esc(g.leader)} · ${g.count} đệ tử · Chiến công ${fmt(g.points)} · Lực chiến ${fmt(g.power)}</div><p style="margin:6px 0;font-style:italic">“${esc(g.notice)}”</p>
+        body.innerHTML = `<div class="detail"><h4>${esc(g.name)}</h4><div class="muted">Chưởng môn ${esc(g.leader)} · ${g.count} đệ tử · Chiến công ${fmt(g.points)} · Lực chiến ${fmt(g.power)}</div><p style="margin:6px 0;font-style:italic">“${esc(g.notice)}”</p><div id="gd3"></div>
           <div class="btns">${g.isLeader ? '<button class="btn-seal jade sm" id="g-notice">Sửa thông báo</button>' : ''}<button class="btn-seal ghost sm" id="g-leave">Rời phái</button></div></div>
           <div class="sec">Giáo Phái Chiến</div><p class="muted">Chưởng môn tuyên chiến một phái khác mỗi ngày; kết quả dựa trên tổng lực chiến (có yếu tố may rủi). Chiến công cũng tăng khi thành viên đánh boss, Tam Giới Đấu và Boss thế giới.</p>
           <div class="list">${lr.list.map((x, i) => `<div class="li ${x.id === g.id ? 'on' : ''}"><span class="ico" style="font-family:var(--font);font-size:18px;font-weight:700">${i + 1}</span><div class="grow"><div class="t">${esc(x.name)}</div><div class="s">${x.count} người · Chiến công ${fmt(x.points)} · Lực chiến ${fmt(x.power)}</div></div>${g.isLeader && x.id !== g.id ? `<button class="btn-seal sm" data-war="${x.id}">Tuyên chiến</button>` : ''}</div>`).join('')}</div>
           <div class="sec">Thành viên</div><div class="list">${g.members.map((m) => `<div class="li"><span class="ico">${m.online ? '🟢' : '⚪'}</span><div class="grow"><div class="t">${esc(m.name)} ${m.leader ? '<span class="tag">Chưởng môn</span>' : ''}</div><div class="s">${M().RACES[m.race].name} · Cấp ${m.lvl} · Cống hiến ${m.contrib}</div></div></div>`).join('')}</div>`;
+        Panels3.guildBlock($('#gd3'));
         $('#g-leave').onclick = async () => { if (await UI.confirm('<p>Rời khỏi môn phái?</p>', 'Rời phái')) { await G.call('guild:leave'); UI.refreshSheet(); } };
         $('#g-notice') && ($('#g-notice').onclick = async () => { const t = await UI.prompt('Thông báo phái', g.notice); if (t != null) { await G.call('guild:notice', { text: t }); UI.refreshSheet(); } });
         body.querySelectorAll('[data-war]').forEach((b) => (b.onclick = async () => { const x = await G.call('guild:war', { id: b.dataset.war }, true); if (x.ok) UI.toast(x.msg, x.win ? 'gold' : 'err'); else UI.toast(x.msg, 'err'); UI.refreshSheet(); }));
@@ -527,7 +549,7 @@ const Panels = (() => {
       const reqs = G.pending;
       body.innerHTML = `${reqs.length ? `<div class="sec">Lời mời đang chờ</div><div class="list">${reqs.map((q, i) => `<div class="li on"><span class="ico">${q.type === 'marry' ? '💍' : q.type === 'party' ? '👥' : '📿'}</span><div class="grow"><div class="t">${esc(q.fromName)}</div><div class="s">${q.type === 'marry' ? 'muốn kết làm phu thê' : q.type === 'party' ? 'mời bạn vào tổ đội' : 'muốn bái bạn làm sư phụ'}</div></div><button class="btn-seal sm" data-ok="${i}">Đồng ý</button><button class="btn-seal ghost sm" data-no="${i}">Từ chối</button></div>`).join('')}</div>` : ''}
         <div class="sec">Đang trực tuyến (${r.list.length})</div>
-        <div class="list">${r.list.map((p) => `<div class="li"><img src="${Sprites.faceURL(p.race, p.gender)}" style="width:34px" alt=""><div class="grow"><div class="t">${esc(p.name)}</div><div class="s">Cấp ${p.lvl} · ${esc(p.map)}${p.guild ? ' · ' + esc(p.guild) : ''}</div></div>
+        <div class="list">${r.list.map((p) => `<div class="li"><img src="${Sprites.faceURL(p.race, p.gender, p.gear)}" style="width:34px" alt=""><div class="grow"><div class="t">${esc(p.name)}</div><div class="s">Cấp ${p.lvl} · ${esc(p.map)}${p.guild ? ' · ' + esc(p.guild) : ''}</div></div>
           <button class="btn-seal sm" data-marry="${esc(p.name)}" title="Cầu hôn">💍</button><button class="btn-seal jade sm" data-master="${esc(p.name)}" title="Bái sư">📿</button></div>`).join('') || '<p class="muted">Chưa có ai khác đang chơi. Rủ bạn bè cùng mạng Wi-Fi vào nhé!</p>'}</div>`;
       body.querySelectorAll('[data-marry]').forEach((b) => (b.onclick = async () => { if (await UI.confirm(`<p>Cầu hôn <b>${esc(b.dataset.marry)}</b>? Sính lễ 520 bạc (trừ khi đối phương đồng ý).</p>`, 'Cầu hôn')) await G.call('social:marry', { name: b.dataset.marry }); }));
       body.querySelectorAll('[data-master]').forEach((b) => (b.onclick = async () => { if (await UI.confirm(`<p>Bái <b>${esc(b.dataset.master)}</b> làm sư phụ?</p>`, 'Bái sư')) await G.call('social:apprentice', { name: b.dataset.master }); }));

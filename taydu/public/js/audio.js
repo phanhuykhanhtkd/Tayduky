@@ -228,7 +228,7 @@ const Sound = (() => {
   }
 
   // trình phát: bước = 1/4 phách
-  const ALIAS = {};
+  const ALIAS = { sea: 'river', hell: 'cave', void: 'cave' };
   function play(name) {
     name = ALIAS[name] || name;
     wantTrack = name;
@@ -431,6 +431,9 @@ const Sound = (() => {
     desert: { beds: [{ type: 'lowpass', f: 240, q: 0.7, gain: 0.07, lfo: 0.18, depth: 90 }], ev: [['crackle', 0.4, 1.4], ['rumble', 12, 22]] },
     cave: { beds: [{ type: 'lowpass', f: 170, q: 0.6, gain: 0.05 }], ev: [['drip', 1.2, 3.8], ['rumble', 16, 30]] },
     snow: { beds: [{ f: 620, q: 4, gain: 0.05, lfo: 0.06, depth: 330 }, { f: 1250, q: 5, gain: 0.018, lfo: 0.11, depth: 500 }], ev: [['gust', 6, 13]] },
+    sea: { beds: [{ type: 'lowpass', f: 300, q: 0.7, gain: 0.08, lfo: 0.12, depth: 120 }], ev: [['splash', 5, 11], ['chime', 9, 18]] },
+    hell: { beds: [{ type: 'lowpass', f: 140, q: 0.6, gain: 0.06, lfo: 0.05, depth: 40 }], ev: [['crackle', 0.6, 2], ['rumble', 10, 18], ['drip', 3, 7]] },
+    void: { beds: [{ f: 420, q: 6, gain: 0.04, lfo: 0.04, depth: 260 }, { type: 'lowpass', f: 120, q: 0.5, gain: 0.04 }], ev: [['chime', 6, 12], ['rumble', 14, 26]] },
   };
   function stopAmb() {
     ambTimers.forEach(clearTimeout); ambTimers = [];

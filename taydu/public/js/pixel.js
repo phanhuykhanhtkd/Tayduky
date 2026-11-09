@@ -215,6 +215,13 @@ const Art = (() => {
       b.rect(cx - 4, cy - 1, 2, 2, EYE, 0).rect(cx + 2, cy - 1, 2, 2, EYE, 0); b.px(cx - 4, cy - 1, o.eyeGlow || '#fff').px(cx + 2, cy - 1, o.eyeGlow || '#fff');
       b.px(cx - 1, cy + 3, '#8a4a3a').px(cx + 1, cy + 3, '#8a4a3a'); b.line(cx - 2, cy + 6, cx + 2, cy + 6, '#8a3a2a');
       if (o.band !== false) { b.rect(cx - 10, cy - 6, 20, 2, '#e8c45a', 0.6); b.px(cx, cy - 6, '#ff5a3a'); }
+    } else if (type === 'panda') { // gấu trúc: tai đen, quầng mắt đen, mõm trắng
+      const K = '#22222a';
+      b.ell(cx - 8, cy - 7, 3.6, 3.6, K, 1); b.ell(cx + 8, cy - 7, 3.6, 3.6, K, 1);
+      b.ell(cx, cy, 10, 9, '#f6f4ee', 1);
+      b.ell(cx - 4.5, cy - 0.5, 2.8, 3.2, K, 0.6); b.ell(cx + 4.5, cy - 0.5, 2.8, 3.2, K, 0.6);
+      b.px(cx - 4.5, cy - 1, '#ffffff').px(cx + 4.5, cy - 1, '#ffffff');
+      b.ell(cx, cy + 4, 4.4, 3.2, '#ffffff', 0.6); b.ell(cx, cy + 2.6, 1.8, 1.3, K, 0.5); b.px(cx - 1, cy + 5.5, '#b0503a').px(cx + 1, cy + 5.5, '#b0503a');
     } else if (type === 'bear') {
       b.ell(cx - 8, cy - 7, 3.5, 3.5, f, 1); b.ell(cx + 8, cy - 7, 3.5, 3.5, f, 1);
       b.ell(cx - 8, cy - 7, 1.6, 1.6, '#c8a080', 0);
@@ -912,20 +919,38 @@ const Art = (() => {
     return rimLight(b);
   }
 
+  // 18 gương mặt người chơi – mỗi phái 6 (0–2 nam, 3–5 nữ), mỗi người một dáng riêng
   const HEROES = {
-    // Thần nam – Thiên tướng: giáp bạc viền vàng, mũ có chóp, giáo, áo choàng trắng
-    than_m: { build: 'male', body: 'armor', robe: '#2a4a8a', metal: '#c8d2e4', plate: '#ffd65a', trim: '#e0b040', sash: '#e0b040', hair: '#24160e', hairStyle: 'topknot', hat: 'crown', weapon: 'spear', cape: '#c8302a', ribbon: '#ffe08a', boot: '#6a4422', pants: '#3a4a7a', brows: '#1a0e08', eyeColor: '#3a5a8a' },
-    // Thần nữ – Tiên nữ: váy hồng trắng, thiên y dài, búi tóc cài trâm, phất trần
-    than_f: { build: 'slim', body: 'dress', robe: '#fbf0f2', inner: '#f08aa8', trim: '#e8b84a', sash: '#e05a7a', sleeve: '#fff6f8', hair: '#1e1016', hairStyle: 'bun', hairBack: true, pin: '#e8c45a', hat: 'flower', weapon: 'whisk', ribbon: '#ffb6c8', smile: true, eyeColor: '#7a3a5a' },
-    // Ma nam – Ma vương vạm vỡ: giáp đen đỏ, sừng lớn, rìu chiến, áo choàng rách
-    ma_m: { build: 'brawny', body: 'armor', robe: '#6a1414', metal: '#34303a', plate: '#c8302a', trim: '#c89030', hair: '#140a0c', hairStyle: 'wild', hat: 'horns', horn: '#e8dcc0', weapon: 'axe', cape: '#3a080c', eye: '#3a0606', eyeColor: '#ff3a2a', brows: '#0a0404', mark: '#e0262a', noBlush: true, boot: '#1d1416', pants: '#241014', skin: '#e8c0a0', hand: '#e8c0a0' },
-    // Ma nữ – Hắc y kiếm khách: giáp đen bó, tóc dài đỏ thẫm, sừng nhỏ, đao cong
-    ma_f: { build: 'slim', body: 'armor', robe: '#3a0c18', metal: '#2a2630', plate: '#d8304a', trim: '#c89030', hair: '#5a0a1e', hairStyle: 'long', hairBack: true, hat: 'smallhorns', weapon: 'saber', cape: '#6a0c1c', eyeColor: '#ff3a4a', mark: '#e0262a', boot: '#140e10', pants: '#1a1016', lashes: true },
-    // Yêu nam – Lãng khách hồ yêu: áo tím mở vạt, tóc bạc dài, tai cáo, một đuôi lớn, quạt
-    yeu_m: { build: 'male', body: 'robe', robe: '#5a3aa8', inner: '#1e1440', trim: '#7fe0c0', sash: '#2a8a7a', sleeve: '#6a4ac0', hair: '#e8e2f4', hairStyle: 'long', hairBack: true, hat: 'foxears', tail: 'fox', tails: 1, tailc: '#f0ecfa', weapon: 'fan', fanc: '#9ff0d8', eyeColor: '#a05af0', boot: '#2a1d44' },
-    // Yêu nữ – Cửu vĩ hồ ly: váy tím nhạt, chín đuôi xoè, tai cáo, quạt
-    yeu_f: { build: 'slim', body: 'dress', robe: '#c8a8f0', inner: '#5a3aa0', trim: '#7fe0c0', sash: '#a05ae0', sleeve: '#d8c0f8', hair: '#fbf6ff', hairStyle: 'long', hairBack: true, hat: 'foxears', tail: 'fox', tails: 9, tailc: '#fff6ff', weapon: 'fan', fanc: '#ffb0e0', eyeColor: '#c040e0', smile: true },
+    // ===== PHẬT (Kim Cang) =====
+    phat_0: { build: 'brawny', body: 'armor', robe: '#8a1a14', metal: '#e0b040', plate: '#ff7a3a', trim: '#fff0a0', sash: '#c8302a', hairStyle: 'bald', hat: 'helmet', weapon: 'mace', cape: '#c8302a', skin: '#e8b890', hand: '#e8b890', eyeColor: '#5a3a10', brows: '#2a1608', boot: '#4a2410', pants: '#5a1a10' },
+    phat_1: { build: 'male', body: 'monk', robe: '#e0a040', inner: '#b8782a', kasaya: '#a82a1a', trim: '#ffe08a', hairStyle: 'bald', weapon: 'khakkhara', necklace: '#6a3a1a', smile: true, eyeColor: '#4a2a10' },
+    phat_2: { build: 'male', body: 'short', robe: '#e8c45a', trim: '#c8302a', sash: '#c8302a', head: 'monkey', fur: '#b86a2a', hat: 'band', weapon: 'staff', tail: 'monkey', hand: '#f0c0a0', pants: '#7a2a1a', boot: '#3a1a10' },
+    phat_3: { build: 'slim', body: 'dress', robe: '#fff4d8', inner: '#f0a030', trim: '#e8b84a', sash: '#e86a3a', sleeve: '#fff8e8', hair: '#1e1016', hairStyle: 'bun', hairBack: true, hat: 'flower', ribbon: '#ffd070', weapon: 'whisk', smile: true, eyeColor: '#7a4a1a' },
+    phat_4: { build: 'slim', body: 'dress', robe: '#bfe8e0', inner: '#2a8a8a', trim: '#7fe0c0', sash: '#3ab8a0', sleeve: '#d8f4ee', hair: '#14202a', hairStyle: 'twin', hat: 'buns2', ribbon: '#9ff0e0', weapon: 'vase', eyeColor: '#2a6a6a' },
+    phat_5: { build: 'slim', body: 'armor', robe: '#c8302a', metal: '#e8b840', plate: '#c8302a', trim: '#fff0a0', sash: '#e8a030', hair: '#1a0e0a', hairStyle: 'topknot', hat: 'band', weapon: 'staff', cape: '#e8a030', lashes: true, boot: '#5a2410', pants: '#7a1a10' },
+    // ===== TIÊN (Thần) =====
+    tien_0: { build: 'male', body: 'armor', robe: '#2a4a8a', metal: '#c8d2e4', plate: '#ffd65a', trim: '#e0b040', sash: '#e0b040', hair: '#24160e', hairStyle: 'topknot', hat: 'crown', weapon: 'spear', cape: '#c8302a', ribbon: '#ffe08a', boot: '#6a4422', pants: '#3a4a7a', brows: '#1a0e08', eyeColor: '#3a5a8a' },
+    tien_1: { build: 'male', body: 'robe', robe: '#f4f0e8', inner: '#c8d8e8', trim: '#6a9ad8', sash: '#3a6ab8', hair: '#f4f4f4', hairStyle: 'topknot', hat: 'scholar', beard: '#f4f4f4', brows: '#ffffff', weapon: 'whisk', offhand: 'gourd', smile: true, eyeColor: '#4a5a6a' },
+    tien_2: { build: 'fat', body: 'robe', robe: '#3a7a4a', inner: '#e8f0d8', trim: '#e8c45a', sash: '#8a5a2a', head: 'panda', fur: '#f6f4ee', weapon: 'staff', hand: '#22222a', boot: '#22222a', offhand: 'gourd' },
+    tien_3: { build: 'slim', body: 'dress', robe: '#fbf0f2', inner: '#f08aa8', trim: '#e8b84a', sash: '#e05a7a', sleeve: '#fff6f8', hair: '#1e1016', hairStyle: 'bun', hairBack: true, pin: '#e8c45a', hat: 'flower', weapon: 'whisk', ribbon: '#ffb6c8', smile: true, eyeColor: '#7a3a5a' },
+    tien_4: { build: 'slim', body: 'dress', robe: '#e8f0ff', inner: '#7a9ae0', trim: '#c8d8ff', sash: '#9ab0f0', sleeve: '#f4f8ff', hair: '#20203a', hairStyle: 'long', hairBack: true, hat: 'tiara', ribbon: '#d0e0ff', weapon: 'lantern', eyeColor: '#4a5aa0' },
+    tien_5: { build: 'slim', body: 'robe', robe: '#2a8aa8', inner: '#e8f8ff', trim: '#9fe8ff', sash: '#1a5a7a', sleeve: '#3a9ab8', hair: '#101820', hairStyle: 'long', hairBack: true, hat: 'band', weapon: 'sword', ribbon: '#9fe8ff', lashes: true, eyeColor: '#2a6a8a' },
+    // ===== YÊU (Yêu Ma) =====
+    yeu_0: { build: 'brawny', body: 'armor', robe: '#2a1440', metal: '#2a2636', plate: '#8a4ae0', trim: '#c8a0ff', hair: '#140a1c', hairStyle: 'wild', hat: 'horns', horn: '#e8dcc0', weapon: 'axe', cape: '#1a0a2a', eye: '#1a0626', eyeColor: '#9affe0', brows: '#0a0410', mark: '#8a4ae0', noBlush: true, boot: '#1d1426', pants: '#1a1024', skin: '#d8c8d8', hand: '#d8c8d8' },
+    yeu_1: { build: 'male', body: 'robe', robe: '#5a3aa8', inner: '#1e1440', trim: '#7fe0c0', sash: '#2a8a7a', sleeve: '#6a4ac0', hair: '#e8e2f4', hairStyle: 'long', hairBack: true, hat: 'foxears', tail: 'fox', tails: 1, tailc: '#f0ecfa', weapon: 'fan', fanc: '#9ff0d8', eyeColor: '#a05af0', boot: '#2a1d44' },
+    yeu_2: { build: 'brawny', body: 'armor', robe: '#3a0a0a', metal: '#3a3438', plate: '#c8302a', trim: '#e0b040', head: 'bear', fur: '#2a2228', weapon: 'spear', cape: '#4a0a0a', hand: '#2a2228', boot: '#1a1214', pants: '#2a1010' },
+    yeu_3: { build: 'slim', body: 'dress', robe: '#c8a8f0', inner: '#5a3aa0', trim: '#7fe0c0', sash: '#a05ae0', sleeve: '#d8c0f8', hair: '#fbf6ff', hairStyle: 'long', hairBack: true, hat: 'foxears', tail: 'fox', tails: 9, tailc: '#fff6ff', weapon: 'fan', fanc: '#ffb0e0', eyeColor: '#c040e0', smile: true },
+    yeu_4: { build: 'slim', body: 'armor', robe: '#3a0c18', metal: '#2a2630', plate: '#d8304a', trim: '#c89030', hair: '#5a0a1e', hairStyle: 'long', hairBack: true, hat: 'smallhorns', weapon: 'saber', cape: '#6a0c1c', eyeColor: '#ff3a4a', mark: '#e0262a', boot: '#140e10', pants: '#1a1016', lashes: true },
+    yeu_5: { build: 'slim', body: 'dress', robe: '#5a1a6a', inner: '#e0a0f0', trim: '#ff6ad0', sash: '#c040c0', sleeve: '#6a2a7a', hair: '#1a0a1e', hairStyle: 'long', hairBack: true, hat: 'flower', spiderLegs: '#3a1a3a', weapon: 'fan', fanc: '#ff9ae0', lashes: true, eyeColor: '#ff40c0' },
   };
+  // gương mặt từ (phái, giới tính hoặc số gương mặt, trang bị có look)
+  const RALIAS = { than: 'tien', ma: 'phat' };
+  function heroId(race, who, gear) {
+    const r = RALIAS[race] || race;
+    const f = gear && Number.isInteger(gear.look) ? gear.look : Number.isInteger(who) ? who : who === 'f' ? 3 : 0;
+    return HEROES[r + '_' + f] ? r + '_' + f : 'tien_0';
+  }
+
 
 
   const NPCS = {
@@ -1022,9 +1047,51 @@ const Art = (() => {
     laongoan: { kind: 'quad', main: '#e8e4dc', light: '#ffffff', acc: '#8a9aac', shell: '#f4f0e8', legs: 5, legW: 4.5, tail: 'snake', tailc: '#c8c4bc', headR: 4.8, snout: 'short', size: 1.15 },
     tieuyeu: { build: 'kid', body: 'short', robe: '#5a3a2a', trim: '#8a8a3a', sash: '#8a8a3a', head: 'demon', fur: '#6aa04a', beard: '#2a2a1a', weapon: 'club', hand: '#6aa04a', pants: '#3a2a1a' },
   });
+  // ===== Hậu truyện: NPC, boss, binh lính, Thiên Kiếp (Đợt 3) =====
+  Object.assign(NPCS, {
+    longvuong: { build: 'brawny', body: 'robe', robe: '#2a6ac8', inner: '#1a3a7a', trim: '#ffd04a', sash: '#ffd04a', head: 'croc', fur: '#4ab8a8', hat: 'crown', beard: '#e8f4f0', mustache: '#e8f4f0', weapon: 'trident', hand: '#4ab8a8', cape: '#1a3a7a', wide: true },
+    longnu: { build: 'slim', body: 'dress', robe: '#bfe6ff', inner: '#5ab0e8', trim: '#ffd04a', sash: '#5ab0e8', hair: '#1a3a5a', hairStyle: 'bun', hairBack: true, hat: 'tiara', pin: '#8ae0ff', weapon: 'gourd', smile: true, ribbon: '#8ae0ff' },
+    quythua: { build: 'fat', body: 'robe', robe: '#4a7a5a', inner: '#2a4a34', trim: '#e0b040', hair: '#e8e4dc', hairStyle: 'bald', hat: 'scholar', beard: '#e8e4dc', weapon: 'abacus', skin: '#9ac08a', hand: '#9ac08a', closedEyes: true, wide: true },
+    daxoa: { build: 'brawny', body: 'armor', robe: '#1a4a5a', metal: '#2a6a7a', plate: '#8ae0d0', trim: '#e0b040', head: 'demon', fur: '#3a8a9a', hair: '#e83a2a', hairStyle: 'wild', weapon: 'trident', hand: '#3a8a9a', fangs: true, eyeColor: '#ffe04a', cape: '#0a2a34' },
+    quyma: { build: 'giant', body: 'armor', robe: '#2a3a2a', metal: '#3a4a3a', plate: '#8a9a6a', trim: '#c8302a', head: 'croc', fur: '#4a6a4a', weapon: 'mace', hand: '#4a6a4a', cape: '#1a241a', eyeGlow: '#ff3a3a', wide: true, skulls: true },
+    giaoma: { kind: 'serp', main: '#1a3a5a', light: '#5ab8c8', acc: '#e8402a', dragon: true, pattern: '#8ae0ff' },
+    nguudau: { build: 'giant', body: 'armor', robe: '#3a2a2a', metal: '#4a3a3a', plate: '#8a6a4a', trim: '#5ad8a8', head: 'bull', fur: '#4a3a34', weapon: 'axe', hand: '#4a3a34', tail: 'bull', eyeGlow: '#5affb8', cape: '#1a1414', wide: true },
+    madien: { build: 'brawny', body: 'armor', robe: '#3a1a1a', metal: '#4a2a2a', plate: '#c8402a', trim: '#5ad8a8', head: 'deer', fur: '#5a3a2a', horn: '#2a1a14', weapon: 'spear', hand: '#5a3a2a', eyeGlow: '#5affb8', cape: '#2a0a0a', flameAura: true },
+    huyetha: { build: 'giant', body: 'robe', robe: '#6a0a12', inner: '#2a0408', trim: '#ff5a5a', sash: '#ff2a3a', skin: '#c8a0a0', hand: '#c8a0a0', hair: '#e8e0e0', hairStyle: 'wild', beard: '#e8e0e0', eyeGlow: '#ff2a2a', weapon: 'staff', aura: '#ff2a3a', wide: true, skulls: true },
+    diemvuong: { build: 'brawny', body: 'robe', robe: '#1a1a2a', inner: '#c8302a', trim: '#e0b040', sash: '#e0b040', skin: '#3a3a4a', hand: '#3a3a4a', hair: '#0a0a10', hat: 'crown', beard: '#0a0a10', mustache: '#0a0a10', brows: '#0a0a10', weapon: 'abacus', eyeColor: '#ffd04a', wide: true },
+    diatang: { build: 'male', body: 'monk', robe: '#e8c45a', inner: '#a8782a', kasaya: '#5a2a8a', trim: '#ffe08a', hairStyle: 'bald', hat: 'monk5', halo: '#d8b8ff', weapon: 'khakkhara', closedEyes: true, smile: true },
+    phanquan: { body: 'robe', robe: '#2a3a2a', inner: '#c8302a', trim: '#e0b040', hair: '#0a0a10', hat: 'scholar', beard: '#0a0a10', mustache: '#0a0a10', brows: '#0a0a10', skin: '#a8b0a0', hand: '#a8b0a0', weapon: 'whisk' },
+    manhba: { body: 'robe', robe: '#6a5a7a', inner: '#3a2a4a', trim: '#c8b8e0', hair: '#f0ecf4', hairStyle: 'bun', pin: '#a88ae0', weapon: 'gourd', closedEyes: true, smile: true },
+    dethinh: { kind: 'quad', main: '#f2ead8', light: '#ffffff', acc: '#c8a040', mane: '#e8c45a', maneSize: 1.0, horn: 'single', hornc: '#ffd04a', tail: 'tuft', legs: 10, legW: 4, headR: 6, ears: 'round', snout: 'short', collar: '#c8302a', size: 1.05 },
+    banglang: { kind: 'quad', main: '#e8f4ff', light: '#ffffff', acc: '#5a8ac8', mane: '#bfe6ff', maneSize: 1.1, tail: 'fox', tails: 1, ears: 'point', snout: 'long', legs: 11, legW: 3.4, headR: 5.4, size: 1.2, glow: '#8ad8ff' },
+    tuyetma: { build: 'slim', body: 'dress', robe: '#e8f6ff', inner: '#8ac8f0', trim: '#ffffff', sash: '#5ab0e8', skin: '#eef6ff', hand: '#eef6ff', hair: '#ffffff', hairStyle: 'long', hairBack: true, hat: 'tiara', eyeColor: '#2a8ae8', weapon: 'fan', fanc: '#bfe6ff', ribbon: '#bfe6ff', aura: '#8ad8ff', lashes: true },
+    khaiminh: { build: 'giant', body: 'armor', robe: '#c8862a', metal: '#e8c45a', plate: '#fff0a0', trim: '#c8302a', head: 'tiger', fur: '#f0b040', spots: false, weapon: 'mace', hand: '#f0b040', tail: 'tiger', tailc: '#f0b040', thirdEye: true, manyEyes: true, cape: '#8a2a1a', wide: true, eyeGlow: '#ff6a2a' },
+    hacdong: { build: 'kid', body: 'robe', robe: '#ffffff', inner: '#e0e8f0', trim: '#c8302a', hair: '#1a1010', hairStyle: 'twin', hat: 'buns2', weapon: 'whisk', smile: true },
+    thanhdieu: { kind: 'bird', main: '#2a8ad8', light: '#8ad8ff', wing: '#2a6ac8', wingTip: '#ffd04a', longTail: '#5ab8e8', acc: '#ffd04a', crest: '#ffd04a', neckLen: 6, neckX: 7, headR: 3.6 },
+    vuongmau: { build: 'slim', body: 'dress', robe: '#f8e8a0', inner: '#c8302a', trim: '#ffffff', sash: '#c8302a', hair: '#1a1018', hairStyle: 'bun', hairBack: true, hat: 'crown', pin: '#ffd04a', halo: '#ffe08a', weapon: 'staff', closedEyes: true, smile: true, ribbon: '#ffd0a0' },
+    ludongtan: { build: 'male', body: 'robe', robe: '#f0ece0', inner: '#5a7aa8', trim: '#2a4a8a', sash: '#2a4a8a', hair: '#1a1010', hairStyle: 'topknot', beard: '#1a1010', weapon: 'sword', cape: '#bfd8f0', smile: true },
+    hatien: { build: 'slim', body: 'dress', robe: '#ffe0ec', inner: '#ff8ab0', trim: '#9ad07a', sash: '#ff8ab0', hair: '#1a1018', hairStyle: 'bun', hairBack: true, hat: 'flower', weapon: 'vase', smile: true, ribbon: '#ffd0e0' },
+    thanlau: { kind: 'octo', main: '#e8b8e0', light: '#fff0fa', acc: '#8a5ac8' },
+    kimngao: { kind: 'quad', main: '#c8a040', light: '#ffe8a0', acc: '#6a4a1a', shell: '#e8c45a', legs: 6, legW: 5, tail: 'snake', tailc: '#a87a2a', headR: 5.4, snout: 'short', horn: 'single', hornc: '#ffd04a', size: 1.3, glow: '#ffd04a' },
+    aodieu: { kind: 'bird', main: '#e84a8a', light: '#ffd0f0', wing: '#8a4ae8', wingTip: '#4ad8e8', fanTail: '#ffd04a', longTail: '#5ae8a8', crest: '#ffd04a', acc: '#ffd04a', neckLen: 7, neckX: 7, headR: 3.6, glow: '#ff8ae8' },
+    ngocde: { build: 'fat', body: 'robe', robe: '#ffd04a', inner: '#c8302a', trim: '#ffffff', sash: '#c8302a', hair: '#1a1010', hat: 'crown', beard: '#1a1010', mustache: '#1a1010', weapon: 'whisk', halo: '#fff0b0', wide: true },
+    loibo: { build: 'brawny', body: 'armor', robe: '#2a2a5a', metal: '#4a4a8a', plate: '#8ad8ff', trim: '#ffd04a', head: 'eagle', fur: '#3a5ab8', wings: '#2a3a8a', weapon: 'mace', hand: '#3a5ab8', eyeGlow: '#8af0ff', cape: '#1a1a3a', aura: '#5ab8ff' },
+    cuudieu: { build: 'male', body: 'armor', robe: '#3a0a3a', metal: '#5a1a5a', plate: '#ff8a2a', trim: '#ffd04a', hair: '#ffb04a', hairStyle: 'wild', hat: 'smallhorns', weapon: 'firespear', eyeGlow: '#ffd04a', cape: '#6a0a2a', flameAura: true, halo: '#ff6a2a' },
+    honthe: { build: 'giant', body: 'armor', robe: '#2a0a0a', metal: '#3a1a1a', plate: '#8a2a1a', trim: '#c8302a', head: 'demon', fur: '#5a1a2a', hair: '#1a0a0a', hairStyle: 'wild', hat: 'horns', weapon: 'axe', hand: '#5a1a2a', fangs: true, eyeGlow: '#ff2a2a', cape: '#1a0408', wide: true, skulls: true, aura: '#8a1a3a' },
+    tamma: { build: 'male', body: 'armor', robe: '#1a1a24', metal: '#2a2a34', plate: '#5a3a8a', trim: '#8a5ae8', head: 'monkey', fur: '#2a2430', face: '#6a5a7a', eyeGlow: '#c84aff', weapon: 'goldstaff', cape: '#1a0a2a', tail: 'monkey', hand: '#6a5a7a', aura: '#6a2ae8' },
+    hondonthu: { kind: 'king', main: '#3a2a5a', light: '#8a6ac8', acc: '#e8c45a' },
+    mato: { build: 'giant', body: 'robe', robe: '#140a1e', inner: '#5a1a8a', trim: '#c84aff', sash: '#ff4a8a', skin: '#3a2a4a', hand: '#3a2a4a', hair: '#e8e0ff', hairStyle: 'wild', hat: 'horns', thirdEye: true, eyeGlow: '#ff4aff', weapon: 'staff', wings: '#2a0a3a', aura: '#a02ae8', wide: true, halo: '#5a1a8a' },
+    kiep_loi: { build: 'brawny', body: 'armor', robe: '#1a2a5a', metal: '#3a5aa8', plate: '#bfe6ff', trim: '#ffd04a', skin: '#5a7ad8', hand: '#5a7ad8', hair: '#ffffff', hairStyle: 'wild', beard: '#ffffff', wings: '#3a5ab8', weapon: 'mace', eyeGlow: '#ffffff', aura: '#8ad8ff', halo: '#bfe6ff' },
+    kiep_hoa: { build: 'brawny', body: 'armor', robe: '#5a0a0a', metal: '#a82a1a', plate: '#ffb04a', trim: '#ffd04a', skin: '#e85a3a', hand: '#e85a3a', hair: '#ffd04a', hairStyle: 'wild', beard: '#ffb04a', weapon: 'firespear', eyeGlow: '#ffffff', flameAura: true, aura: '#ff6a2a' },
+    hatuong: { build: 'brawny', body: 'armor', robe: '#1a4a6a', metal: '#2a6a8a', plate: '#e8604a', trim: '#e0b040', head: 'croc', fur: '#e8604a', weapon: 'spear', hand: '#e8604a', cape: '#0a2a3a' },
+    quysai: { build: 'male', body: 'robe', robe: '#2a2a34', inner: '#5a1a1a', trim: '#5ad8a8', skin: '#9aa8a0', hand: '#9aa8a0', hair: '#0a0a10', hairStyle: 'wild', hat: 'scholar', weapon: 'club', eyeGlow: '#5affb8', fangs: true },
+    mabinh: { build: 'brawny', body: 'armor', robe: '#1a0a1e', metal: '#2a1a2e', plate: '#8a2a5a', trim: '#c84aff', head: 'demon', fur: '#4a2a5a', weapon: 'saber', hand: '#4a2a5a', eyeGlow: '#ff4aff', cape: '#2a0a2a' },
+  });
+  Object.assign(BOSS_ALIAS, { tamma: 'tamma' });
+
   Object.assign(HUMANS, {
     thuytac: { build: 'male', body: 'short', robe: '#2a4a5a', trim: '#c8302a', sash: '#c8302a', hair: '#1a1010', hairStyle: 'wild', hat: 'mask', weapon: 'saber', pants: '#1a2a34' },
-    tieuyeu: NPCS.tieuyeu, daodong: NPCS.daodong,
+    tieuyeu: NPCS.tieuyeu, daodong: NPCS.daodong, hatuong: NPCS.hatuong, quysai: NPCS.quysai, mabinh: NPCS.mabinh,
   });
 
   // 28 hình thái Tiên sủng: [kiểu, tuỳ chọn]  – E = bảng màu theo ngũ hành
@@ -1136,7 +1203,19 @@ const Art = (() => {
     }
   }
   const TALL = (kind, opts) => kind === 'hum' && !opts.chibi;
+  // tranh thật (public/assets/...) thay cho hình vẽ bằng code
+  let OVR = null; const imgRec = new Map();
+  function setOverride(fn) { OVR = fn; }
+  function fromArt(k, id) {
+    const url = OVR && OVR(k, id); if (!url) return null;
+    if (!imgRec.has(url)) { const cv = document.createElement('canvas'); cv.width = 200; cv.height = 260; const im = new Image(); im.onload = () => { cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.getContext('2d').drawImage(im, 0, 0); cv._ready = true; }; im.src = url; imgRec.set(url, { cv, url, art: true }); }
+    return imgRec.get(url);
+  }
+  let VEC_ON = true; try { VEC_ON = localStorage.getItem('tdk_pixel') !== '1'; } catch {}
+  const VEC = () => VEC_ON && typeof Chibi !== 'undefined';
   function get(key, kind, opts, frame = 0, scale = 4, expr = 'calm') {
+    if (kind === 'hum' && VEC()) return Chibi.make(key, opts, frame % 3, expr || 'calm');
+    if (VEC() && typeof Beast !== 'undefined' && Beast.has(kind)) { const r = Beast.make(key, kind, opts, frame % 3, expr || 'calm'); if (r) return r; }
     if (TALL(kind, opts)) scale = Math.min(scale, 3);
     const k = key + '|' + frame + '|' + scale + '|' + expr;
     if (!cache.has(k)) {
@@ -1157,6 +1236,7 @@ const Art = (() => {
     if (g.aq >= 4) o.sash = QCOL[g.aq];
     if (g.hq >= 3) o.hat = race === 'ma' ? 'helmet' : race === 'than' ? 'crown' : o.hat;
     if (g.plus >= 7) o.aura = QCOL[Math.max(g.aq || 0, g.wq || 0, 4)];
+    if (g.asc) { o.aura = '#bfe6ff'; o.halo = o.halo || '#fff3c4'; }
     return o;
   }
   function withAura(b, col) { // viền hào quang 1 điểm ảnh quanh hình
@@ -1176,6 +1256,9 @@ const Art = (() => {
     kylan: ['quad', { main: '#e8b040', light: '#fff0b0', acc: '#a8401a', mane: '#ff6a2a', maneSize: 0.9, horn: 'single', scales: true, tail: 'tuft', legs: 11, neck: 5, hoof: '#3a2418', snout: 'long', ears: 'point', size: 1.1 }],
     hac: ['bird', { main: '#ffffff', light: '#f6f2ea', wing: '#ffffff', wingTip: '#1a1a22', tail: '#1a1a22', headc: '#ffffff', cap: '#e02a2a', beak: '#6a6a5a', beakLen: 6, neckLen: 12, neckX: 9, neckc: '#ffffff', legs: true, headR: 3 }],
     hoho: ['quad', { main: '#e8902a', light: '#fff0d8', acc: '#2a1a10', stripes: true, tail: 'tiger', legs: 10, legW: 4, headR: 6, snout: 'short', ears: 'round', size: 1.12 }],
+    longquy: ['quad', { main: '#3a8a7a', light: '#bfe8d8', acc: '#1a4a3a', shell: '#5a8a4a', legs: 7, legW: 5.2, tail: 'snake', tailc: '#2a6a5a', headR: 5.6, snout: 'long', horn: 'antler', hornc: '#ffd04a', mane: '#8ae0d0', maneSize: 0.7, size: 1.2, saddle: '#c8302a' }],
+    tuyetlang: ['quad', { main: '#eef6ff', light: '#ffffff', acc: '#7aa0d0', mane: '#cfe8ff', maneSize: 1.0, tail: 'fox', tails: 1, ears: 'point', snout: 'long', legs: 12, legW: 3.6, headR: 5.4, size: 1.15, saddle: '#2a4a8a', glow: '#8ad8ff' }],
+    aodieu: ['bird', { main: '#e84a8a', light: '#ffd0f0', wing: '#8a4ae8', wingTip: '#4ad8e8', fanTail: '#ffd04a', longTail: '#5ae8a8', crest: '#ffd04a', acc: '#ffd04a', neckLen: 7, neckX: 7, headR: 3.6, glow: '#ff8ae8', saddle: '#ffd04a' }],
   };
   function cloudMount() {
     const b = new Buf(44, 22);
@@ -1186,16 +1269,20 @@ const Art = (() => {
   }
   function mount(id, frame = 0) {
     const m = MOUNTS[id]; if (!m) return null;
+    { const A = fromArt('mounts', id); if (A) return A; }
+    if (VEC() && typeof Beast !== 'undefined') { const r = Beast.make('mount:' + id, m[0], m[1], frame % 3); if (r) return r; }
     const k = 'mount:' + id + '|' + frame;
     if (!cache.has(k)) { const b = m[0] === 'cloud' ? cloudMount() : build(m[0], m[1], frame); const cv = render(b, 4); cache.set(k, { cv, url: cv.toDataURL() }); }
     return cache.get(k);
   }
 
   // API
-  function heroOpts(race, gender, gear) { const id = race + '_' + (gender === 'f' ? 'f' : 'm'); const base = HEROES[id] || HEROES.than_m; return [id, gear ? applyGear(base, gear, race) : base]; }
+  function heroOpts(race, gender, gear) { const id = heroId(race, gender, gear); const base = HEROES[id]; return [id, gear ? applyGear(base, gear, race) : base]; }
   function hero(race, gender, frame = 0, scale = 4, gear, expr = 'calm') {
     const [id, o] = heroOpts(race, gender, gear);
+    const A = fromArt('heroes', id); if (A) return A;
     if (!gear) return get('hero:' + id, 'hum', o, frame, scale, expr);
+    if (VEC()) return Chibi.make('hero:' + id + ':' + [gear.w, gear.aq, gear.hq, gear.plus >= 7 ? 1 : 0, gear.asc ? 1 : 0].join(','), o, frame % 3, expr || 'calm');
     scale = Math.min(scale, 3);
     const key = 'hero:' + id + ':' + [gear.w, gear.aq, gear.hq, gear.plus >= 7 ? 1 : 0].join(',') + '|' + frame + '|' + scale + '|' + expr;
     if (!cache.has(key)) { let b = build('hum', expr === 'calm' ? o : { ...o, _expr: expr }, frame); if (o.aura) b = withAura(b, o.aura); const cv = render(b, scale); cache.set(key, { cv, url: cv.toDataURL() }); }
@@ -1204,7 +1291,9 @@ const Art = (() => {
   // chân dung (đầu + vai) cho ảnh đại diện, danh sách
   function face(race, gender, gear, expr = 'calm') {
     const [id, o] = heroOpts(race, gender, gear);
+    const A = fromArt('heroes', id + '_face') || fromArt('heroes', id); if (A) return A;
     const key = 'face:' + id + ':' + (gear ? [gear.w, gear.aq, gear.hq].join(',') : '') + '|' + expr;
+    if (VEC()) return Chibi.make(key, { ...o, weapon: null, offhand: null }, 0, expr || 'calm', 'bust');
     if (!cache.has(key)) {
       const full = build('hum', { ...o, weapon: null, offhand: null, wings: null, _expr: expr }, 0), m = full.meta || { cx: 40, hy: 24, k: 1 };
       const w = Math.round(42 * m.k), h = Math.round(46 * m.k), x0 = Math.round(m.cx - w / 2), y0 = Math.max(0, Math.round(m.hy - 19 * m.k)), b = new Buf(w, h);
@@ -1213,14 +1302,16 @@ const Art = (() => {
     }
     return cache.get(key);
   }
-  function npc(id, frame = 0, scale = 4, expr) { const o = NPCS[id]; return o ? get('npc:' + id, o.kind || 'hum', o, frame, scale, expr) : null; }
+  function npc(id, frame = 0, scale = 4, expr) { const A = fromArt('npcs', id); if (A) return A; const o = NPCS[id]; return o ? get('npc:' + id, o.kind || 'hum', o, frame, scale, expr) : null; }
   function form(formId, element = 'tho', frame = 0, scale = 4, expr) {
+    const A = fromArt('monsters', formId); if (A) return A;
     const fn = FORMS[formId]; if (!fn) return null;
     const [kind, opts] = fn(ELEM[element] || ELEM.tho);
     return get('form:' + formId + ':' + element, kind, opts, frame, scale, kind === 'hum' ? expr : undefined);
   }
   function human(hid, frame = 0, scale = 4, expr) { const o = HUMANS[hid]; return o ? get('hum:' + hid, o.kind || 'hum', o, frame, scale, expr) : null; }
   function boss(bid, frame = 0, scale = 4, expr) {
+    const A = fromArt('bosses', bid); if (A) return A;
     if (bid === 'world') return get('boss:world', 'king', { main: '#3a5a8a', light: '#a8c8e8', acc: '#e8c45a' }, frame, scale);
     return npc(BOSS_ALIAS[bid] || bid, frame, scale, expr);
   }
@@ -1234,5 +1325,5 @@ const Art = (() => {
   }
   const kindOf = (formId) => (FORMS[formId] ? FORMS[formId](ELEM.tho)[0] : 'hum');
 
-  return { EMOTES, EMO_UNI, emote, special, sizeOf, get, build, face, hero, npc, form, human, boss, unit, mount, kindOf, HEROES, NPCS, FORMS, ELEM, MOUNTS };
+  return { EMOTES, EMO_UNI, emote, special, sizeOf, get, build, face, hero, npc, form, human, boss, unit, mount, kindOf, setOverride, HEROES, NPCS, FORMS, ELEM, MOUNTS };
 })();

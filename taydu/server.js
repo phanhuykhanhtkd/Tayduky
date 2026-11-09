@@ -11,7 +11,9 @@ const crypto = require('crypto');
 
 const D = require('./game/data');
 require('./game/data2'); // gộp vật phẩm / kỹ năng mới vào D
+const Z = require('./game/data3'); // Thần sủng, hậu truyện, phúc lợi… (Đợt 2–6)
 const F2 = require('./game/features2');
+const F3 = require('./game/features3');
 const L = require('./game/logic');
 const DB = require('./game/db');
 const { Battle } = require('./game/battle');
@@ -36,6 +38,8 @@ for (const c of Object.values(db.chars)) {
   if (!'.,P'.includes(ch || '#') || M.npcs.some((n) => n.x === c.x && n.y === c.y)) { c.x = M.spawn[0]; c.y = M.spawn[1]; }
   c.storyVer = 2;
 }
+// ---- 3 phái Phật/Tiên/Yêu + đội 3 Tiên sủng ----
+for (const c of Object.values(db.chars)) L.migrateChar(c);
 DB.save();
 
 // --------------------------------------------------------------------
@@ -102,7 +106,7 @@ function mapPlayers(mapId) {
   }
   return out;
 }
-const playerBrief = (c) => ({ id: c.id, name: c.name, race: c.race, gender: c.gender, lvl: c.lvl, x: c.x, y: c.y, gear: L.gearBrief(c), guild: c.guild ? db.guilds[c.guild]?.name : null });
+const playerBrief = (c) => ({ id: c.id, name: c.name, race: c.race, gender: c.gender, lvl: c.lvl, x: c.x, y: c.y, gear: L.gearBrief(c), guild: c.guild ? db.guilds[c.guild]?.name : null, title: F3.titleOf(c), stall: c.stall ? c.stall.title : null });
 
 function tileAt(mapId, x, y) { const t = D.MAPS[mapId].tiles[y]; return t ? t[x] || '#' : '#'; }
 function walkable(mapId, x, y) {
@@ -119,7 +123,7 @@ function metaBundle() {
   const maps = {};
   for (const [k, m] of Object.entries(D.MAPS)) {
     maps[k] = { name: m.name, chapter: m.chapter, theme: m.theme, lv: m.lv, spawn: m.spawn, tiles: m.tiles,
-      sub: m.sub, npcs: m.npcs.map(({ id, name, icon, x, y, boss, role, look }) => ({ id, name, icon, x, y, boss: !!boss, role, look })) };
+      sub: m.sub, post: m.post, asc: m.asc, nodes: m.nodes || [], npcs: m.npcs.map(({ id, name, icon, x, y, boss, role, look }) => ({ id, name, icon, x, y, boss: !!boss, role, look })) };
   }
   return {
     RACES: D.RACES, SKILLS: D.SKILLS, ELEMENTS: D.ELEMENTS, GRADES: D.GRADES, ITEMS: D.ITEMS, SLOTS: D.SLOTS,
@@ -127,16 +131,18 @@ function metaBundle() {
     QUESTS: D.QUESTS.map((q) => ({ title: q.title, text: q.text, map: q.map, nan: q.nan, no: q.no, type: q.type, count: q.count })),
     SECRETS: Object.fromEntries(Object.entries(D.SECRETS).map(([k, v]) => [k, { name: v.name, reward: v.reward }])),
     SPECIES_COUNT: D.SPECIES_COUNT, FORMS: D.FORMS.map((f) => ({ id: f.id, name: f.name, icon: f.icon })),
-    ENHANCE_RATE: D.ENHANCE_RATE, MOUNTS: require('./game/data2').MOUNTS,
+    ENHANCE_RATE: D.ENHANCE_RATE, MOUNTS: require('./game/data2').MOUNTS, STORY_END: D.STORY_END,
+    X3: { THAN: Z.THAN, THAN_COST: Z.THAN_COST, MENH: Z.MENH, MENH_LVL: Z.MENH_LVL, MENH_CHANGE_VANG: Z.MENH_CHANGE_VANG, TRAITS: Z.TRAITS, TITLES: Z.TITLES, GATHER: { ...Z.GATHER, needLv: undefined },
+      WORLD_EVENTS: Z.WORLD_EVENTS, ASCEND: Z.ASCEND, NIGHTMARE: Z.NIGHTMARE, MOUNT_MAX_LV: Z.MOUNT_MAX_LV },
   };
 }
 const META = metaBundle();
-// Tranh tuỳ chỉnh: public/assets/{monsters,bosses,npcs}/<id>.png
+// Tranh tuỳ chỉnh: public/assets/<thư mục>/<mã>.png|webp|jpg  (xem ART-SPEC.md)
 function scanAssets() {
   const out = {};
-  for (const k of ['monsters', 'bosses', 'npcs']) {
-    try { out[k] = fs.readdirSync(path.join(PUBLIC, 'assets', k)).filter((f) => /\.png$/i.test(f)).map((f) => f.replace(/\.png$/i, '')); }
-    catch { out[k] = []; }
+  for (const k of ['monsters', 'bosses', 'npcs', 'heroes', 'maps', 'battle', 'mounts']) {
+    out[k] = {};
+    try { for (const f of fs.readdirSync(path.join(PUBLIC, 'assets', k))) { const m = /^(.+)\.(png|webp|jpe?g)$/i.exec(f); if (m) out[k][m[1]] = f; } } catch {}
   }
   return out;
 }
@@ -169,7 +175,7 @@ io.on('connection', (socket) => {
       try {
         const c = charOf(socket);
         if (needChar && !c) return ack({ ok: false, msg: 'Chưa vào game.' });
-        if (c) L.resetDaily(c);
+        if (c) { L.resetDaily(c); F3.touch(c); }
         const r = (await fn(c, d || {})) || { ok: true };
         if (c && r.ok !== false && !r.noState) r.state = L.publicChar(c);
         delete r.noState;
@@ -269,21 +275,30 @@ io.on('connection', (socket) => {
     return { ok: true, noState: true };
   });
 
-  on('char:create', false, (_, { name, race, gender }) => {
+  on('char:create', false, (_, { name, race, gender, face }) => {
     const acc = db.accounts[socket.data.user];
     if (!acc) return { ok: false, msg: 'Chưa đăng nhập.' };
     if (acc.charId) return { ok: false, msg: 'Tài khoản đã có nhân vật.' };
     name = String(name || '').normalize('NFC').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e<>&"'`]/g, '').trim().replace(/\s+/g, ' ');
     if (name.length < 2 || name.length > 12) return { ok: false, msg: 'Tên nhân vật 2–12 ký tự.' };
     if (charByName(name)) return { ok: false, msg: 'Tên đã có người dùng.' };
-    if (!F2.own(D.RACES, race)) return { ok: false, msg: 'Chọn tộc.' };
+    race = F2.own(D.RACE_ALIAS, race) ? D.RACE_ALIAS[race] : race;
+    if (!F2.own(D.RACES, race)) return { ok: false, msg: 'Chọn phái.' };
+    face = F2.int(face, -1, 5); if (face == null) face = -1;
     const id = 'c' + DB.nextId();
-    db.chars[id] = L.createChar(id, socket.data.user, name, race, gender === 'f' ? 'f' : 'm');
+    db.chars[id] = L.createChar(id, socket.data.user, name, race, gender === 'f' ? 'f' : 'm', face >= 0 ? face : undefined);
     acc.charId = id;
-    sys(`Chào mừng tân thủ [${name}] (${D.RACES[race].name}) gia nhập Tam Giới!`);
+    sys(`Chào mừng tân thủ [${name}] (phái ${D.RACES[race].name}) gia nhập Tam Giới!`);
     return { ok: true, noState: true };
   });
 
+  // chọn lại gương mặt miễn phí 1 lần (nhân vật chuyển từ phái cũ)
+  on('char:face', true, (c, { face }) => {
+    if (!c.facePick) return { ok: false, msg: 'Bạn đã dùng lượt đổi gương mặt miễn phí.' };
+    face = F2.int(face, 0, 5); if (face == null) return { ok: false, msg: 'Chọn gương mặt.' };
+    c.face = face; c.gender = D.RACES[c.race].avatars[face].gender; c.facePick = false;
+    return { ok: true, msg: `Đã đổi sang ${D.RACES[c.race].avatars[face].name}.` };
+  });
   on('enter', false, () => {
     const acc = db.accounts[socket.data.user];
     if (!acc || !acc.charId) return { ok: false, msg: 'Chưa có nhân vật.' };
@@ -301,6 +316,7 @@ io.on('connection', (socket) => {
       chat: [...chat.khu, ...chat.shop, ...chat.he, ...(c.guild ? chat.phai[c.guild] || [] : [])].sort((a, b2) => a.t - b2.t),
       pending: pending.get(c.id) || [], boss: bossInfo(),
       mail: (c.mail || []).filter((m) => !m.seen).length, event: (() => { const e = F2.activeEvent(); return e ? { id: e.id, name: e.name, icon: e.icon } : null; })(),
+      welfare: F3.onEnter(c),
     };
   });
 
@@ -308,6 +324,7 @@ io.on('connection', (socket) => {
     conns.set(ip, Math.max(0, (conns.get(ip) || 1) - 1));
     const c = charOf(socket);
     if (c && online.get(c.id) === socket) {
+      F3.onLeave(c, io);
       online.delete(c.id);
       io.to('map:' + c.map).emit('map:leave', { id: c.id });
     }
@@ -346,12 +363,14 @@ io.on('connection', (socket) => {
       const ch = tileAt(c.map, x, y);
       return { ok: false, msg: ch === 'W' ? 'Dòng thác chảy xiết, chưa thể vào...' : '', pos: [c.x, c.y], noState: true };
     }
+    const stallMsg = F3.onMove(c, io);
     c.x = x; c.y = y;
-    // hồi phục nhẹ khi đi bộ (1% khí huyết & nội lực mỗi bước)
-    const ds = L.calcStats(c);
+    // hồi phục nhẹ khi đi bộ (1% khí huyết & nội lực mỗi bước; Mộc Mệnh 2%)
+    const ds = L.calcStats(c), rg = c.menh === 'moc' ? 0.02 : 0.01;
+    if (stallMsg) r0.msg = stallMsg;
     if (c.hp < ds.maxHp || c.mp < ds.maxMp) {
-      c.hp = Math.min(ds.maxHp, c.hp + Math.ceil(ds.maxHp * 0.01));
-      c.mp = Math.min(ds.maxMp, c.mp + Math.ceil(ds.maxMp * 0.01));
+      c.hp = Math.min(ds.maxHp, c.hp + Math.ceil(ds.maxHp * rg));
+      c.mp = Math.min(ds.maxMp, c.mp + Math.ceil(ds.maxMp * rg));
       r0.regen = [c.hp, c.mp];
     }
     io.to('map:' + c.map).emit('map:move', { id: c.id, x, y }, socket);
@@ -365,12 +384,14 @@ io.on('connection', (socket) => {
     if (tile === 'P') {
       const idx = D.MAP_ORDER.indexOf(c.map);
       const next = D.MAP_ORDER[idx + 1];
+      const gate = next && F3.mapGate(c, D.MAPS[next]);
+      if (gate) { r.msg = gate; return r; }
       if (next && c.unlocked >= D.MAPS[next].chapter) { travel(c, next); r.travel = next; r.players = mapPlayers(next).filter((p) => p.id !== c.id); r.noState = false; }
-      else r.msg = next ? 'Cổng phong ấn – hãy hoàn thành cốt truyện chương này.' : 'Phía trước là Lôi Âm Tự…';
+      else r.msg = next ? 'Cổng phong ấn – hãy hoàn thành cốt truyện chương này.' : 'Phía trước là hư vô tận cùng…';
       return r;
     }
-    if (tile === ',' && !c.peace && Math.random() < D.MAPS[c.map].encounter.rate) {
-      const enemies = L.rollEncounter(c.map, c.lvl);
+    if (tile === ',' && !c.peace && Math.random() < D.MAPS[c.map].encounter.rate * F3.encMul()) {
+      const enemies = F3.decorateEnemies(c, L.rollEncounter(c.map, c.lvl));
       r.battle = startBattle(c, enemies, { kind: 'wild' });
     }
     return r;
@@ -380,6 +401,7 @@ io.on('connection', (socket) => {
     const nb = notInBattle(c); if (nb) return nb;
     const M = F2.own(D.MAPS, map);
     if (!M) return { ok: false, msg: 'Bản đồ không tồn tại.' };
+    { const g = F3.mapGate(c, M); if (g) return { ok: false, msg: g }; }
     if (M.chapter > c.unlocked) return { ok: false, msg: 'Chưa mở khoá chương này.' };
     travel(c, map);
     return { ok: true, players: mapPlayers(map).filter((p) => p.id !== c.id) };
@@ -422,6 +444,7 @@ io.on('connection', (socket) => {
       else if (si >= 0 && c.quest > si) { text = `${B.name}: Lần trước chỉ là ta sơ suất. Đánh lại không?`; opts.push({ id: 'fight', label: '⚔️ Tái chiến (nhận vật phẩm)' }); }
       else text = `${B.name} đang bế quan. Hãy hoàn thành cốt truyện trước đã.`;
     }
+    F3hook.talk(c, n, opts);
     if (n.role === 'heal') opts.push({ id: 'heal', label: `💚 Trị thương (${c.lvl <= 10 ? 'miễn phí' : fmt(c.lvl * 6) + ' bạc'})` });
     if (n.role === 'shop') opts.push({ id: 'shop', label: '🛒 Mua bán' });
     if (n.role === 'peach') opts.push({ id: 'peach', label: `🍑 Trộm Đào (${D.CONFIG.dailyPeach - c.daily.peach}/${D.CONFIG.dailyPeach} lượt)` });
@@ -450,6 +473,7 @@ io.on('connection', (socket) => {
     if (!n) return { ok: false, msg: 'Hãy lại gần NPC.' };
     const q = D.QUESTS[c.quest];
     if (opt === 'quest' && q && q.type === 'talk' && q.npc === n.id) {
+      const gate = F3.questGate(c, q); if (gate) return gate;
       const res = L.completeQuestStep(c);
       sysIfLevel(c, res.ups);
       return { ok: true, dialogText: q.dialog, quest: res };
@@ -461,6 +485,7 @@ io.on('connection', (socket) => {
       if (c.hp < 1) return { ok: false, msg: 'Khí huyết cạn, hãy trị thương trước.' };
       return { ok: true, battle: startBattle(c, L.makeBoss(n.boss), { kind: 'boss', bossId: n.boss, quest: isQuest }) };
     }
+    { const x = F3hook.act(c, n, opt); if (x) return x; }
     if (opt === 'heal' && n.role === 'heal') {
       const cost = c.lvl <= 10 ? 0 : c.lvl * 6;
       if (c.bac < cost) return { ok: false, msg: 'Không đủ bạc.' };
@@ -487,7 +512,7 @@ io.on('connection', (socket) => {
 
   // ---------------- Chiến đấu ----------------
   function startBattle(c, enemies, opts) {
-    if (!['arena', 'world', 'peach'].includes(opts.kind || 'wild')) { const al = F2.partyAllies(db, c, online, battles); if (al.length) opts.allies = al; }
+    if (!['arena', 'world', 'peach', 'trial'].includes(opts.kind || 'wild')) { const al = F2.partyAllies(db, c, online, battles); if (al.length) opts.allies = al; }
     const b = new Battle(c, enemies, opts);
     battles.set(c.id, b);
     return b.snapshot();
@@ -536,13 +561,13 @@ io.on('connection', (socket) => {
           else if (L.addItem(c, dr.id, 1)) res.items.push(dr.id);
         }
       }
-      // phu thê
+      // phu thê · bang hội · Thiên Địa Dị Tượng
       if (c.spouse) res.exp = Math.round(res.exp * 1.05);
+      F3.battleMul(c, b, res);
       res.ups = L.addExp(c, res.exp);
       c.bac += res.bac;
       // tiên sủng nhận EXP
-      const pet = c.pets.find((p) => p.uid === c.activePet);
-      if (pet && res.exp) res.petUps = L.petAddExp(c, pet, res.exp * 0.6);
+      L.teamPets(c).forEach((pet, i) => { if (res.exp) { const up = L.petAddExp(c, pet, res.exp * (i ? 0.45 : 0.6)); if (!i) res.petUps = up; } });
       // thu phục
       for (const cp of b.captured) {
         const p = L.makePet(cp.sid, cp.lvl, cp.mut);
@@ -550,7 +575,7 @@ io.on('connection', (socket) => {
         const v = L.petView(p);
         res.captured.push(v);
         if (p.mut || v.grade >= 3) sys(`${c.name} vừa thu phục được ${p.mut ? 'Tiên sủng BIẾN DỊ ' : ''}[${D.GRADES[v.grade].name}] ${p.name}!`);
-        if (!c.activePet) c.activePet = p.uid;
+        L.teamAdd(c, p.uid);
       }
       // nhiệm vụ
       const q = D.QUESTS[c.quest];
@@ -562,15 +587,16 @@ io.on('connection', (socket) => {
       }
       if (b.kind === 'boss' && b.opts.quest && q && q.type === 'boss' && q.boss === b.opts.bossId) {
         res.quest = L.completeQuestStep(c);
-        sys(`${c.name} đã đánh bại ${D.BOSSES[b.opts.bossId].name}! Kiếp nạn đã vượt: ${c.nan}/81.`);
+        sys(D.BOSSES[b.opts.bossId].post ? `${c.name} đã đánh bại ${D.BOSSES[b.opts.bossId].name}! (Hậu truyện)` : `${c.name} đã đánh bại ${D.BOSSES[b.opts.bossId].name}! Kiếp nạn đã vượt: ${c.nan}/81.`);
         if (res.quest.unlocked) sys(`${c.name} mở ra chương mới: ${res.quest.unlockedName}.`);
-        if (c.quest >= D.QUESTS.length) sys(`🎉 ${c.name} đã vượt qua đủ 81 kiếp nạn, đến Lôi Âm Tự thỉnh chân kinh!`);
+        if (c.quest === D.STORY_END) sys(`🎉 ${c.name} đã vượt qua đủ 81 kiếp nạn, đến Lôi Âm Tự thỉnh chân kinh!`);
+        if (c.quest >= D.QUESTS.length) sys(`☯️ ${c.name} đánh tan Hỗn Độn Ma Tổ – vượt Kiếp Nạn Thứ 82, trở thành Hộ Kinh Sứ của Tam Giới!`);
         guildContrib(c, 5);
       }
       if (res.quest) sysIfLevel(c, res.quest.ups);
       if (b.kind === 'wild' && c.map === 'ch4') guildContrib(c, 1);
       if (b.kind === 'peach') { L.addItem(c, 'ban_dao', 1); res.items.push('ban_dao'); }
-      if (b.kind === 'tower') { F.towerWin(c, b, res, sys); const p2 = c.pets.find((p) => p.uid === c.activePet); if (p2 && res.exp) res.petUps = L.petAddExp(c, p2, res.exp * 0.6); }
+      if (b.kind === 'tower') { F.towerWin(c, b, res, sys); L.teamPets(c).forEach((p2, i) => { if (res.exp) { const up = L.petAddExp(c, p2, res.exp * (i ? 0.45 : 0.6)); if (!i) res.petUps = up; } }); }
     }
     if (b.kind === 'arena') {
       const opp = b.opts.opp;
@@ -582,7 +608,7 @@ io.on('connection', (socket) => {
       } else { c.arena = Math.max(0, c.arena - 10); res.arena = -10; }
     }
     if (out === 'lose') {
-      if (b.kind !== 'arena' && b.kind !== 'world' && b.kind !== 'tower') {
+      if (!['arena', 'world', 'tower', 'nightmare', 'dungeon', 'trial'].includes(b.kind)) {
         const lost = Math.floor(c.bac * 0.05);
         c.bac -= lost; res.lostBac = lost;
         c.hp = Math.max(1, Math.round(s.maxHp * 0.3));
@@ -595,6 +621,7 @@ io.on('connection', (socket) => {
     masterReward(c, res.ups);
     F2.battleExtras(c, b, res, { db, toast, pushState });
     F.onBattleEnd(c, b, res);
+    F3.afterBattle(c, b, res, { sys, io, db });
     return res;
   }
 
@@ -620,7 +647,7 @@ io.on('connection', (socket) => {
   function guildContrib(c, n) {
     c.contrib += n;
     const g = c.guild && db.guilds[c.guild];
-    if (g) { g.points = (g.points || 0) + n; g.members[c.id] = (g.members[c.id] || 0) + n; }
+    if (g) { g.points = (g.points || 0) + n; g.members[c.id] = (g.members[c.id] || 0) + n; const up = F3.guildExp(db, c, n); if (up) { addChat('phai', { from: 'Môn Phái', text: `🎉 Môn phái lên cấp ${up.lv}!` }, g.id); sys(`Môn phái «${g.name}» đạt cấp ${up.lv}!`); } }
   }
 
   // ---------------- Hành trang / trang bị ----------------
@@ -649,7 +676,7 @@ io.on('connection', (socket) => {
       const form = L.pick(D.FORMS.filter((f) => f.rare)).id;
       const p = L.makePet(D.speciesId(form, L.pick(D.ELEMENT_KEYS), L.rand(2, 3)), c.lvl, true);
       c.pets.push(p);
-      if (!c.activePet) c.activePet = p.uid;
+      L.teamAdd(c, p.uid);
       L.removeItem(c, id, 1);
       sys(`${c.name} ấp Trứng Biến Dị nở ra ${p.name}!`);
       return { ok: true, msg: `Trứng nở ra ${p.name}!`, pet: L.petView(p) };
@@ -758,17 +785,28 @@ io.on('connection', (socket) => {
   on('pet:active', true, (c, { uid }) => {
     const nb = notInBattle(c); if (nb) return nb;
     if (uid && !c.pets.find((p) => p.uid === uid)) return { ok: false, msg: 'Không tìm thấy.' };
-    c.activePet = uid || null;
-    return { ok: true, msg: uid ? 'Đã cho xuất chiến.' : 'Đã cho nghỉ.' };
+    if (!uid) { c.activePets = []; c.activePet = null; return { ok: true, msg: 'Đã cho cả đội nghỉ.' }; }
+    L.teamAdd(c, uid, true);
+    return { ok: true, msg: 'Đã đặt làm Tiên sủng dẫn đầu.' };
+  });
+  // thêm / bớt Tiên sủng trong đội xuất chiến (tối đa 3)
+  on('pet:team', true, (c, { uid, on: join }) => {
+    const nb = notInBattle(c); if (nb) return nb;
+    if (!c.pets.find((p) => p.uid === uid)) return { ok: false, msg: 'Không tìm thấy.' };
+    if (!join) { L.teamRemove(c, uid); return { ok: true, msg: 'Đã cho nghỉ.' }; }
+    if (!L.teamAdd(c, uid)) return { ok: false, msg: 'Đội đã đủ 3 Tiên sủng – cho một con nghỉ trước.' };
+    return { ok: true, msg: 'Đã cho xuất chiến.' };
   });
   on('pet:release', true, (c, { uid }) => {
     const nb = notInBattle(c); if (nb) return nb;
     const i = c.pets.findIndex((p) => p.uid === uid);
     if (i < 0) return { ok: false, msg: 'Không tìm thấy.' };
     const p = c.pets.splice(i, 1)[0];
-    if (c.activePet === uid) c.activePet = null;
+    L.teamRemove(c, uid);
     const bac = p.lvl * 10;
     c.bac += bac;
+    const sp = D.getSpecies(p.sid);
+    if (sp && sp.than) { const back = sp.chan ? 45 : 15; L.addItem(c, 'hon_' + sp.than, back); return { ok: true, msg: `${p.name} trở về thiên giới, để lại ${back} Hồn Phách (+${bac} bạc).` }; }
     return { ok: true, msg: `Đã phóng sinh ${p.name} (+${bac} bạc công đức).` };
   });
   on('pet:rename', true, (c, { uid, name }) => {
@@ -851,35 +889,34 @@ io.on('connection', (socket) => {
   // ---------------- Tam Giới Đấu ----------------
   function makeBot(lvl, i) {
     const race = Object.keys(D.RACES)[i % 3];
-    const b = L.createChar('bot' + i, 'bot', ['Hư Ảnh', 'Tâm Ma', 'Kính Tượng'][i % 3] + ' ' + D.RACES[race].name.split(' ')[0], race, i % 2 ? 'f' : 'm');
+    const b = L.createChar('bot' + i, 'bot', ['Hư Ảnh', 'Tâm Ma', 'Kính Tượng'][i % 3] + ' ' + D.RACES[race].name.split(' ')[0], race, i % 2 ? 'f' : 'm', (i * 5) % 6);
     b.lvl = Math.max(1, lvl);
     const pts = (b.lvl - 1) * 5;
     const k = ['the', 'luc', 'phap', 'nhanh'];
     for (let j = 0; j < pts; j++) b.stats[k[(j + i) % 4]]++;
     for (const slot of D.SLOT_KEYS) b.equip[slot] = L.makeEquip(slot, b.lvl, 1);
     b.arena = 900 + i * 60; b.bot = true;
-    if (b.lvl >= 5) { const p = L.makePet(D.speciesId(L.pick(D.FORMS).id, L.pick(D.ELEMENT_KEYS), 1), b.lvl, false); b.pets.push(p); b.activePet = p.uid; }
+    if (b.lvl >= 5) { const p = L.makePet(D.speciesId(L.pick(D.FORMS).id, L.pick(D.ELEMENT_KEYS), 1), b.lvl, false); b.pets.push(p); b.activePet = p.uid; b.activePets = [p.uid]; }
     return b;
   }
   const botCache = new Map();
   function arenaList(c) {
     const real = Object.values(db.chars).filter((x) => x.id !== c.id).sort((a, b) => Math.abs(a.arena - c.arena) - Math.abs(b.arena - c.arena)).slice(0, 5)
-      .map((x) => ({ id: x.id, name: x.name, lvl: x.lvl, race: x.race, gender: x.gender, arena: x.arena, power: L.power(x) }));
+      .map((x) => ({ id: x.id, name: x.name, lvl: x.lvl, race: x.race, gender: x.gender, gear: L.gearBrief(x), arena: x.arena, power: L.power(x) }));
     const bots = [];
     for (let i = 0; i < 3; i++) {
       const key = `${c.id}:${i}:${c.lvl}:${L.today()}`;
       if (!botCache.has(key)) botCache.set(key, makeBot(c.lvl + i - 1, i));
       const b = botCache.get(key);
-      bots.push({ id: 'bot:' + key, name: b.name, lvl: b.lvl, race: b.race, gender: b.gender, arena: b.arena, power: L.power(b), bot: true });
+      bots.push({ id: 'bot:' + key, name: b.name, lvl: b.lvl, race: b.race, gender: b.gender, gear: L.gearBrief(b), arena: b.arena, power: L.power(b), bot: true });
     }
     return [...real, ...bots];
   }
   function heroUnitsFrom(o) {
     const s = L.calcStats(o);
-    const units = [{ kind: 'hero', name: o.name, lvl: o.lvl, hero: { race: o.race, gender: o.gender, gear: L.gearBrief(o) }, ...s, hp: s.maxHp, mp: s.maxMp,
+    const units = [{ kind: 'hero', name: o.name, lvl: o.lvl, hero: { race: o.race, gender: o.gender, face: o.face, gear: L.gearBrief(o) }, res: L.resistOf(o), ...s, hp: s.maxHp, mp: s.maxMp,
       skills: [...o.skills.filter((k) => (D.SKILLS[k].lv || 1) <= o.lvl), ...(o.secretSkills || [])], catchable: false }];
-    const pet = o.pets.find((p) => p.uid === o.activePet);
-    if (pet) { const v = L.petView(pet); units.push({ kind: 'beast', sid: pet.sid, name: pet.name, lvl: pet.lvl, icon: v.icon, element: v.element, grade: v.grade, mut: pet.mut, ...v.stats, skills: v.skills, catchable: false }); }
+    for (const pet of L.teamPets(o)) { const v = L.petView(pet); units.push({ kind: 'beast', sid: pet.sid, name: pet.name, lvl: pet.lvl, icon: v.icon, element: v.element, grade: v.grade, mut: pet.mut, ...v.stats, skills: v.skills, catchable: false }); }
     return units;
   }
   on('arena:list', true, (c) => ({ ok: true, list: arenaList(c), left: D.CONFIG.dailyArena - c.daily.arena, noState: true }));
@@ -928,7 +965,7 @@ io.on('connection', (socket) => {
     if (now - (lastChat.get(c.id) || 0) < 1200) return { ok: false, msg: 'Nói chậm thôi…', noState: true };
     lastChat.set(c.id, now);
     if (ch === 'phai' && !c.guild) return { ok: false, msg: 'Bạn chưa vào Môn Phái.', noState: true };
-    addChat(ch, { from: c.name, fromId: c.id, race: c.race, lvl: c.lvl, text }, c.guild);
+    addChat(ch, { from: c.name, fromId: c.id, race: c.race, gender: c.gender, face: c.face, lvl: c.lvl, text }, c.guild);
     return { ok: true, noState: true };
   });
 
@@ -1077,15 +1114,24 @@ io.on('connection', (socket) => {
   // ---------------- Xếp hạng ----------------
   on('rank:list', true, (c, { type }) => {
     const key = { lvl: (x) => x.lvl * 1e9 + x.exp, power: L.power, arena: (x) => x.arena, nan: (x) => x.nan * 1e6 + x.lvl, tower: (x) => ((x.tower && x.tower.best) || 0) * 1e3 + x.lvl }[type] || ((x) => x.lvl);
-    const list = Object.values(db.chars).map((x) => ({ id: x.id, name: x.name, race: x.race, lvl: x.lvl, v: key(x), power: L.power(x), arena: x.arena, nan: x.nan, tower: (x.tower && x.tower.best) || 0 }))
+    const list = Object.values(db.chars).map((x) => ({ id: x.id, name: x.name, race: x.race, gear: L.gearBrief(x), lvl: x.lvl, v: key(x), power: L.power(x), arena: x.arena, nan: x.nan, tower: (x.tower && x.tower.best) || 0 }))
       .sort((a, b) => b.v - a.v).slice(0, 30);
     return { ok: true, list, noState: true };
   });
 
   F.register(on, { notInBattle, startBattle, sys, db });
+  const F3hook = F3.register(on, { db, notInBattle, startBattle, sys, toast, pushState, online, battles, io, socket, travel, mapPlayers, heroUnitsFrom, addChat, levelUp: (c, ups) => sysIfLevel(c, ups) });
   // lệnh chỉ dùng khi chạy kiểm thử (TDK_TEST=1) – KHÔNG bật trên máy chủ thật
-  if (process.env.TDK_TEST === '1') on('test:give', true, (c, { items, bac, vang, lvl, petLvl, points }) => {
+  if (process.env.TDK_TEST === '1') on('test:give', true, (c, d2) => {
+    const { items, bac, vang, lvl, petLvl, points, quest, asc, energy, onl } = d2;
     if (points) c.points += points;
+    if (Number.isInteger(quest)) { c.quest = Math.min(D.QUESTS.length, quest); c.qprog = 0; const q = D.QUESTS[c.quest]; c.unlocked = Math.max(c.unlocked, q ? D.MAPS[q.map].chapter : D.MAP_ORDER.length); if (c.quest >= D.STORY_END) c.nan = 81; }
+    if (asc != null) c.asc = asc ? 1 : 0;
+    if (energy != null) { F3.ensure(c); c.energy = { v: energy, t: Date.now() }; }
+    if (onl != null) c.daily.onl = onl;
+    if (Number.isInteger(d2.runStage) && c.run) c.run.stage = d2.runStage;
+    if (d2 && d2.map && D.MAPS[d2.map]) { travel(c, d2.map); }
+    if (d2 && Number.isInteger(d2.x) && Number.isInteger(d2.y)) { c.x = d2.x; c.y = d2.y; }
     for (const [id, n] of Object.entries(items || {})) L.addItem(c, id, n);
     c.bac += bac || 0; c.vang += vang || 0; if (lvl) { c.points += (lvl - c.lvl) * D.CONFIG.pointsPerLevel; c.lvl = lvl; const s = L.calcStats(c); c.hp = s.maxHp; c.mp = s.maxMp; }
     if (petLvl) c.pets.forEach((p) => (p.lvl = petLvl));
@@ -1109,7 +1155,7 @@ function checkSecretAt(c) {
     const p = L.makePet(D.speciesId('thongoc', 'thuy', 3), Math.max(1, c.lvl), true);
     p.name = 'Nguyệt Thố (Biến Dị)';
     c.pets.push(p);
-    if (!c.activePet) c.activePet = p.uid;
+    L.teamAdd(c, p.uid);
   } else if (id === 'thuylien') {
     if (!(h >= 17 && h < 19)) return null;
     c.secretSkills = c.secretSkills || [];

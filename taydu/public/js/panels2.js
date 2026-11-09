@@ -198,18 +198,18 @@ const Panels2 = (() => {
   }
 
   // ================= BẢN ĐỒ THẾ GIỚI =================
-  const TH_ICON = { heaven: '☁️', city: '🏯', forest: '⛰️', desert: '🌋', river: '🌊', cave: '🕳️', snow: '❄️' };
+  const TH_ICON = { heaven: '☁️', city: '🏯', forest: '⛰️', desert: '🌋', river: '🌊', cave: '🕳️', snow: '❄️', sea: '🐚', hell: '🏮', void: '🌀' };
   function renderWorld(body) {
     const c = G.me, order = M().MAP_ORDER;
     const n = order.length, rowH = 86, Hh = n * rowH + 40;
     const pts = order.map((id, i) => [50 + Math.sin(i * 1.15) * 30, Hh - 40 - i * rowH]);
     const path = pts.map(([x, y], i) => (i ? 'L' : 'M') + (x * 3.4).toFixed(0) + ' ' + y).join(' ');
-    body.innerHTML = `<p class="muted">Hành trình thỉnh kinh từ Thiên Cung, Đông Thổ Đại Đường tới Linh Sơn. Chạm vào chương đã mở để truyền tống.</p>
+    body.innerHTML = `<p class="muted">Hành trình thỉnh kinh từ Thiên Cung tới Linh Sơn, rồi Hậu truyện qua sáu cõi tới Hỗn Độn Hư Không. Chạm vào chương đã mở để truyền tống.</p>
       <div class="world" style="height:${Hh}px"><svg viewBox="0 0 340 ${Hh}" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="#8a5a2a" stroke-width="5" stroke-dasharray="2 9" stroke-linecap="round" opacity=".7"/></svg>
       ${order.map((id, i) => { const m = M().MAPS[id], ok = m.chapter <= c.unlocked, here = id === c.map; const [x, y] = pts[i];
         return `<button class="wnode ${x > 52 ? 'r' : ''} ${ok ? '' : 'lock'} ${here ? 'here' : ''} th-${m.theme}" data-m="${id}" style="left:${x}%;top:${y}px" ${ok ? '' : 'disabled'}>
           <span class="wi">${ok ? TH_ICON[m.theme] || '🗺️' : '🔒'}</span>${here ? `<img class="wme" src="${Sprites.heroURL(c.race, c.gender, 0, c.gear)}" alt="">` : ''}
-          <span class="wl"><b>${i === 0 ? 'Tiền truyện' : 'Chương ' + m.chapter}</b>${esc(m.name)}<small>${ok ? `Quái cấp ${m.lv[0]}–${m.lv[1]}` : 'Chưa mở'}</small></span></button>`; }).join('')}</div>`;
+          <span class="wl"><b>${i === 0 ? 'Tiền truyện' : m.post ? 'Hậu truyện ' + (m.chapter - 15) : 'Chương ' + m.chapter}</b>${esc(m.name)}<small>${ok ? `Quái cấp ${m.lv[0]}–${m.lv[1]}${m.asc ? ' · Cần Phi Thăng' : ''}` : m.asc && !c.asc ? 'Cần Phi Thăng' : 'Chưa mở'}</small></span></button>`; }).join('')}</div>`;
     const w = body.querySelector('.world .here'); if (w) setTimeout(() => w.scrollIntoView({ block: 'center' }), 50);
     body.querySelectorAll('[data-m]').forEach((b2) => (b2.onclick = async () => { if (b2.dataset.m === c.map) return; const r = await G.call('map:travel', { map: b2.dataset.m }); if (r.ok) { UI.closeSheet(); G.onTravel(r); } }));
   }
@@ -217,7 +217,7 @@ const Panels2 = (() => {
   // ================= BẢN ĐỒ NHỎ =================
   let mini = null, miniBig = false;
   function initMini() {
-    if (mini) return;
+    if (mini || document.getElementById('mm')) return;
     mini = document.createElement('canvas'); mini.id = 'minimap';
     $('#map').parentElement.appendChild(mini);
     mini.onclick = (e) => { e.stopPropagation(); miniBig = !miniBig; mini.classList.toggle('big', miniBig); drawMini(); };
@@ -242,11 +242,11 @@ const Panels2 = (() => {
     const qs = M().QUESTS.filter((q) => q.map === mapId);
     const bosses = m.npcs.filter((n) => n.boss), friends = (m.npcs.filter((n) => !n.boss && qs.some((q) => q.type === 'talk' && q.npc === n.id)).concat(m.npcs.filter((n) => !n.boss && !n.role))).filter((n, i, arr) => arr.indexOf(n) === i).slice(0, 3);
     const img = (n, cls = '') => { const a = Art.npc(n.look || n.id); return a ? `<img class="px ${cls}" src="${a.url}" alt="">` : `<span class="emo">${n.icon}</span>`; };
-    const bg = `url('${Tiles.battleBG(m.theme)}')`;
+    const bg = `url('${typeof PaintMap !== 'undefined' ? PaintMap.battleURL(m.theme, 390, 300) : Tiles.battleBG(m.theme)}')`;
     const panels = [
-      { cls: 'p1', html: `<div class="cp-title"><small>${mapId === 'ch1' ? 'Tiền truyện' : 'Chương ' + m.chapter}</small><b>${esc(m.name)}</b><i>${esc(m.sub || '')}</i></div>` },
+      { cls: 'p1', html: `<div class="cp-title"><small>${mapId === 'ch1' ? 'Tiền truyện' : m.post ? 'Hậu truyện ' + (m.chapter - 15) : 'Chương ' + m.chapter}</small><b>${esc(m.name)}</b><i>${esc(m.sub || '')}</i></div>` },
       { cls: 'p2', html: `<div class="cp-cast">${friends.map((n) => img(n)).join('')}</div><div class="cp-cap">${esc((qs[0] && qs[0].text) || '')}</div>` },
-      bosses.length ? { cls: 'p3', html: `<div class="cp-boss">${img(bosses[bosses.length - 1], 'boss')}</div><div class="cp-cap red">${esc(bosses.map((b) => b.name).join(' · '))} đang chờ phía trước… ${qs.reduce((s, q) => s + (q.nan || 0), 0)} kiếp nạn.</div>` } : null,
+      bosses.length ? { cls: 'p3', html: `<div class="cp-boss">${img(bosses[bosses.length - 1], 'boss')}</div><div class="cp-cap red">${esc(bosses.map((b) => b.name).join(' · '))} đang chờ phía trước… ${m.post ? 'Hỗn Độn Kiếp' : qs.reduce((s, q) => s + (q.nan || 0), 0) + ' kiếp nạn'}.</div>` } : null,
     ].filter(Boolean);
     return new Promise((res) => {
       const el = document.createElement('div'); el.id = 'comic';

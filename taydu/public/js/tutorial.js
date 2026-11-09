@@ -5,12 +5,12 @@
 const Tut = (() => {
   const STEPS = [
     { id: 'talk', on: 'talk', map: true, text: 'Chạm vào <b>Thái Bạch Kim Tinh</b> (có dấu ❗ trên đầu) để nhận nhiệm vụ đầu tiên.', target: () => npcTarget() },
-    { id: 'quest', on: 'quest', map: true, text: 'Đây là <b>nhiệm vụ đang làm</b>. Chạm vào để xem, bấm <b>Đi ngay</b> là nhân vật tự đi tới mục tiêu.', target: () => $('#quest-track') },
+    { id: 'quest', on: 'quest', map: true, text: 'Chạm <b>Tự động tìm đường</b> để nhân vật tự đi tới mục tiêu nhiệm vụ. Muốn tự đi: kéo <b>cần điều khiển</b> góc phải hoặc chạm lên bản đồ.', target: () => $('#quest-track') },
     { id: 'fight', on: 'act', text: 'Gặp yêu quái rồi! Chọn <b>Đánh</b> rồi chạm vào một con quái.', battle: true, target: () => $('[data-c="attack"]'),
       idle: 'Đi vào <b>vùng cỏ</b> trên bản đồ để gặp yêu quái và thử chiến đấu.' },
     { id: 'auto', on: 'auto', text: 'Mẹo: bật <b>Tự động</b> để nhân vật tự đánh – rất tiện khi luyện cấp.', battle: true, target: () => $('#b-auto'), alsoOn: 'battleEnd' },
-    { id: 'char', on: 'open_char', map: true, text: 'Lên cấp được <b>điểm tiềm năng</b>. Mở <b>Nhân vật</b> để cộng vào Thể, Lực, Pháp, Nhanh.', target: () => $('[data-p="char"]'), skipIf: () => !G.me || !G.me.points },
-    { id: 'act', on: 'open_act', map: true, text: 'Mở <b>Hoạt động</b> để <b>điểm danh nhận quà</b> mỗi ngày, làm nhiệm vụ ngày và leo <b>Trấn Yêu Tháp</b>.', target: () => $('[data-p="act"]') },
+    { id: 'char', on: 'open_char', map: true, text: 'Lên cấp được <b>điểm tiềm năng</b>. Chạm <b>ảnh chân dung</b> góc trái để mở Nhân vật và cộng vào Thể, Lực, Pháp, Nhanh.', target: () => $('#hud-ava'), skipIf: () => !G.me || !G.me.points },
+    { id: 'act', on: 'open_act', map: true, text: 'Mở <b>Hoạt động</b> để <b>điểm danh nhận quà</b> mỗi ngày, làm nhiệm vụ ngày và leo <b>Trấn Yêu Tháp</b>.', target: () => $('#evt-act') },
   ];
   let step = 99, el = null, timer = null;
 

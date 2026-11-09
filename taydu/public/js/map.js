@@ -9,13 +9,14 @@ const GameMap = (() => {
   const cv3 = $('#map3d');
   const hdOK = typeof Hd2d !== 'undefined' && Hd2d.init(cv3);
   let hdPref = true; try { hdPref = localStorage.getItem('tdk_hd') !== '0'; } catch {}
-  const hdOn = () => hdOK && hdPref && Hd2d.ok;
+  const PAINT = typeof PaintMap !== 'undefined';
+  const hdOn = () => !PAINT && hdOK && hdPref && Hd2d.ok;
   function setHD(v) { hdPref = !!v; try { localStorage.setItem('tdk_hd', v ? '1' : '0'); } catch {} cv.parentElement.classList.toggle('hd', hdOn()); resize(); }
   const COLS = 12, ROWS = 20;
-  let W = 0, H = 0, dpr = 1, T = 32, offY = 0, camY = 0;
+  let W = 0, H = 0, dpr = 1, T = 32, offY = 0, camY = 0, camX = 0, viewX = 0, viewY = 0;
   let M = null, mapId = null, ground = null, groundFrames = null, objs = [], waterTiles = [], lights = [];
   let questNpc = null, marker = null, onTapTile = null;
-  const me = { x: 0, y: 0, px: 0, py: 0, from: null, to: null, t0: 0, dur: 0, race: 'than', gender: 'm', name: '', face: 1 };
+  const me = { x: 0, y: 0, px: 0, py: 0, from: null, to: null, t0: 0, dur: 0, race: 'tien', gender: 'm', name: '', face: 1 };
   const others = new Map();
   let amb = [];
   let overlay = [];
@@ -30,6 +31,9 @@ const GameMap = (() => {
     cave: { ground: [92, 80, 96], grass: [70, 92, 84], water: [30, 40, 70], shore: [140, 160, 220], seam: null, tree: ['#2a3a3a', '#3a5a52', '#6a9a8a'], roof: ['#7a6a8a', '#4a3a5a', '#2a1e34'], wall: '#5a4a5a', col: '#2a1e2a', rock: ['#7a6a86', '#3e3248'], amb: 'firefly', dark: true },
     snow: { ground: [232, 238, 246], grass: [206, 222, 236], water: [150, 196, 228], shore: [255, 255, 255], seam: null, tree: ['#2a4a4a', '#3e6a64', '#e8f4f8'], roof: ['#ffffff', '#c8d8e8', '#6a7a8a'], wall: '#8a5a3a', col: '#4a3020', rock: ['#d8e4f0', '#8a9aac'], amb: 'snow', ice: true },
     desert: { ground: [229, 192, 132], grass: [205, 150, 86], water: [214, 70, 26], shore: [255, 210, 90], seam: null, tree: ['#5a6a2a', '#7a8a3a', '#a0aa4a'], roof: ['#e8b080', '#c8885a', '#8a5a34'], wall: '#c8885a', col: '#8a5a34', rock: ['#b05a32', '#7a3a1e'], lava: true, amb: 'ember' },
+    sea: { ground: [190, 230, 222], grass: [60, 150, 140], water: [30, 120, 200], shore: [240, 232, 200], seam: null, tree: ['#1a5a5a', '#2a8a7a', '#ff8a9a'], roof: ['#5ad8e8', '#1a7a9a', '#0a3a4a'], wall: '#1a6a8a', col: '#0a3a4a', rock: ['#5ab0b0', '#1e5a6a'], amb: 'bubble' },
+    hell: { ground: [70, 56, 62], grass: [110, 30, 40], water: [180, 20, 30], shore: [40, 20, 24], seam: null, tree: ['#1a0e14', '#3a1a24', '#ff3a3a'], roof: ['#3a2a34', '#1a1018', '#0a0408'], wall: '#5a4a50', col: '#8a1a1a', rock: ['#4a3a44', '#1a1018'], amb: 'ember', dark: true },
+    void: { ground: [60, 46, 100], grass: [90, 40, 120], water: [100, 40, 230], shore: [200, 176, 255], seam: null, tree: ['#2a1a4a', '#5a3a8a', '#c88aff'], roof: ['#5a3a8a', '#2a1a4a', '#140a24'], wall: '#3a2e5a', col: '#8a4ae8', rock: ['#3a2e5a', '#120a24'], amb: 'sparkle', dark: true },
   };
 
   // ---------- nhiễu ----------
@@ -51,7 +55,7 @@ const GameMap = (() => {
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.parentElement.classList.toggle('hd', hdOn());
     if (hdOn()) Hd2d.resize(W, H, dpr);
-    const nt = W / COLS;
+    const nt = PAINT ? W / 7.2 : W / COLS;
     if (M && (nt !== T || !ground)) { T = nt; build(); }
     T = nt;
     initAmb();
@@ -340,6 +344,7 @@ const GameMap = (() => {
     if (kind === 'firefly') { p.vx = 0; p.vy = -0.15 - Math.random() * 0.2; }
     if (kind === 'sparkle') { p.vx = 0.1; p.vy = 0.05; }
     if (kind === 'snow') { p.vx = -0.2 + Math.random() * 0.3; p.vy = 0.4 + Math.random() * 0.5; if (!anywhere) p.y = -5; }
+    if (kind === 'bubble') { p.vx = 0; p.vy = -(0.25 + Math.random() * 0.5); if (!anywhere) p.y = H + 5; }
     return p;
   }
   function drawAmb(now, night) {
@@ -349,6 +354,7 @@ const GameMap = (() => {
       p.x += p.vx + Math.sin((p.t + i * 20) / 40) * 0.3; p.y += p.vy;
       if (p.y < -10 || p.y > H + 10 || p.x > W + 10 || p.x < -10) { amb[i] = newAmb(p.kind, false); continue; }
       if (p.kind === 'snow') { ctx.globalAlpha = 0.9; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(p.x, p.y, 1.4 * p.s, 0, 7); ctx.fill(); continue; }
+      if (p.kind === 'bubble') { ctx.globalAlpha = 0.55; ctx.strokeStyle = '#e8ffff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p.x, p.y, 2.2 * p.s, 0, 7); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(p.x - 0.7 * p.s, p.y - 0.7 * p.s, 0.6 * p.s, 0, 7); ctx.fill(); continue; }
       if (p.kind === 'leaf') {
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.sin(p.t / 18) * 1.2); ctx.fillStyle = p.c; ctx.globalAlpha = 0.85;
         ctx.beginPath(); ctx.ellipse(0, 0, 3.5 * p.s, 1.6 * p.s, 0, 0, 7); ctx.fill(); ctx.restore();
@@ -373,6 +379,7 @@ const GameMap = (() => {
   function frame(now) {
     requestAnimationFrame(frame);
     if (!M || !ground || document.hidden || $('#scr-game').hidden || !W) return;
+    if (typeof BattleUI !== 'undefined' && BattleUI.active) return; // đang đánh: nhường GPU cho sân đấu 3D
     if (me.to) {
       const k = Math.min(1, (now - me.t0) / me.dur);
       me.px = me.from[0] + (me.to[0] - me.from[0]) * k;
@@ -384,10 +391,12 @@ const GameMap = (() => {
       o.moving = Math.abs(o.x - o.px) + Math.abs(o.y - o.py) > 0.02;
       o.px += (o.x - o.px) * 0.2; o.py += (o.y - o.py) * 0.2;
     }
+    if (PAINT) return framePaint(now);
     const mapH = ROWS * T;
     offY = mapH < H ? (H - mapH) / 2 : 0;
     const target = mapH > H ? Math.max(0, Math.min(mapH - H, (me.py + 0.5) * T - H / 2)) : 0;
     camY += (target - camY) * 0.2; if (Math.abs(target - camY) < 0.3) camY = target;
+    viewX = 0; viewY = camY - offY;
 
     if (hdOn()) return frameHD(now);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -405,8 +414,9 @@ const GameMap = (() => {
     const ents = objs.map((o) => ({ z: o.z, draw: () => { ctx.imageSmoothingEnabled = !o.w; ctx.drawImage(o.c, o.x, o.y, o.w || o.c.width / Math.min(2, dpr), o.h || o.c.height / Math.min(2, dpr)); ctx.imageSmoothingEnabled = true; } }));
     M.tiles.forEach((row, y) => { const x = row.indexOf('P'); if (x >= 0) ents.push({ z: y + 0.5, draw: () => drawPortal(x, y, now) }); });
     for (const n of M.npcs) ents.push({ z: n.y + 0.6, draw: () => drawNpc(n, now) });
-    for (const o of others.values()) ents.push({ z: o.py + 0.6, draw: () => drawHero(o.race, o.gender, o.px, o.py, o.name, false, now, o.moving, o.face || 1, o.gear) });
-    ents.push({ z: me.py + 0.61, draw: () => drawHero(me.race, me.gender, me.px, me.py, me.name, true, now, !!me.to, me.face, G.me && G.me.gear) });
+    for (const n of M.nodes || []) ents.push({ z: n.y + 0.5, draw: () => drawNode(n, now) });
+    for (const o of others.values()) ents.push({ z: o.py + 0.6, draw: () => drawHero(o.race, o.gender, o.px, o.py, o.name, false, now, o.moving, o.face || 1, o.gear, o) });
+    ents.push({ z: me.py + 0.61, draw: () => drawHero(me.race, me.gender, me.px, me.py, me.name, true, now, !!me.to, me.face, G.me && G.me.gear, G.me) });
     overlay = [];
     ents.sort((a, b) => a.z - b.z).forEach((e) => e.draw());
     overlay.forEach((f) => f());
@@ -415,9 +425,97 @@ const GameMap = (() => {
   }
 
   // =====================================================================
+  //  KHUNG HÌNH KIỂU TRANH VẼ: nền tranh + vật thể xếp theo chiều sâu
+  // =====================================================================
+  const artCache = {};
+  function artImg(src) { if (!src) return null; let im = artCache[src]; if (!im) { im = artCache[src] = new Image(); im.src = src; } return im.complete && im.naturalWidth ? im : null; }
+  function framePaint(now) {
+    const R = Math.min(2, dpr), PM = PaintMap.get(M, T, R);
+    const tx = Math.max(0, Math.min(COLS * T - W, (me.px + 0.5) * T - W / 2)), ty = Math.max(0, Math.min(ROWS * T - H, (me.py + 0.6) * T - H * 0.56));
+    camX += (tx - camX) * 0.18; camY += (ty - camY) * 0.18;
+    if (Math.abs(tx - camX) < 0.3) camX = tx; if (Math.abs(ty - camY) < 0.3) camY = ty;
+    viewX = Math.round(camX * dpr) / dpr; viewY = Math.round(camY * dpr) / dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#1a140e'; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(-viewX, -viewY);
+    ctx.imageSmoothingEnabled = true;
+    const custom = artImg(Sprites.mapArt(mapId)), front = artImg(Sprites.mapFront(mapId));
+    if (custom) ctx.drawImage(custom, 0, 0, COLS * T, ROWS * T);
+    else { ctx.drawImage(PM.ground, 0, 0, COLS * T, ROWS * T); PaintMap.water(ctx, PM.water, T, now, PM.pal); }
+    if (marker && now - marker.t < 800) {
+      const k = (now - marker.t) / 800;
+      for (let i = 0; i < 2; i++) { const kk = Math.min(1, k + i * 0.25); ctx.strokeStyle = `rgba(255,240,180,${1 - kk})`; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse((marker.x + 0.5) * T, (marker.y + 0.8) * T, T * (0.15 + kk * 0.32), T * (0.06 + kk * 0.13), 0, 0, 7); ctx.stroke(); }
+    }
+    const meBox = { x: (me.px + 0.5) * T - T * 0.5, y: (me.py + 1) * T - T * 1.9, w: T, h: T * 1.9 }, meZ = me.py + 0.9;
+    const ents = (custom ? [] : PM.objs).filter((o) => o.x < viewX + W + T && o.x + o.w > viewX - T && o.y < viewY + H + T && o.y + o.h > viewY - T).map((o) => ({ z: o.z, draw: () => {
+      const cover = o.z > meZ && o.x < meBox.x + meBox.w && o.x + o.w > meBox.x && o.y < meBox.y + meBox.h && o.y + o.h * 0.85 > meBox.y;
+      if (cover) ctx.globalAlpha = 0.5; ctx.drawImage(o.c, o.x, o.y, o.w, o.h); ctx.globalAlpha = 1; } }));
+    M.tiles.forEach((row, y) => { const x = row.indexOf('P'); if (x >= 0) ents.push({ z: y + 0.82, draw: () => drawPortal(x, y + 0.1, now) }); });
+    for (const n of M.npcs) ents.push({ z: n.y + 0.9, draw: () => drawNpc(n, now) });
+    for (const n of M.nodes || []) ents.push({ z: n.y + 0.7, draw: () => drawNode(n, now) });
+    for (const o of others.values()) ents.push({ z: o.py + 0.9, draw: () => drawHero(o.race, o.gender, o.px, o.py, o.name, false, now, o.moving, o.face || 1, o.gear, o) });
+    ents.push({ z: meZ + 0.001, draw: () => drawHero(me.race, me.gender, me.px, me.py, me.name, true, now, !!me.to, me.face, G.me && G.me.gear, G.me) });
+    overlay = [];
+    ents.sort((a, b) => a.z - b.z).forEach((e) => e.draw());
+    if (front) ctx.drawImage(front, 0, 0, COLS * T, ROWS * T);
+    overlay.forEach((f) => f());
+    ctx.restore();
+    lights = PM.lights;
+    lighting(now);
+    if (now - miniT > 200) { miniT = now; drawMini(now); }
+    joyStep(now);
+  }
+
+  // ---------- bản đồ nhỏ tròn ----------
+  let miniT = 0;
+  const mini = $('#mm-cv'), mg = mini && mini.getContext('2d');
+  function drawMini(now) {
+    if (!mg) return;
+    const S = mini.width, k = S / 22, ox = S / 2 - (COLS / 2) * k, oy = S / 2 - (me.py + 0.5) * k * 0.55 - (ROWS * k * 0.45) / 2 + 0;
+    const cy0 = Math.max(S - ROWS * k - 6, Math.min(6, S / 2 - (me.py + 0.5) * k));
+    mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, S, S);
+    mg.save(); mg.beginPath(); mg.arc(S / 2, S / 2, S / 2, 0, 7); mg.clip();
+    const bg = mg.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2); bg.addColorStop(0, '#2a5a7a'); bg.addColorStop(1, '#0c2034'); mg.fillStyle = bg; mg.fillRect(0, 0, S, S);
+    mg.translate(ox, cy0);
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      const ch = M.tiles[y][x];
+      mg.fillStyle = ch === '~' || ch === 'W' ? 'rgba(90,180,240,.85)' : ch === ',' ? 'rgba(110,190,110,.7)' : ch === '.' || ch === 'P' ? 'rgba(230,214,170,.55)' : ch === 'H' ? 'rgba(200,120,90,.75)' : ch === 'T' ? 'rgba(60,130,70,.8)' : 'rgba(10,20,30,.35)';
+      mg.fillRect(x * k, y * k, k + 0.5, k + 0.5);
+    }
+    const dot = (x, y, c, r) => { mg.fillStyle = c; mg.shadowColor = c; mg.shadowBlur = 6; mg.beginPath(); mg.arc((x + 0.5) * k, (y + 0.5) * k, r, 0, 7); mg.fill(); mg.shadowBlur = 0; };
+    for (const n of M.npcs) dot(n.x, n.y, n.id === questNpc ? '#ff3a2a' : n.boss ? '#ff5a3a' : '#ff9a2a', n.id === questNpc ? 6 : 4.5);
+    for (const n of M.nodes || []) if (!(nodeCd[n.id] > Date.now())) dot(n.x, n.y, '#9af07a', 3);
+    for (const o of others.values()) dot(o.px, o.py, '#4a9aff', 4.5);
+    M.tiles.forEach((row, y) => { const x = row.indexOf('P'); if (x >= 0) dot(x, y, '#ffe07a', 5); });
+    dot(me.px, me.py, '#6affd8', 6 + Math.sin(now / 200));
+    mg.restore();
+  }
+
+  // ---------- cần điều khiển ----------
+  const joy = $('#joy'); let joyDir = null, joyNext = 0;
+  if (joy) {
+    const knob = joy.querySelector('i');
+    const set = (e) => { const r = joy.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2), d = Math.hypot(dx, dy), m = Math.min(d, r.width * 0.32);
+      knob.style.transform = d ? `translate(${(dx / d) * m}px, ${(dy / d) * m}px)` : '';
+      joyDir = d < 12 ? null : Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]; };
+    joy.addEventListener('pointerdown', (e) => { e.preventDefault(); joy.setPointerCapture(e.pointerId); joy.classList.add('on'); set(e); });
+    joy.addEventListener('pointermove', (e) => { if (joy.classList.contains('on')) set(e); });
+    const end = () => { joy.classList.remove('on'); joyDir = null; knob.style.transform = ''; };
+    joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end);
+  }
+  function joyStep(now) {
+    if (!joyDir || me.to || now < joyNext || !onTapTile) return;
+    const nx = me.x + joyDir[0], ny = me.y + joyDir[1];
+    if (joyDir[0]) me.face = joyDir[0];
+    joyNext = now + 90;
+    if (walkable(nx, ny)) onTapTile(nx, ny);
+  }
+
+  // =====================================================================
   //  KHUNG HÌNH HD-2D: dựng cảnh 3D bằng WebGL, chữ/nhãn vẽ trên lớp 2D
   // =====================================================================
   const imgCache = {};
+  const worldCache = new Map();
   // màu tên NPC theo vai trò: nhiệm vụ vàng · cửa hàng xanh · thầy thuốc lục · boss đỏ
   function nameCol(n) { return n.boss ? '#ff9a85' : n.role === 'shop' ? '#8ad8ff' : n.role === 'heal' ? '#9af0a0' : n.role ? '#ffb0e0' : '#f3d27a'; }
   // dấu chấm than nhiệm vụ: vàng (nói chuyện) / đỏ (boss), nảy lên xuống
@@ -437,7 +535,14 @@ const GameMap = (() => {
     const h = new Date().getHours() + new Date().getMinutes() / 60;
     const night = h >= 19 || h < 5, dusk = (h >= 17 && h < 19) || (h >= 5 && h < 6.5);
     const sprites = [], glows = [];
-    for (const o of objs) sprites.push({ c: o.c, x: (o.x + o.w / 2) * k, z: (o.y + o.h) * k - 0.14, w: o.w * k, h: o.h * k, tilt: 0.42 });
+    // thế giới 3D thật (địa hình, nhà, cây, núi, nước) — dựng 1 lần mỗi bản đồ
+    let w3 = false;
+    if (typeof World3D !== 'undefined') {
+      const key = M.name + '|' + M.theme;
+      if (!Hd2d.hasWorld(key)) { try { if (!worldCache.has(key)) worldCache.set(key, World3D.build(M)); Hd2d.setWorld(worldCache.get(key)); } catch (e) { console.warn('[3D]', e); worldCache.set(key, null); Hd2d.setWorld(null); } }
+      w3 = Hd2d.hasWorld(key);
+    }
+    if (!w3) for (const o of objs) sprites.push({ c: o.c, x: (o.x + o.w / 2) * k, z: (o.y + o.h) * k - 0.14, w: o.w * k, h: o.h * k, tilt: 0.42 });
     const npcPos = [];
     for (const n of M.npcs) {
       const bob = Math.sin(now / 700 + n.x * 2) * 0.03;
@@ -470,7 +575,8 @@ const GameMap = (() => {
     const fi = Math.floor(now / 420) % groundFrames.length;
     Hd2d.render({
       theme: M.theme, ground: groundFrames[fi], mapW: COLS, mapH: ROWS, focusX: me.px + 0.5, focusZ: me.py + 0.5, sprites, glows,
-      night, dusk, dark: !!th.dark, lights: lights.map(([x, y, r]) => [x * k, y * k, r * k * 1.3, 1]), blur: FX.low ? 0 : 2.2,
+      night, dusk, dark: !!th.dark, lights: lights.map(([x, y, r]) => [x * k, y * k, r * k * 1.3, 1]), blur: FX.low ? 0 : 1.8,
+      time: now / 1000, low: FX.low, fade: [me.px + 0.5, me.py + 0.92],
     });
     // lớp 2D: nhãn tên, dấu nhiệm vụ, điểm đến, hạt môi trường
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -526,7 +632,7 @@ const GameMap = (() => {
       ctx.fillStyle = TH[M.theme].dark && !(h >= 19 || h < 5) ? 'rgb(150,150,200)' : night ? 'rgb(95,110,170)' : 'rgb(255,222,198)';
       ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'lighter';
-      ctx.translate(0, offY - camY);
+      ctx.translate(-viewX, -viewY);
       for (const [x, y, r, col] of lights) {
         const fl = 0.85 + Math.sin(now / 180 + x) * 0.05;
         const gr = ctx.createRadialGradient(x, y, 0, x, y, r * fl);
@@ -536,11 +642,72 @@ const GameMap = (() => {
       if (night) { const px = (me.px + 0.5) * T, py = (me.py + 0.5) * T; const gr = ctx.createRadialGradient(px, py, 0, px, py, T * 1.6); gr.addColorStop(0, 'rgba(255,230,190,.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(px, py, T * 1.6, 0, 7); ctx.fill(); }
       ctx.restore();
     }
+    if (M.theme === 'sea') { // ánh sáng đáy biển lung linh
+      ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(20,90,160,.55)'; ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i++) { const x = ((i * 97 + now / 40) % (W + 200)) - 100, w = 30 + (i % 3) * 18; const gr = ctx.createLinearGradient(x, 0, x + w, H); gr.addColorStop(0, 'rgba(180,240,255,.16)'); gr.addColorStop(1, 'rgba(180,240,255,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + w, 0); ctx.lineTo(x + w * 2.4, H); ctx.lineTo(x + w * 1.2, H); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+    }
+    if (M.theme === 'hell') { ctx.save(); const gr = ctx.createRadialGradient(W / 2, H, 0, W / 2, H, H); gr.addColorStop(0, 'rgba(255,40,30,.14)'); gr.addColorStop(1, 'rgba(255,40,30,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H); ctx.restore(); }
     drawAmb(now, night);
+    drawWeather(now);
     const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.75);
-    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, PAINT ? 'rgba(10,20,10,.22)' : 'rgba(0,0,0,.45)');
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
   }
+
+  // ---------- thời tiết: mưa theo khung giờ (mọi người cùng thấy) ----------
+  let rain = [];
+  function weatherNow() {
+    if (!M || !['forest', 'river', 'city', 'sea'].includes(M.theme)) return null;
+    const blk = Math.floor(Date.now() / (25 * 60e3)); let h = 7; for (const ch of mapId + blk) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return (h % 100) < 28 ? (M.theme === 'sea' ? 'current' : 'rain') : null;
+  }
+  function drawWeather(now) {
+    const w = weatherNow();
+    if (!w) { rain = []; return; }
+    const n = FX.low ? 40 : 110;
+    while (rain.length < n) rain.push({ x: Math.random() * (W + 80), y: Math.random() * H, v: 7 + Math.random() * 6, l: 8 + Math.random() * 10 });
+    ctx.save();
+    if (w === 'rain') { ctx.fillStyle = 'rgba(40,60,90,.16)'; ctx.fillRect(0, 0, W, H); ctx.strokeStyle = 'rgba(210,225,255,.55)'; ctx.lineWidth = 1; }
+    else { ctx.strokeStyle = 'rgba(220,255,255,.18)'; ctx.lineWidth = 2; }
+    ctx.beginPath();
+    for (const d of rain) {
+      if (w === 'rain') { d.x -= d.v * 0.25; d.y += d.v; ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - d.l * 0.25, d.y - d.l); }
+      else { d.x += d.v * 0.35; d.y += Math.sin(now / 600 + d.l) * 0.4; ctx.moveTo(d.x, d.y); ctx.quadraticCurveTo(d.x - d.l, d.y - 3, d.x - d.l * 2.4, d.y); }
+      if (d.y > H + 20 || d.x < -40 || d.x > W + 60) { d.y = w === 'rain' ? -10 : Math.random() * H; d.x = w === 'rain' ? Math.random() * (W + 80) : -30; }
+    }
+    ctx.stroke(); ctx.restore();
+  }
+
+  // ---------- điểm khai thác ----------
+  const nodeCd = {};
+  function drawNode(n, now) {
+    const cx = (n.x + 0.5) * T, by = (n.y + 0.92) * T, ready = !(nodeCd[n.id] > Date.now());
+    const k = T / 40;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(cx, by, T * 0.38, T * 0.12, 0, 0, 7); ctx.fill();
+    if (ready) { const pu = 0.5 + 0.5 * Math.sin(now / 400 + n.x); const gr = ctx.createRadialGradient(cx, by - T * 0.3, 0, cx, by - T * 0.3, T * 0.7); gr.addColorStop(0, `rgba(255,240,170,${0.25 + pu * 0.25})`); gr.addColorStop(1, 'rgba(255,240,170,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, by - T * 0.3, T * 0.7, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = ready ? 1 : 0.45;
+    ctx.translate(cx, by); ctx.scale(k, k); ctx.lineJoin = 'round'; ctx.lineWidth = 1.6; ctx.strokeStyle = '#2a1e14';
+    if (n.type === 'khoang') { // tảng đá có vân quặng
+      ctx.fillStyle = '#8a8478'; ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(-13, -14); ctx.lineTo(-3, -22); ctx.lineTo(9, -19); ctx.lineTo(16, -6); ctx.lineTo(13, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#b8b0a2'; ctx.beginPath(); ctx.moveTo(-12, -13); ctx.lineTo(-3, -20); ctx.lineTo(6, -17); ctx.lineTo(-4, -11); ctx.closePath(); ctx.fill();
+      for (const [x, y] of [[-6, -9], [4, -12], [9, -5], [-10, -4]]) { ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.moveTo(x, y - 3); ctx.lineTo(x + 2.5, y); ctx.lineTo(x, y + 3); ctx.lineTo(x - 2.5, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#8a5a10'; ctx.lineWidth = 0.8; ctx.stroke(); }
+      ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(10, -2); ctx.lineTo(20, -20); ctx.stroke(); ctx.fillStyle = '#a8b0b8'; ctx.beginPath(); ctx.moveTo(14, -24); ctx.quadraticCurveTo(22, -24, 27, -17); ctx.lineTo(23, -18); ctx.quadraticCurveTo(20, -21, 15, -20); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#2a1e14'; ctx.lineWidth = 1; ctx.stroke();
+    } else if (n.type === 'thao') { // khóm linh thảo phát sáng
+      for (let i = -2; i <= 2; i++) { ctx.strokeStyle = '#2a6a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(i * 3, 0); ctx.quadraticCurveTo(i * 6, -10, i * 8, -18 + Math.abs(i) * 3); ctx.stroke(); ctx.fillStyle = '#5ac85a'; ctx.beginPath(); ctx.ellipse(i * 8, -18 + Math.abs(i) * 3, 3.5, 6, i * 0.4, 0, 7); ctx.fill(); }
+      const tw = 0.6 + 0.4 * Math.sin(now / 300 + n.y); ctx.fillStyle = `rgba(255,250,200,${tw})`; ctx.shadowColor = '#fff7a0'; ctx.shadowBlur = 8; for (const [x, y] of [[0, -24], [-9, -17], [9, -18]]) { ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fill(); }
+    } else { // linh tuyền: vũng nước + đá
+      ctx.fillStyle = '#7a8a8a'; ctx.beginPath(); ctx.ellipse(0, -3, 18, 8, 0, 0, 7); ctx.fill(); ctx.stroke();
+      const lg = ctx.createRadialGradient(-4, -5, 1, 0, -3, 15); lg.addColorStop(0, '#d8fbff'); lg.addColorStop(1, '#2a9ad8'); ctx.fillStyle = lg; ctx.beginPath(); ctx.ellipse(0, -4, 14, 5.5, 0, 0, 7); ctx.fill();
+      const o = (now / 900 + n.x) % 1; ctx.strokeStyle = `rgba(255,255,255,${1 - o})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0, -4, 4 + o * 9, 1.5 + o * 3.5, 0, 0, 7); ctx.stroke();
+      ctx.fillStyle = 'rgba(200,255,255,.8)'; for (let i = 0; i < 3; i++) { const yy = -8 - ((now / 500 + i * 0.33) % 1) * 18; ctx.beginPath(); ctx.arc(-4 + i * 4, yy, 1.4, 0, 7); ctx.fill(); }
+    }
+    ctx.restore();
+  }
+  function nodeAt(x, y) { return M && (M.nodes || []).find((n) => n.x === x && n.y === y); }
+  function setNodeCd(cd) { const now = Date.now(); for (const [k, v] of Object.entries(cd || {})) nodeCd[k] = v > 0 ? now + v : 0; }
 
   function drawPortal(x, y, now) {
     const cx = (x + 0.5) * T, cy = (y + 0.55) * T;
@@ -581,12 +748,12 @@ const GameMap = (() => {
     ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(cx, by - T * 0.1, T * 0.3, T * 0.09, 0, 0, 7); ctx.fill();
     const sz = T * (n.boss ? 1.1 : 0.92);
     const bob = Math.sin(now / 700 + n.x * 2) * T * 0.03;
-    const src = Sprites.npcSrc(n.id);
+    const src = PAINT ? null : Sprites.npcSrc(n.id);
     const pix = !src && Art.npc(n.look || n.id);
     if (pix) {
       const hum = pix.cv.width / pix.cv.height < 0.9;
       const hgt = T * (hum ? (n.boss ? 2.35 : 2.0) : 1.3), wid = hgt * pix.cv.width / pix.cv.height;
-      ctx.imageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = PAINT; ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(pix.cv, cx - wid / 2, by - hgt + T * 0.06 + bob, wid, hgt);
       ctx.imageSmoothingEnabled = true;
     } else if (src) {
@@ -601,29 +768,44 @@ const GameMap = (() => {
     if (questNpc === n.id) overlay.push(() => bang(cx, by - sz - T * 0.3 + Math.sin(now / 220) * T * 0.08, T * 0.5, n.boss));
   }
 
-  function drawHero(race, gender, px, py, name, self, now, moving, face, gear) {
+  function drawHero(race, gender, px, py, name, self, now, moving, face, gear, info) {
     const cx = (px + 0.5) * T, by = (py + 1) * T;
     const fr = moving ? 1 + (Math.floor(now / 140) % 2) : 0;
     const blink = !moving && Math.floor((now + px * 977) / 130) % 32 === 0;
     const im = Sprites.heroImg(race, gender, fr, gear, blink ? 'blink' : undefined);
-    const h = T * 2.0, w = h * (im.width / im.height || 0.51);
+    const h = T * (PAINT ? 1.85 : 2.0), w = h * (im.width / im.height || 0.51);
     if (self) { // vòng sáng dưới chân
       ctx.strokeStyle = 'rgba(243,210,122,.55)'; ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.ellipse(cx, by - T * 0.1, T * 0.36, T * 0.12, 0, 0, 7); ctx.stroke();
     }
     if (im.width) {
-      ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(cx, 0); ctx.scale(face < 0 ? -1 : 1, 1);
+      ctx.save(); ctx.imageSmoothingEnabled = PAINT; ctx.imageSmoothingQuality = 'high'; ctx.translate(cx, 0); ctx.scale(face < 0 ? -1 : 1, 1);
       ctx.drawImage(im, -w / 2, by - h + T * 0.06, w, h); ctx.restore();
     }
-    overlay.push(() => label(name, cx, by - h + T * 0.12, self ? '#ffffff' : '#bfe6d6', self ? 'rgba(168,50,42,.88)' : 'rgba(15,9,6,.72)'));
+    const ttl = info && info.title, stall = info && (self ? info.stall && info.stall.title : info.stall);
+    overlay.push(() => {
+      label(name, cx, by - h + T * 0.12, self ? '#ffffff' : '#bfe6d6', self ? 'rgba(168,50,42,.88)' : 'rgba(15,9,6,.72)');
+      if (ttl) label('〈' + ttl.name + '〉', cx, by - h - T * 0.26, ttl.color || '#ffd65a', 'rgba(20,10,30,.72)');
+      if (stall) stallBanner(stall, cx, by - h - T * (ttl ? 0.7 : 0.32), now);
+    });
+  }
+  function stallBanner(text, cx, y, now) {
+    ctx.save();
+    ctx.font = `700 ${Math.max(9, T * 0.27)}px "Lora VN", Georgia, serif`;
+    const t = text.length > 14 ? text.slice(0, 13) + '…' : text, w = ctx.measureText(t).width + T * 0.7, h = T * 0.42, sw = Math.sin(now / 700) * 1.2;
+    ctx.translate(cx, y); ctx.rotate(sw * 0.01);
+    ctx.fillStyle = '#c8302a'; ctx.strokeStyle = '#ffd65a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(-w / 2, -h, w, h, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffd65a'; ctx.beginPath(); ctx.arc(-w / 2 + T * 0.18, -h / 2, T * 0.08, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff6d8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t, T * 0.08, -h / 2 + 0.5);
+    ctx.restore();
   }
 
   // ---------- chạm ----------
   cv.addEventListener('pointerdown', (e) => {
     if (!M) return;
     const r = cv.getBoundingClientRect();
-    let x = Math.floor((e.clientX - r.left) / T);
-    let y = Math.floor((e.clientY - r.top - offY + camY) / T);
+    let x = Math.floor((e.clientX - r.left + viewX) / T);
+    let y = Math.floor((e.clientY - r.top + viewY) / T);
     if (hdOn()) { const p = Hd2d.pick(e.clientX - r.left, e.clientY - r.top); if (!p) return; x = Math.floor(p.x); y = Math.floor(p.z); }
     if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return;
     marker = { x, y, t: performance.now() };
@@ -632,7 +814,7 @@ const GameMap = (() => {
 
   // ---------- tìm đường ----------
   // toạ độ màn hình (px) của tâm ô – dùng cho hướng dẫn tân thủ
-  function screenOf(x, y) { const r = cv.getBoundingClientRect(); if (hdOn()) { const p = Hd2d.project(x + 0.5, 0.9, y + 0.9); if (p) return { x: r.left + p.x, y: r.top + p.y }; } return { x: r.left + (x + 0.5) * T, y: r.top + (y + 0.25) * T + offY - camY }; }
+  function screenOf(x, y) { const r = cv.getBoundingClientRect(); if (hdOn()) { const p = Hd2d.project(x + 0.5, 0.9, y + 0.9); if (p) return { x: r.left + p.x, y: r.top + p.y }; } return { x: r.left + (x + 0.5) * T - viewX, y: r.top + (y + 0.25) * T - viewY }; }
   function walkable(x, y) {
     const ch = M.tiles[y] && M.tiles[y][x];
     if (!ch) return false;
@@ -673,12 +855,14 @@ const GameMap = (() => {
   function movePlayer({ id, x, y }) { const o = others.get(id); if (o) { o.x = x; o.y = y; } }
   function removePlayer(id) { others.delete(id); }
   function setPlayerGear(id, gear) { const o = others.get(id); if (o) o.gear = gear; }
+  function setPlayerInfo(id, k, v) { const o = others.get(id); if (o) o[k] = v; }
+  function playerAt(x, y) { for (const o of others.values()) if (o.x === x && o.y === y) return o; return null; }
 
   window.addEventListener('resize', () => setTimeout(resize, 60));
   requestAnimationFrame(frame);
 
   return {
-    setMap, setMe, snap, resize, path, walkable, animateTo, setPlayers, addPlayer, movePlayer, removePlayer, initAmb, screenOf, setHD, setPlayerGear, get hd() { return hdOn(); }, get hdSupported() { return hdOK; },
+    setMap, setMe, snap, resize, path, walkable, animateTo, setPlayers, addPlayer, movePlayer, removePlayer, initAmb, screenOf, setHD, setPlayerGear, setPlayerInfo, playerAt, nodeAt, setNodeCd, weatherNow, get hd() { return hdOn(); }, get hdSupported() { return hdOK; },
     me, set onTap(fn) { onTapTile = fn; }, set questNpc(id) { questNpc = id; }, get questNpc() { return questNpc; }, get id() { return mapId; }, get meta() { return M; },
   };
 })();

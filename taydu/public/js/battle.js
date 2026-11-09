@@ -7,8 +7,8 @@ const BattleUI = (() => {
   let snap = null, busy = false, mode = null, auto = false, onEnd = null, theme = 'city';
   const els = {};
   // đội hình nhìn ngang: địch bên trái, phe mình bên phải, xếp chéo hai hàng
-  const SLOT = { 1: [[26, 60], [14, 74], [30, 86], [14, 46], [32, 40]], 0: [[76, 68], [62, 84], [88, 86], [66, 52], [88, 50]] };
-  FX.attach($('#b-fx'), $('#b-fx-under'), [stage, $('#b-bg')]);
+  const SLOT = { 1: [[27, 62], [13, 76], [31, 88], [14, 47], [33, 41]], 0: [[74, 64], [61, 80], [87, 80], [64, 48], [88, 46]] };
+  FX.attach($('#b-fx'), $('#b-fx-under'), [stage, $('#b-bg'), $('#b-3d')]);
   const ECOL = { thunder: '#9fd8ff', fire: '#ff8a2a', ice: '#bff0ff', poison: '#c88aff', heal: '#7cf09a', gold: '#ffd65a', wind: '#9ff0d8', rock: '#e0b07a', shadow: '#b07af0', rage: '#ff5a2a', slash: '#fff0c8', hit: '#fff0c8' };
 
   const FX_SOUND = { thunder: 'thunder', fire: 'fire', ice: 'ice', poison: 'poison', heal: 'heal', gold: 'gold', wind: 'wind', rock: 'rock', shadow: 'shadow', rage: 'rage', slash: 'slash', hit: 'hit' };
@@ -18,11 +18,13 @@ const BattleUI = (() => {
   async function start(s, opts = {}) {
     snap = s; onEnd = opts.onEnd; busy = true; mode = null; combo = 0; comboSide = -1; $('#b-combo')?.remove();
     if (!Object.keys(ULT).length) ultInit();
-    theme = s.kind === 'arena' || s.kind === 'tower' ? 'arena' : s.kind === 'world' ? 'world' : (G.meta.MAPS[G.me.map]?.theme || 'city');
+    theme = s.theme || (s.kind === 'arena' || s.kind === 'tower' ? 'arena' : s.kind === 'world' ? 'world' : (G.meta.MAPS[G.me.map]?.theme || 'city'));
     root.className = theme;
     $('#b-bg').style.backgroundImage = `url("${Sprites.battleBG(theme)}")`;
     const bd = $('.b-board', root); if (bd && typeof Tiles !== 'undefined') bd.style.setProperty('--tex', `url("${Tiles.boardTex(theme)}")`);
     root.hidden = false;
+    if (typeof PaintMap !== 'undefined') { root.classList.remove('has3d'); root.classList.add('painted'); $('#b-bg').style.backgroundImage = `url("${Sprites.battleArt(theme) || PaintMap.battleURL(theme, root.clientWidth || innerWidth, root.clientHeight || innerHeight)}")`; }
+    else root.classList.toggle('has3d', typeof Arena !== 'undefined' && Arena.show(theme));
     closePick();
     $('#b-log').textContent = s.kind === 'boss' ? 'Trận chiến với boss – không thể bỏ chạy!' : s.kind === 'arena' ? 'Tam Giới Đấu bắt đầu!' : s.kind === 'world' ? `Đánh ${s.maxRounds} hiệp, sát thương cộng dồn vào boss chung.` : s.kind === 'tower' ? 'Trấn Yêu Tháp – vượt tầng này để đi tiếp!' : 'Yêu quái xuất hiện!';
     render();
@@ -81,16 +83,19 @@ const BattleUI = (() => {
     for (const u of order) {
       const pos = SLOT[u.side][idx[u.side]++ % SLOT[u.side].length];
       const el = document.createElement('div');
-      el.className = `unit side${u.side}` + (u.boss ? ' boss' : '') + (u.mut ? ' mut' : '') + (u.dead ? ' dead' : '') + (u.hero ? ' is-hero' : '') + (u.form && u.grade >= 2 ? ' aura g' + u.grade : '');
+      el.className = `unit side${u.side}` + (u.boss ? ' boss' : '') + (u.mut ? ' mut' : '') + (u.dead ? ' dead' : '') + (u.hero ? ' is-hero' : '') + (u.form && u.grade >= 2 ? ' aura g' + u.grade : '')
+        + (u.than ? ' than' : '') + (u.chan ? ' chan' : '') + (u.shadow ? ' shadow' : '') + (u.nm ? ' nm' : '') + (u.elite ? ' elite' : '') + (u.phase > 1 ? ' enraged' : '');
       el.style.left = pos[0] + '%'; el.style.top = `calc(${pos[1]}% - ${u.boss ? 176 : 146}px)`;
       el.style.zIndex = Math.round(pos[1]);
       const ring = u.side === 0 ? '#7fd6b7' : u.boss ? '#ff5a3a' : (G.meta.ELEMENTS[u.element]?.color || '#ffd65a');
       const gcol = u.grade != null && u.side === 1 && !u.boss ? G.meta.GRADES[u.grade].color : null;
-      el.innerHTML = `<div class="circle" style="background-image:url('data:image/svg+xml;charset=utf-8,${encodeURIComponent(Sprites.circle(ring))}')"></div>
+      el.innerHTML = `<i class="shd"></i><div class="circle" style="background-image:url('data:image/svg+xml;charset=utf-8,${encodeURIComponent(Sprites.circle(ring))}')"></div>
         <div class="spr">${creatureHTML(u)}</div><span class="st"></span>
-        <div class="plate">${gcol ? `<i class="gdot" style="background:${gcol}"></i>` : ''}<b>${esc(u.name)}</b><em>${u.lvl}</em></div>
+        <div class="plate">${gcol ? `<i class="gdot" style="background:${gcol}"></i>` : ''}${u.than ? '<i class="tsdot">✦</i>' : ''}<b>${esc(u.name)}</b><em>${u.lvl}</em></div>
         <div class="ub"><div class="bar hp"><i></i></div>${u.side === 0 ? '<div class="bar mp"><i></i></div>' : ''}</div>`;
       el.onclick = () => tapUnit(u.id);
+      el.dataset.n = u.name;
+      if (u.pos) el.querySelector('.ub').insertAdjacentHTML('beforeend', `<em class="upos">${u.pos}</em>`);
       box.appendChild(el);
       els[u.id] = el;
     }
@@ -103,23 +108,28 @@ const BattleUI = (() => {
   function bossPlate() {
     const el = $('#b-bossplate'), u = lead(); if (!u) { el.hidden = true; return; }
     el.hidden = false; el.classList.toggle('isboss', !!u.boss);
-    el.innerHTML = `<span class="bp-ava">${Sprites.unitImg(u)}</span><div class="bp-txt"><b>${esc(u.name)}</b> <em>(Lv ${u.lvl})</em><div class="bar hp"><i></i></div></div>`;
+    el.classList.toggle('nm', !!u.nm);
+    el.innerHTML = `<span class="bp-ava">${Sprites.unitImg(u)}</span><div class="bp-txt"><b>${esc(u.name)}</b> <em>(Lv ${u.lvl})</em><div class="bar hp"><i></i></div>${u.phases > 1 ? `<div class="bp-ph">${Array.from({ length: u.phases }, (_, i) => `<i class="${i < (u.phase || 1) ? 'on' : ''}"></i>`).join('')}<small>Giai đoạn ${u.phase || 1}/${u.phases}</small></div>` : ''}</div>`;
     el.dataset.id = u.id; el.querySelector('.bar i').style.width = Math.max(0, 100 * u.hp / u.maxHp) + '%';
   }
   function stageBanner(s) {
     const el = $('#b-sbanner'), M = G.meta.MAPS[G.me.map];
-    const sub = s.kind === 'tower' ? `Trấn Yêu Tháp · Tầng ${(G.me.towerBest || 0) + 1}` : s.kind === 'boss' ? `Hàng Yêu · ${(lead() || {}).name || ''}` : s.kind === 'arena' ? 'Tam Giới Đấu' : s.kind === 'world' ? 'Boss Thế Giới' : `${M ? M.name : 'Hoang dã'}`;
+    const run = G.me && G.me.run;
+    const sub = s.kind === 'tower' ? `Trấn Yêu Tháp · Tầng ${(G.me.towerBest || 0) + 1}` : s.kind === 'boss' ? `Hàng Yêu · ${(lead() || {}).name || ''}` : s.kind === 'arena' ? 'Tam Giới Đấu' : s.kind === 'world' ? 'Boss Thế Giới'
+      : s.kind === 'nightmare' ? 'Ác Mộng Luân Hồi' : s.kind === 'trial' ? `Tam Cửu Thiên Kiếp · ${run ? run.stage + 1 : 1}/3` : s.kind === 'dungeon' ? `Phó Bản · Chặng ${run ? run.stage + 1 : 1}/${run ? run.total : 4}` : `${M ? M.name : 'Hoang dã'}`;
     el.querySelector('span').textContent = sub.replace(/ · $/, '');
     el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   }
   function sync(s) {
     snap = s;
+    // có Tiên sủng mới ra trận (lệnh Sủng) → dựng lại đội hình
+    if (s.units.some((u) => !els[u.id] || els[u.id].dataset.n !== u.name)) { render(); return; }
     { const bp = $('#b-bossplate'), u = bp && !bp.hidden && s.units.find((x) => x.id === bp.dataset.id); if (u) bp.querySelector('.bar i').style.width = Math.max(0, 100 * u.hp / u.maxHp) + '%'; }
     for (const u of s.units) {
       const el = els[u.id]; if (!el) continue;
       setBars(u.id, u.hp, u.maxHp, u.mp, u.maxMp);
       el.classList.toggle('dead', u.dead && !el.classList.contains('caught'));
-      el.querySelector('.st').textContent = (u.stun ? '💫' : '') + (u.poison ? '☠️' : '') + (u.buffs.length ? '✨' : '');
+      el.querySelector('.st').innerHTML = stTags(u);
     }
     $('#b-round').innerHTML = `<small>Hiệp</small>${s.round + 1}${s.maxRounds ? `<small>/${s.maxRounds}</small>` : ''}`;
     const boss = s.units.find((u) => u.boss);
@@ -131,6 +141,7 @@ const BattleUI = (() => {
     }
     $('[data-c="flee"]').disabled = !s.canFlee;
     $('[data-c="catch"]').disabled = !s.canCatch;
+    $('[data-c="pet"]').disabled = !(s.bench && s.bench.length);
     turnBar();
   }
 
@@ -153,18 +164,14 @@ const BattleUI = (() => {
   const TURN = 30;
   // vòng lệnh hình thoi bao quanh nhân vật của người chơi
   // lệnh hình thoi xếp so le thành cột bên trái nhân vật (kiểu cổ điển)
-  const ZIG = ['attack', 'skill', 'item', 'catch', 'defend', 'flee'];
+  const ZIG = ['attack', 'skill', 'catch', 'item', 'pet', 'flee', 'defend'];
+  // vòng lệnh (kiểu tay cầm): nút Công lớn ở góc phải, các lệnh khác xếp hai cung quanh
+  const WHEEL = { attack: [0, 0], skill: [90, 102], item: [90, 146], pet: [90, 190], catch: [150, 114], defend: [150, 149], flee: [150, 184] };
   function placeCmds() {
-    const cm = $('#b-cmds'), me = els.p && els.p.querySelector('.spr'); if (!cm || !me) return;
-    const R = root.getBoundingClientRect(), r = me.getBoundingClientRect(), st = stage.getBoundingClientRect();
-    const step = Math.min(40, (st.height - 80) / 6.4), colA = 50, colB = 90;
-    const sab = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0;
-    let cx = r.left - R.left + r.width * 0.42, cy = r.top - R.top + r.height * 0.45;
-    cx = Math.max(colB + 44, Math.min(R.width - 30, cx));
-    const span = step * (ZIG.length - 1);
-    cy = Math.max(st.top - R.top + span / 2 + 44, Math.min(R.height - span / 2 - 50 - sab, cy));
+    const cm = $('#b-cmds'); if (!cm) return;
+    const w = cm.clientWidth || 250, h = cm.clientHeight || 236, cx = w - 62, cy = h - 64;
     cm.style.setProperty('--cx', cx + 'px'); cm.style.setProperty('--cy', cy + 'px');
-    $$('.seal', cm).forEach((b) => { const i = ZIG.indexOf(b.dataset.c); b.style.setProperty('--x', -(i % 2 ? colB : colA) + 'px'); b.style.setProperty('--y', (i - (ZIG.length - 1) / 2) * step + 'px'); b.style.setProperty('--d', i * 45 + 'ms'); });
+    $$('.seal', cm).forEach((b, i) => { const [r, deg] = WHEEL[b.dataset.c] || [0, 0], a = deg * Math.PI / 180; b.style.setProperty('--x', (Math.cos(a) * r).toFixed(1) + 'px'); b.style.setProperty('--y', (-Math.sin(a) * r).toFixed(1) + 'px'); b.style.setProperty('--d', i * 40 + 'ms'); });
   }
   addEventListener('resize', () => { if (!root.hidden) placeCmds(); });
   function ready() {
@@ -190,6 +197,7 @@ const BattleUI = (() => {
     if (c === 'skill') return pickSkill();
     if (c === 'item') return pickItem();
     if (c === 'catch') return pickCatch();
+    if (c === 'pet') return pickPet();
   });
   $('#b-auto').onclick = () => {
     auto = !auto; Tut.event('auto');
@@ -215,7 +223,8 @@ const BattleUI = (() => {
     hint(m.side === 1 ? 'Chạm vào mục tiêu' : 'Chọn người nhận');
   }
   function tapUnit(id) {
-    if (!mode || !els[id].classList.contains('target')) return;
+    if (!mode) return unitInfo(id);
+    if (!els[id].classList.contains('target')) return;
     const cb = mode.cb; cancel(); cb(id);
   }
 
@@ -228,17 +237,13 @@ const BattleUI = (() => {
     p.innerHTML = items.map((it, i) => `<button data-i="${i}" ${it.disabled ? 'disabled' : ''}><span class="ico">${it.icon}</span><span class="grow"><b>${esc(it.title)}</b><br><small class="muted">${esc(it.sub || '')}</small></span></button>`).join('')
       || '<p class="muted" style="margin:6px">Không có gì để dùng.</p>';
     p.querySelectorAll('button').forEach((b) => (b.onclick = () => { const it = items[+b.dataset.i]; closePick(); onPick(it); }));
+    p.classList.add('dockpick'); p.dataset.cmd = cmd;
     root.appendChild(p);
-    const seal = $(`.seal[data-c="${cmd}"]`), R = root.getBoundingClientRect();
-    if (seal) { const r = seal.getBoundingClientRect(), aL = r.left - R.left - 10, aR = R.right - r.right - 10, left = aL >= aR;
-      const w = Math.max(150, Math.min(230, left ? aL : aR));
-      p.style.width = w + 'px'; let x = left ? r.left - R.left - w - 2 : r.right - R.left + 2; x = Math.max(6, Math.min(R.width - w - 6, x));
-      p.style.left = x + 'px'; p.style.right = 'auto'; p.style.bottom = 'auto';
-      const h = p.offsetHeight; p.style.top = Math.max(60, Math.min(R.height - h - 12, r.top - R.top + r.height / 2 - h / 2)) + 'px'; }
+    const dk = $('#b-dock'); if (dk) p.style.bottom = (root.getBoundingClientRect().bottom - dk.getBoundingClientRect().top + 8) + 'px';
   }
   function closePick() { $('#b-pick')?.remove(); }
 
-  const SK_ICON = { heal: '💚', buff: '✨', phys: '🗡️', magic: '🔮' };
+  const SK_ICON = { heal: '💚', buff: '✨', phys: '🗡️', magic: '🔮', control: '🌀', revive: '🕊️' };
   function pickSkill() {
     const me = unit('p');
     const list = snap.skills.map((k) => {
@@ -256,6 +261,28 @@ const BattleUI = (() => {
       .map((b) => ({ id: b.id, icon: Sprites.itemIcon(b.id, G.meta.ITEMS), title: `${G.meta.ITEMS[b.id].name} ×${b.qty}`, sub: G.meta.ITEMS[b.id].desc }));
     pick(list, ({ id }) => target({ cmd: 'item', side: 0 }, (t) => send({ type: 'item', item: id, target: t })), 'item');
   }
+  // Sủng: gọi Tiên sủng dự bị ra trận (thay con đã ngã hoặc con yếu nhất)
+  function pickPet() {
+    const list = (snap.bench || []).map((p) => { const full = G.me.pets.find((x) => x.uid === p.uid); return { uid: p.uid, icon: full ? Sprites.petImg(full) : '🐾', title: `${p.name} · Cấp ${p.lvl}`, sub: full ? `${G.meta.ELEMENTS[full.element].name} · ${G.meta.GRADES[full.grade].name}` : '' }; });
+    pick(list, ({ uid }) => send({ type: 'pet', uid }), 'pet');
+  }
+  // chạm vào đơn vị (khi không chọn mục tiêu) → bảng thông tin như bản gốc
+  function unitInfo(id) {
+    const u = unit(id); if (!u) return;
+    $('#b-uinfo')?.remove();
+    const el = document.createElement('div'); el.id = 'b-uinfo'; el.className = 'b-uinfo';
+    const E = G.meta.ELEMENTS[u.element];
+    el.innerHTML = `<b>${esc(u.name)}</b><span>Cấp ${u.lvl}${u.pos ? ' · Vị trí ' + u.pos : ''}</span><span>Hp: ${fmt(u.hp)}/${fmt(u.maxHp)}</span>${u.maxMp ? `<span>Mp: ${fmt(u.mp)}/${fmt(u.maxMp)}</span>` : ''}
+      <div class="ui-tags">${E ? `<i style="background:${E.color}">${E.name}</i>` : '<i>Vô</i>'}${stTags(u)}</div>`;
+    root.appendChild(el);
+    const r = els[id].getBoundingClientRect(), R = root.getBoundingClientRect();
+    el.style.left = Math.max(6, Math.min(R.width - 156, r.left - R.left + r.width / 2 - 75)) + 'px';
+    el.style.top = Math.max(60, r.top - R.top + 10) + 'px';
+    setTimeout(() => el.remove(), 2600);
+    el.onclick = () => el.remove();
+  }
+  const ST = { stun: ['Định', '#6ac8ff'], seal: ['Ấn', '#c87aff'], chaos: ['Loạn', '#ff7ab0'], burn: ['Bỏng', '#ff8a3a'], poison: ['Độc', '#7fd66a'], shield: ['Khiên', '#ffe08a'] };
+  function stTags(u) { const bf = (u.buffs || []).filter((b) => b !== 'enrage'); return Object.entries(ST).filter(([k]) => u[k] > 0).map(([k, [l, c]]) => `<i style="background:${c}">${l}</i>`).join('') + (bf.length ? '<i style="background:#ffd65a">Buff</i>' : '') + ((u.buffs || []).includes('enrage') ? '<i style="background:#e8201a;color:#fff">Cuồng nộ</i>' : ''); }
   function pickCatch() {
     const list = ['bau_bac', 'bau_vang'].map((id) => {
       const n = (G.me.bag.find((b) => b.t === 'item' && b.id === id) || {}).qty || 0;
@@ -290,6 +317,29 @@ const BattleUI = (() => {
     if (auto) setTimeout(autoAct, 350);
   }
 
+  // điểm chân đơn vị (toạ độ trong #battle) – để rọi đèn 3D xuống mặt đài
+  function feet(id) { const e = els[id]; if (!e) return null; const c = (e.querySelector('.circle') || e).getBoundingClientRect(), R = root.getBoundingClientRect(); return { x: c.left - R.left + c.width / 2, y: c.top - R.top + c.height * 0.55 }; }
+  // ánh sáng chiêu thức: sân 3D thì rọi đèn thật; phông tranh thì vũng sáng + pháp trận xoay dưới chân
+  function pool(id, col, o = {}) {
+    const p = feet(id); if (!p || FX.low) return;
+    const d = document.createElement('div'), dur = o.dur || 700, r = 70 * (o.sigil || 1.2) * (o.r ? o.r / 2.6 : 1);
+    d.className = 'gpool'; d.style.cssText = `left:${p.x}px;top:${p.y}px;width:${r * 2}px;height:${r * 2}px;--c:${col};--d:${dur}ms`;
+    if (o.sigil !== 0) d.innerHTML = `<i style="background-image:url('data:image/svg+xml;charset=utf-8,${encodeURIComponent(Sprites.circle(col))}')"></i>`;
+    root.appendChild(d); setTimeout(() => d.remove(), dur + 60);
+  }
+  function wash(col, k = 0.35, dur = 260) {
+    if (FX.low) return; const d = document.createElement('div'); d.className = 'gwash'; d.style.cssText = `--c:${col};--k:${k};--d:${dur}ms`; root.appendChild(d); setTimeout(() => d.remove(), dur + 40);
+  }
+  const A3 = { burst: (id, col, o) => { if (typeof Arena !== 'undefined' && Arena.on) Arena.burst(feet(id), col, o); else pool(id, col, o); }, flash: (c, k, d) => { if (typeof Arena !== 'undefined' && Arena.on) Arena.flash(c, k, d); else wash(c, k, d); } };
+  // máy quay đẩy vào người ra chiêu
+  function pushIn(id, k = 1.07) {
+    const e = els[id]; if (!e || FX.low) return;
+    const r = e.getBoundingClientRect(), R = root.getBoundingClientRect(), S = stage.getBoundingClientRect(), cvs = $('#b-3d');
+    const ox = r.left + r.width / 2, oy = r.top + r.height * 0.6;
+    stage.style.transformOrigin = `${ox - S.left}px ${oy - S.top}px`; if (cvs) cvs.style.transformOrigin = `${ox - R.left}px ${oy - R.top}px`;
+    for (const el of [stage, cvs]) if (el) { el.style.transition = 'scale .38s cubic-bezier(.2,.8,.3,1)'; el.style.scale = String(k); }
+  }
+  function pushOut() { for (const el of [stage, $('#b-3d')]) if (el) { el.style.transition = 'scale .45s ease'; el.style.scale = ''; } }
   function rectOf(id) { const e = els[id]; if (!e) return null; const sp = e.querySelector('.spr').getBoundingClientRect(), s = stage.getBoundingClientRect(); return { x: sp.left - s.left + sp.width / 2, y: sp.top - s.top + sp.height * 0.55 }; }
   function num(id, text, cls = '') {
     const e = els[id]; if (!e) return;
@@ -298,7 +348,7 @@ const BattleUI = (() => {
     if (cls.includes('crit')) n.dataset.tag = 'BẠO KÍCH';
     e.appendChild(n); setTimeout(() => n.remove(), 1300);
   }
-  function banner(text, side) { $('#b-banner').innerHTML = `<span class="${side === 1 ? 'foe' : ''}">${esc(text)}</span>`; }
+  function banner(text, side) { const b = $('#b-banner'); b.innerHTML = `<span class="${side === 1 ? 'foe' : ''}">${esc(text)}</span>`; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
   const nameOf = (id) => unit(id)?.name || '';
   const skillOf = (name) => Object.values(G.meta.SKILLS).find((s) => s.name === name);
 
@@ -306,9 +356,19 @@ const BattleUI = (() => {
     const u = unit(h.t); if (!u) return;
     const p = rectOf(h.t);
     if (h.miss) { num(h.t, 'Né!', 'miss'); Sound.sfx('miss'); return; }
-    if (h.h != null) { const nh = Math.min(u.maxHp, u.hp + h.h); setBars(h.t, nh, u.maxHp, u.mp, u.maxMp); num(h.t, '+' + fmt(h.h), 'heal'); setExpr(h.t, 'smile', 800); if (p) FX.impact('heal', p); Sound.sfx('heal'); return; }
+    if (h.st) {
+      const [l, c] = ST[h.st] || ['?', '#fff'];
+      if (h.ok) { num(h.t, { stun: 'Định Thân!', seal: 'Phong Ấn!', chaos: 'Loạn Hồn!' }[h.st] || l, 'info'); if (p) FX.ring(p.x, p.y, c, 52, 26, 3); u[h.st] = h.turns; els[h.t].querySelector('.st').innerHTML = stTags(u); Sound.sfx('charge'); }
+      else { num(h.t, 'Kháng!', 'miss'); Sound.sfx('shield'); }
+      return;
+    }
+    if (h.rev) { u.dead = false; els[h.t]?.classList.remove('dead'); setBars(h.t, h.h, u.maxHp, u.mp, u.maxMp); u.hp = h.h; num(h.t, 'Hồi sinh!', 'heal'); if (p) { FX.pillar(p.x, p.y + 40, '#bfffd0', 50, 50); FX.impact('heal', p); } Sound.sfx('heal'); return; }
+    if (h.h != null) { A3.burst(h.t, '#8af0a8', { r: 2.6, i: 1.5, dur: 900, sigil: 1.2 }); const nh = Math.min(u.maxHp, u.hp + h.h); setBars(h.t, nh, u.maxHp, u.mp, u.maxMp); num(h.t, '+' + fmt(h.h), 'heal'); setExpr(h.t, 'smile', 800); if (p) FX.impact('heal', p); Sound.sfx('heal'); return; }
     const kind = ev.fx && ev.fx !== 'hit' ? ev.fx : (ev.k === 'atk' ? 'slash' : 'hit');
     if (p) FX.impact(ev.k === 'atk' ? (h.crit ? 'slash' : 'hit') : kind, p, h.crit);
+    A3.burst(h.t, ev.k === 'atk' ? (h.crit ? '#fff2c0' : '#ffe8c8') : (ECOL[kind] || '#fff0c8'), { r: ev.k === 'atk' ? 2 : 2.8, i: h.crit ? 2.2 : ev.k === 'atk' ? 1.1 : 1.8, dur: ev.k === 'atk' ? 420 : 760, sigil: ev.k === 'atk' ? 0 : ev.aoe ? 1.1 : 1.3 });
+    if (h.crit) A3.flash('#ffffff', 0.35, 220);
+    if (kind === 'thunder') A3.flash('#cfe6ff', 0.55, 320);
     num(h.t, '-' + fmt(h.d), h.crit ? 'crit' : (h.adv > 0 ? 'adv' : ''));
     els[h.t].classList.remove('hurt'); void els[h.t].offsetWidth; els[h.t].classList.add('hurt');
     u.hp = Math.max(0, u.hp - h.d); setExpr(h.t, 'hurt', h.dead ? 0 : 560); u.hp += h.d;
@@ -316,6 +376,9 @@ const BattleUI = (() => {
     if (h.dead) { u.dead = true; setTimeout(() => { els[h.t]?.classList.add('dead'); turnBar(); if (p) FX.death(p, u.side === 1 ? '#ffc8a0' : '#c8e8ff', !!u.boss); Sound.sfx(u.boss ? 'bossdeath' : 'death'); }, 330); }
     if (h.stun) setTimeout(() => num(h.t, 'Choáng', 'info'), 250);
     if (h.poison) setTimeout(() => num(h.t, 'Trúng độc', 'poison'), 300);
+    if (h.burn) setTimeout(() => num(h.t, 'Bỏng', 'crit'), 320);
+    if (h.absorb) setTimeout(() => num(h.t, 'Khiên -' + fmt(h.absorb), 'info'), 150);
+    if (h.mpDrain) setTimeout(() => num(h.t, '-' + h.mpDrain + ' MP', 'info'), 350);
     if (h.adv > 0) setTimeout(() => num(h.t, 'Khắc chế!', 'info'), 200);
     const kb = els[h.t]; kb.style.setProperty('--kb', (u.side === 1 ? -1 : 1) * (h.crit ? 16 : 9) + 'px');
     if (h.drain) { const a = unit(ev.a); if (a) { setBars(ev.a, Math.min(a.maxHp, a.hp + h.drain), a.maxHp, a.mp, a.maxMp); setTimeout(() => num(ev.a, '+' + h.drain, 'heal'), 200); } }
@@ -332,9 +395,11 @@ const BattleUI = (() => {
           const au = unit(ev.a), col = ECOL[ev.fx] || (au?.side === 0 ? '#9ff0d8' : '#ff8a6a');
           $('#b-log').textContent = `${nameOf(ev.a)} thi triển ${ev.s}`;
           root.classList.add('dim');
-          if (au && (au.id === 'p' || au.boss)) await cutin(au, ev.s);
+          if (au && (au.id === 'p' || au.boss)) await cutin(au, ev.s, ev.fx);
           else banner(ev.s, au?.side);
           if (me) FX.cast(me, col);
+          A3.burst(ev.a, col, { r: 3.2, i: 1.3, dur: 1300, sigil: au?.boss ? 2.1 : 1.6, up: 160 });
+          if (au && (au.id === 'p' || au.boss || ev.aoe)) pushIn(ev.a, ev.aoe ? 1.05 : 1.08);
           a?.classList.add('cast'); setExpr(ev.a, 'cast', 900);
           Sound.sfx('charge');
           await sleep(420);
@@ -361,12 +426,12 @@ const BattleUI = (() => {
         else ev.hits.forEach((h) => applyHit(h, ev));
         await sleep(ev.hits.some((h) => h.crit) ? 360 : 240);
         if (a) { a.style.transition = 'transform .28s ease'; a.style.transform = ''; }
-        root.classList.remove('dim');
+        root.classList.remove('dim'); pushOut();
         await sleep(ev.aoe ? 420 : 300);
         if (a) a.style.transition = '';
       } else if (ev.k === 'skill') { // hồi máu
         banner(ev.s, unit(ev.a)?.side);
-        const me = rectOf(ev.a); if (me) FX.cast(me, '#7cf09a');
+        const me = rectOf(ev.a); if (me) FX.cast(me, '#7cf09a'); A3.burst(ev.a, '#7cf09a', { r: 3, i: 1.3, dur: 1200, sigil: 1.6, up: 160 });
         Sound.sfx('charge');
         await sleep(380);
         const u = unit(ev.a); const sk = skillOf(ev.s);
@@ -376,6 +441,7 @@ const BattleUI = (() => {
       } else if (ev.k === 'buff') {
         banner(ev.s, unit(ev.a)?.side);
         const me = rectOf(ev.a); if (me) { FX.cast(me, ev.fx === 'rage' ? '#ff4a2a' : '#c9a8ff'); FX.impact(ev.fx === 'rage' ? 'rage' : 'gold', me); }
+        A3.burst(ev.a, ev.fx === 'rage' ? '#ff5a2a' : '#d8b8ff', { r: 3, i: 1.5, dur: 1000, sigil: 1.5 });
         Sound.sfx(ev.fx === 'rage' ? 'rage' : 'buff');
         num(ev.a, ev.s, 'info');
         const u = unit(ev.a); const sk = skillOf(ev.s);
@@ -392,7 +458,8 @@ const BattleUI = (() => {
       } else if (ev.k === 'catch') {
         await throwGourd(ev);
       } else if (ev.k === 'defend') {
-        num(ev.a, '🛡️ Phòng thủ', 'info'); const p = rectOf(ev.a); if (p) { FX.shock(p.x, p.y + 42, '#9fd8ff', 64, 26); FX.ring(p.x, p.y, '#cfeaff', 46, 30, 3); els[ev.a]?.classList.add('guard'); setTimeout(() => els[ev.a]?.classList.remove('guard'), 900); }
+        A3.burst(ev.a, '#9fd8ff', { r: 2.2, i: 1.1, dur: 800, sigil: 1.1 });
+        num(ev.a, ev.mpGain != null ? `Nghỉ +${ev.mpGain} MP` : '🛡️ Phòng thủ', 'info'); const p = rectOf(ev.a); if (p) { FX.shock(p.x, p.y + 42, '#9fd8ff', 64, 26); FX.ring(p.x, p.y, '#cfeaff', 46, 30, 3); els[ev.a]?.classList.add('guard'); setTimeout(() => els[ev.a]?.classList.remove('guard'), 900); }
         Sound.sfx('shield'); await sleep(380);
       } else if (ev.k === 'flee') {
         num(ev.a, ev.ok ? 'Thoát thân!' : 'Chạy thất bại', 'info');
@@ -405,20 +472,50 @@ const BattleUI = (() => {
         num(ev.t, '-' + fmt(ev.d), 'poison');
         if (ev.dead && u) { u.dead = true; setTimeout(() => els[ev.t]?.classList.add('dead'), 300); }
         await sleep(480);
+      } else if (ev.k === 'burn') {
+        const u = unit(ev.t), p = rectOf(ev.t); if (u) setBars(ev.t, Math.max(0, u.hp - ev.d), u.maxHp, u.mp, u.maxMp);
+        if (p) FX.impact('fire', p); Sound.sfx('fire'); num(ev.t, '-' + fmt(ev.d), 'crit');
+        if (ev.dead && u) { u.dead = true; setTimeout(() => els[ev.t]?.classList.add('dead'), 300); }
+        await sleep(450);
+      } else if (ev.k === 'summon') {
+        const p = rectOf(ev.t); num(ev.a, `Sủng: ${ev.name}`, 'info'); if (p) { FX.ring(p.x, p.y, '#bfefff', 60, 30, 3); FX.pillar(p.x, p.y + 40, '#dff4ff', 40, 40); }
+        $('#b-log').textContent = ev.out ? `${ev.out} rút lui, ${ev.name} ra trận!` : `${ev.name} ra trận!`;
+        Sound.sfx('charge'); await sleep(600);
+      } else if (ev.k === 'chaos') {
+        num(ev.a, '😵 Loạn hồn', 'info'); await sleep(350);
+      } else if (ev.k === 'selfcost') {
+        const u = unit(ev.a); if (u) { setBars(ev.a, Math.max(1, u.hp - ev.d), u.maxHp, u.mp, u.maxMp); u.hp = Math.max(1, u.hp - ev.d); }
+        num(ev.a, 'Xả thân -' + fmt(ev.d), 'crit'); Sound.sfx('rage'); await sleep(300);
       } else if (ev.k === 'stun') {
         num(ev.a, '💫 Choáng', 'info'); await sleep(450);
       } else if (ev.k === 'text') {
         $('#b-log').textContent = ev.msg; await sleep(500);
+      } else if (ev.k === 'phase') { // boss chuyển giai đoạn – Cuồng Nộ
+        const u = unit(ev.a), p = rectOf(ev.a), el = els[ev.a];
+        if (u) { u.phase = ev.n; if (ev.h) { u.hp = Math.min(u.maxHp, u.hp + ev.h); setBars(ev.a, u.hp, u.maxHp, u.mp, u.maxMp); } }
+        if (el) { el.classList.add('enraged'); el.classList.remove('phase-hit'); void el.offsetWidth; el.classList.add('phase-hit'); }
+        root.classList.remove('quake'); void root.offsetWidth; root.classList.add('quake');
+        Sound.sfx('gong'); Sound.sfx('rage');
+        if (p) { FX.ring(p.x, p.y, '#ff3a2a', 120, 50, 5); FX.pillar(p.x, p.y + 60, '#ff6a3a', 70, 90); }
+        A3.burst(ev.a, '#ff4a2a', { r: 4, i: 2.2, dur: 1400, sigil: 2.2, up: 200 });
+        banner(ev.msg, 1); $('#b-log').textContent = ev.msg;
+        if (ev.h) num(ev.a, '+' + fmt(ev.h), 'heal');
+        bossPlate();
+        await sleep(1300);
+      } else if (ev.k === 'regen') {
+        const u = unit(ev.t); if (u) { u.hp = Math.min(u.maxHp, u.hp + ev.h); setBars(ev.t, u.hp, u.maxHp, u.mp, u.maxMp); }
+        num(ev.t, '+' + fmt(ev.h), 'heal'); await sleep(250);
       }
     }
     turnBar();
   }
 
   // ---------- cắt cảnh khi tung chiêu (người chơi / boss) ----------
-  async function cutin(u, name) {
+  async function cutin(u, name, fx) {
     const el = $('#b-cutin');
     el.className = 'b-cutin ' + (u.side === 1 ? 'foe' : 'ally');
-    el.innerHTML = `<div class="ci-band"><i class="ci-lines"></i><div class="ci-art">${Sprites.unitImg(u)}</div><div class="ci-txt"><small>${esc(u.name)}</small><b>${esc(name)}</b></div></div>`;
+    el.style.setProperty('--ec', ECOL[fx] || (u.side === 1 ? '#ff6a4a' : '#ffd65a'));
+    el.innerHTML = `<div class="ci-band"><i class="ci-lines"></i><i class="ci-ink"></i><div class="ci-art">${Sprites.unitImg(u)}</div><div class="ci-txt"><small>${esc(u.name)}</small><b style="font-size:${Math.max(24, Math.min(40, Math.floor(Math.min(innerWidth, 480) * 0.74 / (name.length * 0.56))))}px">${esc(name)}</b></div></div>`;
     el.hidden = false;
     Sound.sfx('cutin');
     await sleep(720);
@@ -426,7 +523,7 @@ const BattleUI = (() => {
   }
   // ---------- tuyệt chiêu riêng từng tộc: màn tối + hình hiện quanh mục tiêu ----------
   const ULT = {};
-  const ULT_BY_KEY = { kim_quang: 'buddha', cuu_thien: 'buddha', ma_diem: 'demon', pha_thien: 'demon', nhiep_hon: 'fox', yeu_phong: 'fox', that_thap: 'monkey' };
+  const ULT_BY_KEY = { phat_quang: 'buddha', cuu_thien: 'buddha', chan_hoa: 'demon', me_hon: 'fox', nhiep_hon: 'fox', that_thap: 'monkey' };
   function ultInit() { for (const [k, v] of Object.entries(ULT_BY_KEY)) { const s = G.meta.SKILLS[k]; if (s) ULT[s.name] = v; } }
   async function ultimate(kind, ev) {
     const pts = ev.hits.map((h) => rectOf(h.t)).filter(Boolean); if (!pts.length) return;
@@ -512,7 +609,12 @@ const BattleUI = (() => {
     Sound.sfx(win ? 'victory' : res.outcome === 'lose' ? 'defeat' : 'wind');
     clearTimeout(blinkT);
     if (win && res.ups && res.ups.length) { const p = rectOf('p'); if (p) { FX.pillar(p.x, p.y + 40, '#ffe08a', 70, 70); FX.rays(p.x, p.y, '#fff0a0', 70, 180); } Sound.sfx('gong'); num('p', 'THĂNG CẤP!', 'lvup'); await sleep(900); }
-    if (win) { FX.victory(); setTimeout(() => Sound.sfx('fireworks'), 300); snap?.units.forEach((u) => { if (u.side === 0 && !u.dead) setExpr(u.id, 'smile'); }); }
+    if (win) { A3.flash('#fff2c0', 0.5, 700); FX.victory(); setTimeout(() => Sound.sfx('fireworks'), 300); snap?.units.forEach((u) => { if (u.side === 0 && !u.dead) setExpr(u.id, 'smile'); }); }
+    if (win || res.outcome === 'lose') { // băng THẮNG / BẠI như bản gốc
+      const bn = document.createElement('div'); bn.className = 'b-thang ' + (win ? 'win' : 'lose');
+      bn.innerHTML = `<b>${win ? 'THẮNG' : 'BẠI'}</b>${win && res.exp ? `<span>${esc(G.me.name)} · Kinh nghiệm +${fmt(res.exp)}</span>` : ''}`;
+      root.appendChild(bn); setTimeout(() => bn.remove(), 1700); await sleep(1100);
+    }
     else if (res.outcome === 'lose') { root.classList.add('defeat'); FX.flash('#3a0000', 40, 0.5); }
     const I = G.meta.ITEMS;
     const slots = [];
@@ -537,6 +639,7 @@ const BattleUI = (() => {
     if (res.outcome === 'lose' && res.respawn) html += `<p class="muted center">Bạn được đưa về điểm hồi sinh.</p>`;
     await UI.modal(html, [{ id: 'ok', label: 'Tiếp tục' }]);
     root.hidden = true;
+    if (typeof Arena !== 'undefined') Arena.hide(); pushOut();
     closePick(); FX.clear(); root.classList.remove('dim', 'defeat');
     snap = null;
     Sound.play(G.meta.MAPS[G.me.map]?.theme || 'city');

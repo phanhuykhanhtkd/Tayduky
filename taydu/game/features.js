@@ -175,7 +175,7 @@ function register(on, ctx) {
 
   const towerTop = () => Object.values(db.chars).filter((x) => x.tower && x.tower.best > 0)
     .sort((a, b) => b.tower.best - a.tower.best || (a.tower.at || 0) - (b.tower.at || 0)).slice(0, 10)
-    .map((x) => ({ id: x.id, name: x.name, race: x.race, lvl: x.lvl, best: x.tower.best }));
+    .map((x) => ({ id: x.id, name: x.name, race: x.race, gear: L.gearBrief(x), lvl: x.lvl, best: x.tower.best }));
   on('tower:info', true, (c) => ({ ok: true, tower: towerView(c, towerTop()), noState: true }));
   on('tower:fight', true, (c) => {
     const nb = notInBattle(c); if (nb) return nb;

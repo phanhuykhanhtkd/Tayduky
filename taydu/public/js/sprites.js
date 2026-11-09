@@ -91,7 +91,7 @@ ${sideLocks}${mark}${lash}
     if (a) return `<img class="px ${a.cv.width / a.cv.height < 0.9 ? 'hum' : 'beast'} ${u.form ? 'sz-' + Art.sizeOf(u.form) : ''} ${cls}" src="${a.url}" alt="">`;
     return `<span class="emo ${cls}">${u.icon || '❔'}</span>`;
   }
-  function petImg(p, cls = '') { return unitImg({ form: p.sid ? p.sid.split('.')[0] : p.form, element: p.element, icon: p.icon }, cls); }
+  function petImg(p, cls = '') { return unitImg({ form: p.sid ? p.sid.split(".")[0] : p.form, element: p.element, icon: p.icon, bossId: p.look }, cls + (p.chan ? " chan" : p.than ? " than" : "")); }
 
   function gourd(kind = 'silver') {
     const [a, b, c] = kind === 'gold' ? ['#fff3c4', '#e8b73c', '#8a6421'] : ['#ffffff', '#c3cad2', '#6d7680'];
@@ -120,6 +120,13 @@ ${sideLocks}${mark}${lash}
     item: I('<path d="M12 4h8M13 4v5l-5 7v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4v-8l-5-7V4"/><path d="M9 19h14"/>'),
     catch: I('<circle cx="16" cy="10" r="5"/><circle cx="16" cy="22" r="7.5"/><path d="M13 15h6M16 5V3"/>'),
     flee: I('<path d="M4 20c4 0 4-4 8-4s4 4 8 4 4-4 8-4"/><path d="M4 26c4 0 4-4 8-4s4 4 8 4 4-4 8-4"/><path d="M18 5l5 5-5 5M8 10h15"/>'),
+    // Đợt 2–6
+    than3: I('<path d="M16 3l2.6 6.2 6.6.5-5 4.4 1.6 6.5L16 17.2 10.2 20.6l1.6-6.5-5-4.4 6.6-.5z"/><path d="M8 25c2.5 2.2 5.2 3.2 8 3.2s5.5-1 8-3.2"/>'),
+    ach: I('<circle cx="16" cy="12" r="7"/><path d="M12.5 18.5 10 29l6-3 6 3-2.5-10.5"/><path d="M16 8.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z"/>'),
+    codex: I('<path d="M5 6c4-1.5 7.5-1 11 1.4C19.5 5 23 4.5 27 6v20c-4-1.5-7.5-1-11 1.4C12.5 25 9 24.5 5 26z"/><path d="M16 7.4v20"/><circle cx="10.5" cy="13" r="2"/><path d="M20 12h4M20 16h4M8 19h5"/>'),
+    nm: I('<path d="M3 16c4-6.5 8.5-9.5 13-9.5S25 9.5 29 16c-4 6.5-8.5 9.5-13 9.5S7 22.5 3 16z"/><circle cx="16" cy="16" r="4.5"/><path d="M16 13.5v5M8 6 6 3M24 6l2-3M16 5V2"/>'),
+    dg: I('<path d="M4 12 16 5l12 7"/><path d="M7 11v15h18V11"/><path d="M3 26h26M13 26v-7a3 3 0 0 1 6 0v7"/><path d="M10 15h2M20 15h2"/>'),
+    stall: I('<path d="M5 12h22l-2-6H7z"/><path d="M5 12c0 2 1.6 3 3.2 3s3.2-1 3.2-3c0 2 1.6 3 3.2 3s3.2-1 3.2-3c0 2 1.6 3 3.2 3s3.2-1 3.2-3"/><path d="M7 15v11h18V15M12 26v-6h8v6"/>'),
   };
 
   // ---------- hoa văn mây (tường vân) cho góc khung ----------
@@ -268,14 +275,13 @@ ${sideLocks}${mark}${lash}
   }
 
   // ---------- tranh tuỳ chỉnh (nếu người dùng thêm PNG vào public/assets) ----------
-  let ASSETS = { monsters: [], bosses: [], npcs: [] };
-  function setAssets(a) { if (a) ASSETS = a; }
-  function creatureSrc(u) {
-    if (u.bossId && ASSETS.bosses.includes(u.bossId)) return `assets/bosses/${u.bossId}.png`;
-    if (u.form && ASSETS.monsters.includes(u.form)) return `assets/monsters/${u.form}.png`;
-    return null;
-  }
-  function npcSrc(id) { return ASSETS.npcs.includes(id) ? `assets/npcs/${id}.png` : null; }
+  let ASSETS = {};
+  // đường dẫn tranh thật nếu có (hỗ trợ cả kiểu danh sách cũ)
+  function art(k, id) { const a = ASSETS[k]; if (!a || id == null) return null; if (Array.isArray(a)) return a.includes(id) ? `assets/${k}/${id}.png` : null; return a[id] ? `assets/${k}/${a[id]}` : null; }
+  function setAssets(a) { if (a) ASSETS = a; if (Art.setOverride) Art.setOverride(art); }
+  function creatureSrc(u) { return (u.bossId && art('bosses', u.bossId)) || (u.form && art('monsters', u.form)) || null; }
+  function npcSrc(id) { return art('npcs', id); }
+  const mapArt = (id) => art('maps', id), mapFront = (id) => art('maps', id + '_front'), battleArt = (th) => art('battle', th);
 
   function itemIcon(id, items) {
     const it = items[id];
@@ -289,5 +295,5 @@ ${sideLocks}${mark}${lash}
     return `hue-rotate(${elements[el].hue}deg) saturate(1.15)`;
   }
 
-  return { hero, heroURL, heroImg, faceURL, unitImg, petImg, gourd, ICONS, cornerURL, corners, circle, battleBG, paperTexture, itemIcon, elemFilter, setAssets, creatureSrc, npcSrc, LOOK };
+  return { hero, heroURL, heroImg, faceURL, unitImg, petImg, gourd, ICONS, cornerURL, corners, circle, battleBG, paperTexture, itemIcon, elemFilter, setAssets, creatureSrc, npcSrc, mapArt, mapFront, battleArt, art, LOOK };
 })();

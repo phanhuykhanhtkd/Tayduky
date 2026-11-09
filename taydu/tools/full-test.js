@@ -133,7 +133,7 @@ function rawHttp(line) { return new Promise((r) => { const s = net.connect(PORT,
   await B.emit('item:use', { id: 'trung_bd' }); r = await B.emit('item:use', { id: 'trung_bd' });
   st = r.state; ok(st.pets.length >= 2, 'Ấp trứng có 2 Tiên sủng');
   const p1 = st.pets[0], p2 = st.pets[1];
-  r = await B.emit('pet:learn', { uid: p1.uid, book: 'sach_loi' }); ok(r.ok && r.state.pets.find((p) => p.uid === p1.uid).skills.includes('pet_loi'), 'Học chiêu Lôi Đình Kích từ sách');
+  r = await B.emit('pet:learn', { uid: p1.uid, book: 'sach_loi' }); ok(r.ok && r.state.pets.find((p) => p.uid === p1.uid).skills.includes('pet_loi'), 'Học chiêu Lôi Đình Vạn Quân từ sách');
   await B.emit('test:give', { petLvl: 60, items: { linh_dan: 10 } });
   const g0 = r.state.pets.find((p) => p.uid === p1.uid).grade;
   r = await B.emit('pet:evolve', { uid: p1.uid });
@@ -185,6 +185,58 @@ function rawHttp(line) { return new Promise((r) => { const s = net.connect(PORT,
     r = await B.emit('item:use', { id: 'li_xi' }); ok(r.ok && /Lì xì/.test(r.msg), 'Mở Bao Lì Xì', r.msg);
     r = await B.emit('item:use', { id: 'phao_hoa' }); await sleep(200); ok(r.ok && C.ev.some((e) => e.e === 'fx:firework'), 'Pháo hoa hiện cho người cùng bản đồ');
   } else console.log('  (bỏ qua – chạy server với TDK_EVENT=tet để thử)');
+
+  console.log('\n═══ 13. Ba phái, gương mặt, đội 3 Tiên sủng, trạng thái ═══');
+  {
+    const Lg = require('../game/logic');
+    const old = { race: 'than', gender: 'f', lvl: 30, pets: [{ uid: 'x1' }], activePet: 'x1', skills: ['thien_loi'], equip: {} };
+    Lg.migrateChar(old);
+    ok(old.race === 'tien' && old.facePick === true && old.face === 3 && old.activePets.join() === 'x1' && old.skills.includes('dinh_than'), 'Chuyển nhân vật Thần cũ → phái Tiên, giữ pet, được đổi gương mặt 1 lần');
+    const Z = await client(); const zu = ('ph' + T).toLowerCase();
+    await Z.emit('auth:register', { user: zu, pass: '1234' });
+    r = await Z.emit('char:create', { name: 'Ph' + T, race: 'phat', face: 4 }); ok(r.ok, 'Tạo nhân vật phái Phật, gương mặt Long Nữ');
+    let en = await Z.emit('enter'); ok(en.state.race === 'phat' && en.state.face === 4 && en.state.gender === 'f' && en.state.skills.includes('xa_than'), 'Phái, gương mặt, giới tính, bộ kỹ năng Phật đúng');
+    r = await Z.emit('char:face', { face: 1 }); ok(!r.ok, 'Không đổi gương mặt miễn phí khi không có lượt');
+    const Y = await client(); await Y.emit('auth:register', { user: ('pz' + T).toLowerCase(), pass: '1234' });
+    r = await Y.emit('char:create', { name: 'Pz' + T, race: 'constructor', face: 1 }); ok(!r.ok, 'Mã phái lạ bị từ chối');
+    r = await Y.emit('char:create', { name: 'Pz' + T, race: 'yeu', face: 'abc' }); ok(r.ok, 'Gương mặt sai kiểu vẫn tạo được với mặc định');
+    await Z.emit('test:give', { lvl: 40, items: { trung_bd: 4, hp_s: 5 } });
+    for (let i = 0; i < 4; i++) await Z.emit('item:use', { id: 'trung_bd' });
+    en = await Z.emit('enter');
+    ok(en.state.pets.length === 4 && en.state.activePets.length === 3, 'Có 4 pet, tự xếp 3 con vào đội xuất chiến');
+    const extra = en.state.pets.find((p) => !en.state.activePets.includes(p.uid));
+    r = await Z.emit('pet:team', { uid: extra.uid, on: true }); ok(!r.ok, 'Đội tối đa 3 Tiên sủng');
+    r = await Z.emit('tower:fight'); let bt = r.battle;
+    ok(bt && bt.units.filter((u) => u.side === 0 && u.kind === 'pet').length === 3 && bt.units.every((u) => u.pos >= 1), 'Trận đấu có người + 3 Tiên sủng, mỗi đơn vị có số vị trí');
+    ok(bt.bench.length === 1 && bt.bench[0].uid === extra.uid, 'Danh sách Tiên sủng dự bị để lệnh Sủng');
+    r = await Z.emit('battle:act', { type: 'defend' }); ok(r.ok && r.events.some((e) => e.k === 'defend' && e.mpGain >= 0), 'Lệnh Nghỉ: phòng thủ + hồi nội lực');
+    if (!r.result) { r = await Z.emit('battle:act', { type: 'pet', uid: extra.uid }); ok(r.ok && r.events.some((e) => e.k === 'summon') && r.snapshot.bench.length === 0, 'Lệnh Sủng: gọi Tiên sủng dự bị ra trận'); }
+    if (!r.result) { const foe = r.snapshot.units.find((u) => u.side === 1 && !u.dead); r = await Z.emit('battle:act', { type: 'skill', skill: 'xa_than', target: foe.id }); ok(r.ok && r.events.some((e) => e.k === 'selfcost'), 'Xả Thân trừ khí huyết bản thân'); }
+    if (r && !r.result) await fight(Z, r.snapshot);
+    // trạng thái trong động cơ trận
+    const { Battle } = require('../game/battle');
+    const Dd = require('../game/data'); require('../game/data2');
+    const ch = Lg.createChar('t1', 'u', 'Thu', 'yeu', 'm', 0); ch.lvl = 60; ch.hp = 9999; ch.mp = 9999;
+    const sid = Dd.speciesId('hautinh', 'tho', 0), mk = () => { const m = Lg.makeMonster(sid, 10); m.maxHp = m.hp = 99999; return m; };
+    const bb = new Battle(ch, [mk(), mk()], { kind: 'wild' });
+    bb.get('p').mp = 9999; bb.get('e0').res = { seal: 0, chaos: 0, stun: 0 };
+    let evs = []; for (let i = 0; i < 6 && !bb.get('e0').seal && !bb.over; i++) evs = evs.concat(bb.doRound({ type: 'skill', skill: 'phong_an', target: 'e0' }).events);
+    ok(evs.some((e) => e.hits && e.hits.some((h) => h.st === 'seal' && h.ok)) && bb.snapshot().units.find((u) => u.id === 'e0').seal > 0, 'Phong Ấn dính lên địch (kháng 0%)');
+    const t2 = new Battle(ch, [mk()], { kind: 'wild' });
+    t2.get('e0').res = { seal: 100, chaos: 100, stun: 100 };
+    const ev2 = t2.doRound({ type: 'skill', skill: 'phong_an', target: 'e0' }).events.find((e) => e.k === 'skill');
+    ok(ev2 && ev2.hits[0].resist === true, 'Kháng 100% thì không bao giờ dính Phong Ấn');
+    const ch2 = Lg.createChar('t2', 'u', 'Thu2', 'phat', 'm', 0); ch2.lvl = 60; ch2.hp = 9999; ch2.mp = 9999; ch2.skills = Dd.RACES.phat.skills;
+    for (let i = 0; i < 2; i++) { const pt = Lg.makePet(sid, 10, false); ch2.pets.push(pt); }
+    Lg.teamAdd(ch2, ch2.pets[0].uid);
+    const t3 = new Battle(ch2, [mk()], { kind: 'wild' });
+    let e3 = t3.doRound({ type: 'pet', uid: ch2.pets[1].uid }).events;
+    ok(e3.some((e) => e.k === 'summon') && t3.units.filter((u) => u.kind === 'pet').length === 2, 'Lệnh Sủng gọi thêm Tiên sủng vào trận');
+    e3 = t3.doRound({ type: 'pet', uid: ch2.pets[1].uid }).events; ok(!e3.some((e) => e.k === 'summon'), 'Một Tiên sủng chỉ được gọi ra một lần mỗi trận');
+    const hp0 = t3.get('p').hp; e3 = t3.doRound({ type: 'skill', skill: 'xa_than', target: 'e0' }).events;
+    ok(e3.some((e) => e.k === 'selfcost'), 'Xả Thân trừ khí huyết bản thân');
+    e3 = t3.doRound({ type: 'skill', skill: 'kim_cang_ho' }).events; ok(t3.get('p').shield > 0 || e3.some((e) => e.k === 'buff' && e.shield), 'Kim Cang Hộ Thể tạo khiên');
+  }
 
   console.log('\n═══ 12. Nhiều người chơi cùng lúc ═══');
   const many = await Promise.all(Array.from({ length: 12 }, (_, i) => player('m' + i)));

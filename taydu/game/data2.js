@@ -15,11 +15,11 @@ const NEW_ITEMS = {
   sach_kim: { name: 'Sách: Kim Cang Trảm', icon: '📘', type: 'book', teach: 'pet_kim', price: 0, desc: 'Dạy Tiên sủng chiêu Kim Cang Trảm.' },
   sach_moc: { name: 'Sách: Đằng Mạn Triền', icon: '📗', type: 'book', teach: 'pet_moc', price: 0, desc: 'Dạy Tiên sủng chiêu Đằng Mạn Triền (gây choáng).' },
   sach_thuy: { name: 'Sách: Băng Phong Tiễn', icon: '📘', type: 'book', teach: 'pet_thuy', price: 0, desc: 'Dạy Tiên sủng chiêu Băng Phong Tiễn.' },
-  sach_hoa: { name: 'Sách: Liệt Diễm Phún', icon: '📕', type: 'book', teach: 'pet_hoa', price: 0, desc: 'Dạy Tiên sủng chiêu Liệt Diễm Phún.' },
-  sach_tho: { name: 'Sách: Lạc Thạch Kích', icon: '📙', type: 'book', teach: 'pet_tho', price: 0, desc: 'Dạy Tiên sủng chiêu Lạc Thạch Kích.' },
-  sach_aoe: { name: 'Sách: Thiên Địa Cộng Minh', icon: '📒', type: 'book', teach: 'pet_aoe', price: 0, desc: 'Dạy Tiên sủng chiêu đánh toàn bộ địch.' },
+  sach_hoa: { name: 'Sách: Tam Muội Chân Hỏa', icon: '📕', type: 'book', teach: 'pet_hoa', price: 0, desc: 'Dạy Tiên sủng chiêu Tam Muội Chân Hỏa (gây Bỏng).' },
+  sach_tho: { name: 'Sách: Phi Sa Tẩu Thạch', icon: '📙', type: 'book', teach: 'pet_tho', price: 0, desc: 'Dạy Tiên sủng chiêu Phi Sa Tẩu Thạch.' },
+  sach_aoe: { name: 'Sách: Long Trời Lở Đất', icon: '📒', type: 'book', teach: 'pet_aoe', price: 0, desc: 'Dạy Tiên sủng chiêu đánh toàn bộ địch.' },
   sach_heal: { name: 'Sách: Linh Tuyền Trị Liệu', icon: '📗', type: 'book', teach: 'pet_heal', price: 0, desc: 'Dạy Tiên sủng chiêu hồi máu đồng đội.' },
-  sach_loi: { name: 'Sách: Lôi Đình Kích', icon: '📓', type: 'book', teach: 'pet_loi', price: 0, desc: 'Dạy Tiên sủng chiêu sét, có thể gây choáng.' },
+  sach_loi: { name: 'Sách: Lôi Đình Vạn Quân', icon: '📓', type: 'book', teach: 'pet_loi', price: 0, desc: 'Dạy Tiên sủng chiêu sét đánh toàn địch, có thể Định Thân.' },
   // sự kiện
   li_xi: { name: 'Bao Lì Xì', icon: '🧧', type: 'lixi', price: 0, desc: 'Mở ra bạc hoặc vàng may mắn.' },
   phao_hoa: { name: 'Pháo Hoa', icon: '🎆', type: 'firework', price: 0, desc: 'Bắn pháo hoa trên bản đồ cho mọi người cùng xem.' },
@@ -28,7 +28,7 @@ const NEW_ITEMS = {
   den_long: { name: 'Đèn Lồng', icon: '🏮', type: 'mat', price: 0, desc: 'Sưu tầm đủ 10 cái đổi quà ở mục Sự kiện.' },
 };
 Object.assign(D.ITEMS, NEW_ITEMS);
-D.SKILLS.pet_loi = { name: 'Lôi Đình Kích', type: 'magic', target: 'enemy', power: 1.7, mp: 0, fx: 'thunder', stun: 0.15 };
+D.SKILLS.pet_loi = { name: 'Lôi Đình Vạn Quân', type: 'magic', target: 'allEnemy', power: 0.95, mp: 0, fx: 'thunder', stun: 0.1 };
 const MATS = ['thao_duoc', 'yeu_dan', 'tinh_thach', 'thu_bi'];
 const BOOKS = Object.keys(NEW_ITEMS).filter((k) => k.startsWith('sach_'));
 

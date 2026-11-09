@@ -107,39 +107,61 @@ $('#f-login').onsubmit = async (e) => {
 if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone) $('#install-hint').hidden = false;
 
 // ---------------- tạo nhân vật ----------------
-let cRace = 'than', cGender = 'm';
+// ---------------- chọn nhân vật (bố cục như bản gốc: 3 cột phái, mỗi cột 6 gương mặt) ----------------
+let cRace = 'phat', cFace = 0, csMode = 'create';
 const FACTION = {
-  than: { sect: 'Thiên Đình', icon: '☁', hall: 'Lăng Tiêu Bảo Điện', role: 'Pháp sư · Hồi phục', aura: 'rgba(255,226,140,.75)', pros: ['Pháp lực dồi dào', 'Lôi pháp, hồi máu đồng đội', 'Hợp đánh lâu dài'] },
-  ma: { sect: 'Ma Giới', icon: '🔥', hall: 'Hắc Phong Ma Vực', role: 'Đấu sĩ · Vật công', aura: 'rgba(255,90,60,.75)', pros: ['Sức mạnh và khí huyết cao', 'Chém mạnh, hút máu', 'Đứng hàng đầu chịu đòn'] },
-  yeu: { sect: 'Yêu Giới', icon: '🌙', hall: 'Thanh Khâu Yêu Sơn', role: 'Mẫn tiệp · Khống chế', aura: 'rgba(170,140,255,.75)', pros: ['Tốc độ ra đòn nhanh nhất', 'Độc, choáng, né tránh', 'Bắt Tiên sủng dễ hơn'] },
+  phat: { hall: 'Lôi Âm Tự · Linh Sơn', role: 'Kim Cang · Cận chiến, chịu đòn', aura: 'rgba(255,214,90,.8)', pros: ['Khí huyết và sức mạnh cao', 'Xả Thân, Chân Hỏa, Phật Quang', 'Kháng Định Thân tốt'] },
+  yeu: { hall: 'Bàn Ti Động · U Minh Giới', role: 'Yêu Ma · Nhanh nhẹn, khống chế', aura: 'rgba(200,120,255,.8)', pros: ['Tốc độ ra đòn nhanh nhất', 'Phong Ấn, Mê Hồn, Vạn Độc', 'Kháng Phong Ấn tốt'] },
+  tien: { hall: 'Lăng Tiêu Bảo Điện · Thiên Đình', role: 'Thần · Pháp thuật, hồi phục', aura: 'rgba(110,190,255,.8)', pros: ['Pháp lực dồi dào', 'Định Thân, Loạn Hồn, Hồi Sinh', 'Kháng Loạn Hồn tốt'] },
 };
+const COL_ORDER = ['phat', 'yeu', 'tien'];
 const NAME_A = ['Thanh', 'Huyền', 'Lăng', 'Vân', 'Phong', 'Hạo', 'Tử', 'Bạch', 'Kim', 'Ngọc', 'Thiên', 'Dạ', 'Linh', 'Tuyết', 'Hàn', 'Mộ'];
 const NAME_B = ['Phong', 'Vân', 'Nguyệt', 'Long', 'Hà', 'Thiên', 'Sương', 'Minh', 'Diệp', 'Kiếm', 'Hồ', 'Tâm', 'Dương', 'Lam', 'Tinh', 'Vũ'];
-function showCreate() {
+function showCreate(mode = 'create') {
+  csMode = mode;
   show('#scr-create');
   Sound.play('login');
   const R = G.meta.RACES;
+  if (mode === 'face') { cRace = G.me.race; cFace = G.me.face || 0; UI.closeSheet(); UI.closeDialog(); }
+  $('#cs-title').textContent = mode === 'face' ? 'Đổi Gương Mặt (miễn phí 1 lần)' : 'Chọn Nhân Vật';
+  $('#cs-foot').hidden = mode === 'face';
+  $('#b-create').textContent = mode === 'face' ? 'Xác nhận' : 'Chọn';
+  $('#b-random').textContent = mode === 'face' ? 'Để sau' : 'Ngẫu nhiên';
   const draw = () => {
-    const F = FACTION[cRace] || FACTION.than, r = R[cRace];
-    $('#create-hero').src = Sprites.heroURL(cRace, cGender);
+    const F = FACTION[cRace], r = R[cRace], av = r.avatars[cFace], look = { look: cFace };
+    $('#create-hero').src = Sprites.heroURL(cRace, av.gender, 0, look);
     $('#create-hero').classList.remove('pop'); void $('#create-hero').offsetWidth; $('#create-hero').classList.add('pop');
+    $('#cs-face').src = Sprites.faceURL(cRace, av.gender, look);
     $('#cr-aura').style.setProperty('--aura', F.aura);
-    $('#race-list').innerHTML = Object.entries(R).map(([k, x]) => `<button class="race ${k === cRace ? 'on' : ''}" data-r="${k}">
-      <span class="race-frame"><img src="${Sprites.faceURL(k, cGender)}" alt=""></span><h4>${x.name}</h4><small>${(FACTION[k] || {}).sect || ''}</small></button>`).join('');
+    $('#cs-phai').textContent = `${r.name} (${r.title})`; $('#cs-gioi').textContent = av.gender === 'f' ? 'Nữ' : 'Nam';
+    $('#cs-name').textContent = av.name; $('#cs-lore').textContent = av.lore;
+    $('#race-list').innerHTML = COL_ORDER.map((k) => `<div class="cs-col c-${k} ${k === cRace ? 'on' : ''} ${mode === 'face' && k !== cRace ? 'lock' : ''}">
+      <span class="cs-emb">${R[k].name}</span>
+      <div class="cs-grid">${R[k].avatars.map((a, i) => `<button class="cs-f ${k === cRace && i === cFace ? 'sel' : ''}" data-r="${k}" data-f="${i}" aria-label="${a.name}"><img src="${Sprites.faceURL(k, a.gender, { look: i })}" alt=""></button>`).join('')}</div></div>`).join('');
     const kind = ['the', 'luc', 'phap', 'nhanh'].reduce((a, b) => (r.base[b] > r.base[a] ? b : a), 'the');
-    $('#cr-type').textContent = { the: 'Khí huyết hình', luc: 'Lực sĩ hình', phap: 'Pháp sư hình', nhanh: 'Mẫn tiệp hình' }[kind];
-    $('#cr-info').innerHTML = `<div class="cr-row"><span>Chủng tộc</span><b style="color:${r.color}">${r.name}</b><span>Môn phái</span><b>${F.icon} ${F.sect}</b></div>
-      <div class="cr-body">${Panels.radar({ stats: r.base }, {})}
-      <div class="cr-desc"><p>${esc(r.desc)}</p><ul>${F.pros.map((p) => `<li>${p}</li>`).join('')}</ul><p class="muted">Xuất thân: ${F.hall} · ${F.role}</p></div></div>`;
-    $$('#race-list .race').forEach((b) => (b.onclick = () => { if (cRace === b.dataset.r) return; cRace = b.dataset.r; Sound.sfx('buff'); draw(); }));
+    $('#cr-info').innerHTML = `<div class="cr-body">${Panels.radar({ stats: r.base }, {})}
+      <div class="cr-desc"><p><b style="color:${r.color}">${r.name} · ${r.title}</b> – ${esc(r.desc)}</p><ul>${F.pros.map((p) => `<li>${p}</li>`).join('')}</ul><p class="muted">${F.hall} · ${F.role}</p></div></div>`;
+    $$('#race-list .cs-f').forEach((b) => (b.onclick = () => {
+      if (mode === 'face' && b.dataset.r !== cRace) { UI.toast('Chỉ đổi gương mặt trong phái của bạn.'); return; }
+      cRace = b.dataset.r; cFace = +b.dataset.f; Sound.sfx('buff'); draw();
+    }));
   };
   draw();
-  $$('#scr-create .gender .seg-b').forEach((b) => (b.onclick = () => { cGender = b.dataset.g; $$('#scr-create .gender .seg-b').forEach((x) => x.classList.toggle('on', x === b)); Sound.sfx('click'); draw(); }));
   $('#c-dice').onclick = () => { const p = (l) => l[Math.floor(Math.random() * l.length)]; $('#c-name').value = p(NAME_A) + ' ' + p(NAME_B); Sound.sfx('coin'); };
+  $('#b-random').onclick = () => {
+    if (csMode === 'face') { show('#scr-game'); return; }
+    cRace = COL_ORDER[Math.floor(Math.random() * 3)]; cFace = Math.floor(Math.random() * 6); $('#c-dice').onclick(); draw();
+  };
 }
 $('#b-create').onclick = async () => {
+  if (csMode === 'face') {
+    const r = await G.call('char:face', { face: cFace });
+    show('#scr-game'); if (r && r.ok) { GameMap.setPlayerGear && GameMap.setPlayerGear(G.me.gear); }
+    return;
+  }
   $('#create-err').textContent = '';
-  const r = await Net.emit('char:create', { name: $('#c-name').value, race: cRace, gender: cGender });
+  if (!$('#c-name').value.trim()) $('#c-dice').onclick();
+  const r = await Net.emit('char:create', { name: $('#c-name').value, race: cRace, face: cFace });
   if (!r.ok) { $('#create-err').textContent = r.msg; Sound.sfx('error'); return; }
   Sound.sfx('levelup');
   enter(true);
@@ -162,13 +184,20 @@ async function enter(first) {
   Panels2.initMini();
   Net.emit('party:info').then((x) => x.ok && Panels2.setParty(x.party));
   if (r.mail) setTimeout(() => UI.toast(`📬 Bạn có ${r.mail} thư mới ở Chợ (mục Thư).`, 'gold'), 2500);
+  if (!first && r.welfare) Panels3.offline(r.welfare);
+  Panels3.refreshNodes(); Panels3.wevChip();
   renderTicker(); updateBadges();
   requestAnimationFrame(() => GameMap.resize());
   if (r.battle) return startBattle(r.battle);
   Sound.play(G.meta.MAPS[r.state.map].theme);
   Sound.ambient(G.meta.MAPS[r.state.map].theme);
   mapTitle();
-  if (!first && r.state.tut >= 99) setTimeout(async () => { const d = await Net.emit('daily:info'); if (d.ok && d.daily.checkin.canClaim && !UI.sheet.open && !BattleUI.active) Panels.daily(true); }, 1400);
+  if (!first && r.state.tut >= 99 && !r.state.facePick) setTimeout(async () => { const d = await Net.emit('daily:info'); if (d.ok && d.daily.checkin.canClaim && !UI.sheet.open && !BattleUI.active) Panels.daily(true); }, 1400);
+  if (r.state.facePick && !first) setTimeout(async () => {
+    const R = G.meta.RACES[r.state.race];
+    const ok = await UI.confirm(`<h3 style="font-size:20px">Tam Giới chia lại môn phái</h3><p>Phái của bạn nay là <b>${R.name} (${R.title})</b>. Bạn được <b>đổi gương mặt miễn phí 1 lần</b> trong 6 gương mặt của phái.</p>`, 'Chọn gương mặt');
+    if (ok) showCreate('face');
+  }, 900);
   if (first || r.state.tut < 99) Tut.start();
   if (first) {
     setTimeout(() => UI.dialog({ name: 'Thái Bạch Kim Tinh', icon: '🧙‍♂️', npc: 'thaibach', text: `Chào ${r.state.name}! Đây là Thiên Cung. Chạm vào bản đồ để đi, chạm vào NPC để trò chuyện. Ta đang đứng gần ngươi – lại đây nhận nhiệm vụ đầu tiên nhé. Nhớ ghé Tiên Đồng trị thương và Tiên Thương mua Bầu Bạc để thu phục Tiên sủng.`, options: [] }), 1600);
@@ -178,7 +207,7 @@ async function enter(first) {
 function mapTitle() {
   const m = G.meta.MAPS[G.me.map];
   const el = $('#map-title');
-  el.innerHTML = `<small>Chương ${m.chapter} · ${esc(m.sub || '')}</small><b>${esc(m.name)}</b>`;
+  el.innerHTML = `<small>${m.post ? 'Hậu truyện ' + (m.chapter - 15) : 'Chương ' + m.chapter} · ${esc(m.sub || '')}</small><b>${esc(m.name)}</b>`;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
 }
 
@@ -201,8 +230,9 @@ function updateHud() {
   { const bs = G.meta.CONFIG.bagSize, n = c.bag.length, el = $('#hud-bag'); el.textContent = `${n}/${bs}`; el.parentNode.classList.toggle('full', n >= bs * 0.9); }
   $('#map-name').textContent = G.meta.MAPS[c.map].name;
   const q = c.quest;
-  $('#quest-track').innerHTML = q.done ? '<b>Đã thỉnh kinh thành công</b> · 81/81 kiếp nạn'
-    : `${q.no ? `<b>Nạn ${q.no}:</b> ` : ''}<b>${esc(q.title)}</b> · ${esc(q.type === 'kill' ? `Diệt quái ${q.prog}/${q.count}` : q.text)}`;
+  $('#quest-track').innerHTML = q.done ? '<em>Hộ Kinh Sứ</em><span>Kiếp nạn thứ 82 đã vượt</span>'
+    : q.needAsc && !c.asc ? `<em>Cần Phi Thăng</em><span>→ cấp 120 · Tam Cửu Thiên Kiếp</span>`
+    : `<em>Tự động tìm đường</em><span>→ ${esc(q.type === 'kill' ? `${q.title} (${q.prog}/${q.count})` : q.title)}</span>`;
   GameMap.questNpc = !q.done && q.map === c.map ? (q.type === 'talk' ? q.npc : q.type === 'boss' ? q.boss : null) : null;
   const pb = $('#pt-badge');
   pb.hidden = !c.points;
@@ -214,20 +244,38 @@ function updateBadges() {
   $('[data-p="char"]').classList.toggle('dot', G.me.points > 0);
   $('#soc-btn').classList.toggle('dot', G.pending.length > 0);
   $('[data-p="act"]').classList.toggle('dot', !!G.me.dailyBadge);
+  $('#evt-act').classList.toggle('dot', !!G.me.dailyBadge);
+  const b3 = Panels3.badges();
+  $('#btn-menu').classList.toggle('dot', G.me.points > 0 || !!G.me.dailyBadge || !!b3 || (!G.me.menh && G.me.lvl >= 10));
 }
 
+let chatTab = 'khu';
 function renderTicker() {
-  const last = G.chat.slice(-2);
-  $('#ticker').innerHTML = last.map((m) => `<div><span class="chn ${m.ch}">[${{ khu: 'Khu', doi: 'Đội', phai: 'Phái', shop: 'Shop', he: 'HT' }[m.ch]}]</span>${m.fromId ? `<b>${esc(m.from)}</b>: ` : ''}${esc(m.text).replace(/\[e(\d{1,2})\]/g, (a, n) => Art.EMO_UNI[+n] || a)}</div>`).join('') || '<div style="opacity:.6">Kênh chat – chạm để mở</div>';
+  const list = G.chat.filter((m) => m.ch === chatTab || m.ch === 'he' || chatTab === 'all');
+  const last = list.slice(-3);
+  const ava = (m) => m.fromId ? `<img src="${Sprites.faceURL(m.race || 'tien', m.gender || 'm', Number.isInteger(m.face) ? { look: m.face } : null)}" alt="">` : '<i class="sys">☯</i>';
+  $('#ticker').innerHTML = last.map((m) => `<div class="cm ${m.fromId ? '' : 'he'}"><span class="cav">${ava(m)}${m.lvl ? `<em>${m.lvl}</em>` : ''}</span><span class="ct"><small>${m.fromId ? esc(m.from) : 'Hệ thống'}</small><span class="cb">${esc(m.text).replace(/\[e(\d{1,2})\]/g, (a, n) => Art.EMO_UNI[+n] || a)}</span></span></div>`).join('') || '<div class="cm he"><span class="ct"><span class="cb">Kênh chat – chạm để mở</span></span></div>';
 }
+$$('.ctabs [data-ch]').forEach((b) => (b.onclick = (e) => { e.stopPropagation(); chatTab = b.dataset.ch; $$('.ctabs [data-ch]').forEach((x) => x.classList.toggle('on', x === b)); renderTicker(); }));
 
-$('#hud-ava').onclick = () => Panels.char();
+$('#hud-ava').onclick = () => { Tut.event('open_char'); Panels.char(); };
 $('#hud-gear').onclick = () => settings();
 $('#pt-badge').onclick = () => Panels.char('info');
 $('#map-chip').onclick = () => Panels.act('travel');
-$('#quest-track').onclick = () => { Tut.event('quest'); Panels.quest(); };
+$('#quest-track').onclick = () => { Tut.event('quest'); goQuest(); };
 $('#ticker').onclick = () => Panels.social('chat');
-$$('.nav button').forEach((b) => (b.onclick = () => { Tut.event('open_' + b.dataset.p); (Panels[b.dataset.p] || Panels2[b.dataset.p])(); }));
+$$('.nav button').forEach((b) => (b.onclick = () => { $('.nav').classList.remove('open'); Tut.event('open_' + b.dataset.p); (Panels3[b.dataset.p] || Panels[b.dataset.p] || Panels2[b.dataset.p])(); }));
+$('#btn-menu').onclick = (e) => { e.stopPropagation(); $('.nav').classList.toggle('open'); };
+document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.nav, #btn-menu')) $('.nav')?.classList.remove('open'); });
+$('#btn-quick').onclick = () => Panels.bag();
+$('#mm').onclick = () => Panels.act('travel');
+$('#evt-daily').onclick = () => Panels.daily();
+$('#evt-act').onclick = () => { Tut.event('open_act'); Panels.act(); };
+$('#evt-welfare').onclick = () => Panels3.welfare();
+$('#evt-pass').onclick = () => Panels3.pass();
+$('#evt-dg').onclick = () => Panels3.dg();
+$('#evt-than').onclick = () => Panels3.than();
+$('#wev').onclick = () => Panels3.wevInfo();
 $('#soc-btn').onclick = () => { Tut.event('open_social'); Panels.social('friend'); };
 document.addEventListener('click', (e) => { if (e.target.closest('button:not(.seal):not([data-close]):not(.tap-start)')) Sound.sfx('click'); });
 
@@ -238,7 +286,7 @@ function settings() {
     body.innerHTML = `
       <div class="set-row"><span class="ic">${Sprites.ICONS.sound}</span><label style="margin:0">Nhạc nền<input type="range" id="s-music" min="0" max="100" value="${Math.round(st.music * 100)}"></label><output id="o-music">${Math.round(st.music * 100)}</output></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.skill}</span><label style="margin:0">Hiệu ứng âm thanh<input type="range" id="s-sfx" min="0" max="100" value="${Math.round(st.sfx * 100)}"></label><output id="o-sfx">${Math.round(st.sfx * 100)}</output></div>
-      ${GameMap.hdSupported ? `<div class="set-row"><span class="ic">${Sprites.ICONS.act}</span><div><b>Đồ hoạ HD-2D (3D)</b><div class="muted">Bản đồ có chiều sâu, bóng đổ, ánh đèn. Tắt nếu máy nóng.</div></div><button class="toggle ${GameMap.hd ? 'on' : ''}" id="s-hd" aria-label="HD-2D"></button></div>` : ''}
+      <div class="set-row"><span class="ic">${Sprites.ICONS.act}</span><div><b>Nhân vật kiểu tranh (chibi)</b><div class="muted">Tắt để dùng lại hình pixel cổ điển.</div></div><button class="toggle ${(() => { try { return localStorage.getItem('tdk_pixel') !== '1'; } catch { return true; } })() ? 'on' : ''}" id="s-vec" aria-label="Chibi"></button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.gear}</span><div><b>Hiệu ứng nhẹ</b><div class="muted">Bật trên iPhone đời cũ để mượt hơn.</div></div><button class="toggle ${FX.low ? 'on' : ''}" id="s-low" aria-label="Hiệu ứng nhẹ"></button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.gear}</span><div><b>Mã khôi phục</b><div class="muted">Tạo mã mới để lấy lại tài khoản khi quên mật khẩu.</div></div><button class="btn-seal sm ghost" id="s-rc">Tạo mã</button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.flee}</span><div><b>Tránh quái</b><div class="muted">Đi lại không gặp quái ngẫu nhiên.</div></div><button class="toggle ${G.me.peace ? 'on' : ''}" id="s-peace" aria-label="Tránh quái"></button></div>
@@ -252,7 +300,7 @@ function settings() {
     const bind = (id, k) => { const i = $('#s-' + id); i.oninput = () => { $('#o-' + id).textContent = i.value; Sound.set(k, i.value / 100); }; i.onchange = () => Sound.sfx('click'); };
     bind('music', 'music'); bind('sfx', 'sfx');
     $('#s-test').onclick = () => { Sound.test(); setTimeout(() => { const el = $('#s-state'); if (el) el.textContent = 'Trạng thái: ' + (Sound.state === 'running' ? 'đang phát' : Sound.state); }, 300); };
-    if ($('#s-hd')) $('#s-hd').onclick = () => { GameMap.setHD(!GameMap.hd); UI.refreshSheet(); };
+    $('#s-vec').onclick = () => { try { localStorage.setItem('tdk_pixel', localStorage.getItem('tdk_pixel') === '1' ? '0' : '1'); } catch {} location.reload(); };
     $('#s-low').onclick = () => { FX.setLow(!FX.low); GameMap.initAmb(); UI.refreshSheet(); };
     $('#s-peace').onclick = async () => { await G.call('char:peace'); UI.refreshSheet(); };
     $('#s-logout').onclick = async () => { if (await UI.confirm('<p>Đăng xuất khỏi thiết bị này?</p>', 'Đăng xuất')) { localStorage.removeItem('tdk_token'); location.reload(); } };
@@ -347,6 +395,10 @@ function onMapTap(x, y) {
   if (BattleUI.active) return;
   const n = npcAt(x, y);
   if (n) return goToNpc(n);
+  const pl = GameMap.playerAt(x, y);
+  if (pl) { const near = Math.abs(pl.x - G.me.x) + Math.abs(pl.y - G.me.y) <= 1; if (near) return Panels3.playerTap(pl); return walk((a, b) => Math.abs(a - pl.x) + Math.abs(b - pl.y) === 1, () => Panels3.playerTap(pl)); }
+  const nd = GameMap.nodeAt(x, y);
+  if (nd) { const near = (a, b) => Math.abs(a - nd.x) + Math.abs(b - nd.y) <= 1; if (near(G.me.x, G.me.y)) return Panels3.gather(nd); return walk(near, () => Panels3.gather(nd)); }
   if (x === G.me.x && y === G.me.y) return;
   walk((a, b) => a === x && b === y);
 }
@@ -354,6 +406,7 @@ GameMap.onTap = onMapTap;
 
 function onTravel(r) {
   walkTok++;
+  setTimeout(() => Panels3.refreshNodes(), 200);
   GameMap.setMap(G.me.map, G.meta.MAPS[G.me.map]);
   GameMap.snap([G.me.x, G.me.y]);
   GameMap.setPlayers(r.players || []);
@@ -432,6 +485,7 @@ function startBattle(b) {
       if (res.players) GameMap.setPlayers(res.players);
       GameMap.snap([G.me.x, G.me.y]);
       if (res.quest) questToast(res.quest);
+      Panels3.afterBattle(res);
       if (G.me.hp < G.me.derived.maxHp * 0.3) UI.toast('Khí huyết thấp – dùng Kim Sang Dược hoặc gặp NPC trị thương.', 'err');
     },
   });
@@ -456,6 +510,8 @@ Net.on('map:join', (p) => { if (G.me && p.id !== G.me.id) GameMap.addPlayer(p); 
 Net.on('map:move', (p) => GameMap.movePlayer(p));
 Net.on('map:leave', (p) => GameMap.removePlayer(p.id));
 Net.on('map:gear', (p) => GameMap.setPlayerGear(p.id, p.gear));
+Net.on('map:stall', (p) => { if (G.me && p.id === G.me.id) return; GameMap.setPlayerInfo(p.id, 'stall', p.stall); });
+Net.on('map:title', (p) => GameMap.setPlayerInfo(p.id, 'title', p.title));
 Net.on('party', (p) => Panels2.setParty(p));
 Net.on('fx:firework', (d) => Panels2.firework(d.by));
 Net.on('boss:update', (b) => { G.boss = b; if (UI.sheet.name === 'act' && UI.sheet.tab === 'list') UI.refreshSheet(); });

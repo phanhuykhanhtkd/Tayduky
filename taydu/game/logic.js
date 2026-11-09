@@ -54,15 +54,18 @@ function equipStats(it) {
 function equipPrice(it) { return Math.round((it.lvl * 12 + 20) * D.QUALITIES[it.q].mult * (1 + 0.15 * it.plus)); }
 
 // ---------- nhân vật ----------
-function createChar(id, user, name, race, gender) {
+function createChar(id, user, name, race, gender, face) {
+  race = D.RACE_ALIAS[race] || race;
   const R = D.RACES[race];
+  face = Number.isInteger(face) && face >= 0 && face < 6 ? face : gender === 'f' ? 3 : 0;
+  gender = R.avatars[face].gender;
   const c = {
-    id, user, name, race, gender, lvl: 1, exp: 0, points: 0,
+    id, user, name, race, gender, face, lvl: 1, exp: 0, points: 0,
     stats: { ...R.base },
     hp: 0, mp: 0, bac: 300, vang: 5,
     map: 'ch1', x: D.MAPS.ch1.spawn[0], y: D.MAPS.ch1.spawn[1],
     equip: Object.fromEntries(D.SLOT_KEYS.map((s) => [s, null])),
-    bag: [], pets: [], activePet: null,
+    bag: [], pets: [], activePet: null, activePets: [],
     skills: [...R.skills], secretSkills: [],
     quest: 0, qprog: 0, nan: 0, unlocked: 1,
     secrets: {}, secretState: { thodia: 0 },
@@ -102,8 +105,47 @@ function calcStats(c, spouseBonus = !!c.spouse) {
   }
   if (spouseBonus) { o.maxHp *= 1.05; o.atk *= 1.05; o.matk *= 1.05; }
   require('./features2').mountBonus(c, o);
+  require('./features3').statBonus(c, o);
   for (const k of Object.keys(o)) o[k] = k === 'crit' || k === 'dodge' ? Math.round(o[k] * 10) / 10 : Math.round(o[k]);
   return o;
+}
+
+// ---------- chuyển dữ liệu cũ (Thần/Ma → Tiên/Phật, 1 pet → tối đa 3 pet) ----------
+function migrateChar(c) {
+  if (D.RACE_ALIAS[c.race]) {
+    c.race = D.RACE_ALIAS[c.race];
+    c.facePick = true;                         // được chọn lại gương mặt miễn phí 1 lần
+  }
+  const R = D.RACES[c.race] || D.RACES.tien;
+  if (!Number.isInteger(c.face)) c.face = c.gender === 'f' ? 3 : 0;
+  // bộ kỹ năng theo phái mới (giữ bí tịch)
+  if (!c.skills || c.skills.some((k) => !R.skills.includes(k))) c.skills = [...R.skills];
+  if (!Array.isArray(c.activePets)) c.activePets = c.activePet ? [c.activePet] : [];
+  c.activePets = c.activePets.filter((u, i, a) => a.indexOf(u) === i && c.pets.some((p) => p.uid === u)).slice(0, 3);
+  c.activePet = c.activePets[0] || null;
+  return c;
+}
+// đội Tiên sủng xuất chiến (tối đa 3) – activePet luôn là con đầu đội
+function teamAdd(c, uid, lead = false) {
+  if (!Array.isArray(c.activePets)) c.activePets = c.activePet ? [c.activePet] : [];
+  c.activePets = c.activePets.filter((u) => u !== uid);
+  if (lead) c.activePets.unshift(uid); else if (c.activePets.length < 3) c.activePets.push(uid); else return false;
+  c.activePets = c.activePets.slice(0, 3); c.activePet = c.activePets[0] || null; return true;
+}
+function teamRemove(c, uid) {
+  c.activePets = (c.activePets || []).filter((u) => u !== uid); c.activePet = c.activePets[0] || null;
+}
+function teamPets(c) { return (c.activePets && c.activePets.length ? c.activePets : c.activePet ? [c.activePet] : []).map((u) => c.pets.find((p) => p.uid === u)).filter(Boolean); }
+// kháng tính: Phong ấn · Loạn hồn · Định thân (% giảm tỉ lệ dính)
+function resistOf(c) {
+  const base = Math.min(25, c.lvl * 0.15);
+  const r = { seal: base, chaos: base, stun: base };
+  if (c.race === 'tien') { r.chaos += 10; r.stun += 5; }
+  if (c.race === 'phat') { r.stun += 10; r.seal += 5; }
+  if (c.race === 'yeu') { r.seal += 10; r.chaos += 5; }
+  for (const it of Object.values(c.equip || {})) if (it && it.res) for (const [k, v] of Object.entries(it.res)) r[k] = (r[k] || 0) + v;
+  for (const k of Object.keys(r)) r[k] = Math.round(Math.min(70, r[k]));
+  return r;
 }
 
 function power(c) {
@@ -113,9 +155,10 @@ function power(c) {
 
 function addExp(c, n) {
   const ups = [];
-  if (c.lvl >= D.CONFIG.maxLevel) return ups;
+  const cap = levelCap(c);
+  if (c.lvl >= cap) return ups;
   c.exp += Math.round(n);
-  while (c.lvl < D.CONFIG.maxLevel && c.exp >= expNeed(c.lvl)) {
+  while (c.lvl < cap && c.exp >= expNeed(c.lvl)) {
     c.exp -= expNeed(c.lvl);
     c.lvl++;
     c.points += D.CONFIG.pointsPerLevel;
@@ -124,6 +167,9 @@ function addExp(c, n) {
   if (ups.length) { const s = calcStats(c); c.hp = s.maxHp; c.mp = s.maxMp; }
   return ups;
 }
+
+// chưa Phi Thăng: tối đa cấp 120 (giữ nguyên nếu nhân vật cũ đã vượt)
+function levelCap(c) { return c.asc ? D.CONFIG.maxLevel : Math.max(Math.min(120, D.CONFIG.maxLevel), Math.min(c.lvl, D.CONFIG.maxLevel)); }
 
 function clampHpMp(c) {
   const s = calcStats(c);
@@ -176,17 +222,18 @@ function beastStats(f, gradeMult, lvl, mut) {
 }
 function petStats(p) {
   const sp = D.getSpecies(p.sid);
-  return beastStats(sp.f, D.GRADES[sp.grade].mult, p.lvl, p.mut);
+  return require('./features3').petBonus(p, beastStats(sp.f, D.GRADES[sp.grade].mult, p.lvl, p.mut));
 }
 function makePet(sid, lvl, mut) {
   const sp = D.getSpecies(sid);
-  return { uid: uid(), sid, name: (mut ? 'Biến Dị ' : '') + sp.name, lvl: Math.max(1, lvl), exp: 0, mut: !!mut };
+  return { uid: uid(), sid, name: (mut ? 'Biến Dị ' : '') + sp.name, lvl: Math.max(1, lvl), exp: 0, mut: !!mut, tc: require('./features3').rollTrait() };
 }
 function petView(p) {
   const sp = D.getSpecies(p.sid);
   return {
     ...p, icon: sp.icon, element: sp.element, grade: sp.grade, species: sp.name,
     skills: require('./features2').petSkills(p), stats: petStats(p), need: expNeed(p.lvl), learned: p.learned || [],
+    than: sp.than || undefined, chan: sp.chan || undefined, look: sp.look || undefined, form: sp.form,
   };
 }
 function petAddExp(c, p, n) {
@@ -218,7 +265,7 @@ function makeBoss(bid) {
   st.maxHp = Math.round(st.maxHp * B.hpMul);
   st.atk = Math.round(st.atk * B.atkMul / 1.2);
   st.matk = Math.round(st.matk * B.atkMul / 1.2);
-  const units = [{ kind: 'boss', bossId: bid, name: B.name, icon: B.icon, element: B.element, lvl: B.lv, ...st, skills: B.skills, catchable: false, boss: true }];
+  const units = [{ kind: 'boss', bossId: bid, name: B.name, icon: B.icon, element: B.element, lvl: B.lv, ...st, skills: B.skills, catchable: false, boss: true, phases: B.phases || 1 }];
   for (const [hid, lv] of B.minions) units.push(makeHuman(hid, lv));
   return units;
 }
@@ -291,7 +338,7 @@ function gearBrief(c) {
   let wk = null;
   if (w) wk = w.unique ? 'goldstaff' : /Côn/.test(w.name) ? (w.q >= 3 ? 'goldstaff' : 'staff') : /Kiếm/.test(w.name) ? 'sword' : /Đao/.test(w.name) ? 'saber' : /Thương/.test(w.name) ? (w.q >= 4 ? 'firespear' : 'spear') : null;
   const plus = Math.max(0, ...Object.values(c.equip || {}).filter(Boolean).map((e) => e.plus || 0));
-  return { w: wk, wq: w ? w.q : -1, aq: a ? a.q : -1, hq: h ? h.q : -1, plus, mount: c.mount || null };
+  return { w: wk, wq: w ? w.q : -1, aq: a ? a.q : -1, hq: h ? h.q : -1, plus, mount: c.mount || null, look: Number.isInteger(c.face) ? c.face : undefined, asc: c.asc ? 1 : undefined };
 }
 
 // ---------- trạng thái gửi client ----------
@@ -299,11 +346,11 @@ function publicChar(c, extra = {}) {
   resetDaily(c);
   const s = calcStats(c);
   return {
-    id: c.id, name: c.name, race: c.race, gender: c.gender, lvl: c.lvl, exp: c.exp, need: expNeed(c.lvl), points: c.points,
+    id: c.id, name: c.name, race: c.race, gender: c.gender, face: c.face, facePick: !!c.facePick, resist: resistOf(c), lvl: c.lvl, exp: c.exp, need: expNeed(c.lvl), points: c.points,
     stats: c.stats, derived: s, hp: c.hp, mp: c.mp, bac: c.bac, vang: c.vang, map: c.map, x: c.x, y: c.y,
     equip: Object.fromEntries(Object.entries(c.equip).map(([k, v]) => [k, v ? { ...v, total: equipStats(v), price: equipPrice(v) } : null])),
     bag: c.bag.map((b) => (b.t === 'eq' ? { ...b, total: equipStats(b), price: equipPrice(b) } : b)),
-    pets: c.pets.map(petView), activePet: c.activePet,
+    pets: c.pets.map(petView), activePet: c.activePet, activePets: c.activePets || [],
     skills: [...c.skills, ...(c.secretSkills || [])],
     quest: questView(c), nan: c.nan, unlocked: c.unlocked,
     secrets: c.secrets, daily: c.daily, arena: c.arena, guild: c.guild, contrib: c.contrib,
@@ -312,14 +359,15 @@ function publicChar(c, extra = {}) {
     tut: c.tut ?? (c.lvl <= 1 && c.quest === 0 ? 0 : 99), towerBest: (c.tower && c.tower.best) || 0,
     dailyBadge: require('./features').badge(c),
     secretHints: Object.fromEntries(Object.keys(D.SECRETS).filter((k) => c.secrets[k] || (c.secretState.rumors || {})[k]).map((k) => [k, D.SECRETS[k].hint])),
+    ...require('./features3').pub(c),
     ...extra,
   };
 }
 
 module.exports = {
-  rand, randf, chance, pick, weighted, uid, today, vnNow, expNeed,
+  rand, randf, chance, pick, weighted, uid, today, vnNow, expNeed, levelCap,
   makeEquip, makeUniqueStaff, equipStats, equipPrice,
-  createChar, calcStats, power, addExp, clampHpMp, resetDaily,
+  createChar, migrateChar, resistOf, teamAdd, teamRemove, teamPets, calcStats, power, addExp, clampHpMp, resetDaily,
   countItem, addItem, removeItem, addEquip, bagUsed,
   beastStats, petStats, makePet, petView, petAddExp,
   makeMonster, makeHuman, makeBoss, rollEncounter, rollDrops,

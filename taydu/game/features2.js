@@ -16,7 +16,8 @@ const fmt = (n) => Number(n).toLocaleString('vi-VN');
 function mountBonus(c, o) {
   const m = c.mount && X.MOUNTS[c.mount];
   if (!m) return o;
-  for (const [k, v] of Object.entries(m.bonus)) if (o[k] != null) o[k] = o[k] * (1 + v / 100);
+  const lvMul = 1 + 0.12 * (((c.mountLv || {})[c.mount] || 1) - 1); // mỗi cấp thú cưỡi +12% hiệu quả
+  for (const [k, v] of Object.entries(m.bonus)) if (o[k] != null) o[k] = k === 'crit' ? o[k] + v * lvMul : o[k] * (1 + (v * lvMul) / 100);
   return o;
 }
 
@@ -65,7 +66,7 @@ function partyAllies(db, c, online, battles) {
     const m = db.chars[id];
     if (!m || !online.has(id) || battles.has(id) || m.map !== c.map || m.hp < 1) continue;
     const s = L.calcStats(m);
-    out.push({ kind: 'hero', allyId: id, name: m.name, lvl: m.lvl, hero: { race: m.race, gender: m.gender, gear: L.gearBrief(m) }, ...s, hp: Math.max(1, m.hp), mp: m.mp,
+    out.push({ kind: 'hero', allyId: id, name: m.name, lvl: m.lvl, hero: { race: m.race, gender: m.gender, face: m.face, gear: L.gearBrief(m) }, ...s, hp: Math.max(1, m.hp), mp: m.mp,
       skills: [...m.skills.filter((k) => (D.SKILLS[k].lv || 1) <= m.lvl), ...(m.secretSkills || [])], catchable: false });
   }
   return out;
@@ -138,6 +139,7 @@ function register(on, ctx) {
   on('pet:evolve', true, (c, { uid }) => {
     const p = findPet(c, uid); if (!p) return { ok: false, msg: 'Không tìm thấy Tiên sủng.' };
     const sp = D.getSpecies(p.sid);
+    if (sp.than) return { ok: false, msg: 'Thần sủng tiến hoá bằng Chân Hoá (mục Thần sủng).' };
     if (sp.grade >= 4) return { ok: false, msg: 'Đã đạt phẩm cao nhất (Thánh).' };
     const n = evolveNeed(p);
     if (p.lvl < n.lvl) return { ok: false, msg: `Cần Tiên sủng đạt cấp ${n.lvl}.` };
@@ -156,6 +158,7 @@ function register(on, ctx) {
     if (!pa || !pb || a === b) return { ok: false, msg: 'Chọn hai Tiên sủng khác nhau.' };
     if (L.countItem(c, 'hop_the_dan') < 1) return { ok: false, msg: 'Cần 1 Hợp Thể Đan (luyện ở Lò Bát Quái).' };
     const sa = D.getSpecies(pa.sid), sb = D.getSpecies(pb.sid);
+    if (sa.than || sb.than) return { ok: false, msg: 'Không thể hợp thể Thần sủng.' };
     const cost = 500 * (Math.max(sa.grade, sb.grade) + 1);
     if (c.bac < cost) return { ok: false, msg: `Cần ${fmt(cost)} bạc.` };
     L.removeItem(c, 'hop_the_dan', 1); c.bac -= cost;
@@ -167,7 +170,7 @@ function register(on, ctx) {
     np.learned = pool.sort(() => Math.random() - 0.5).slice(0, 2);
     c.pets = c.pets.filter((p) => p.uid !== a && p.uid !== b);
     c.pets.push(np);
-    if (c.activePet === a || c.activePet === b || !c.activePet) c.activePet = np.uid;
+    { const lead = c.activePet === a || c.activePet === b; L.teamRemove(c, a); L.teamRemove(c, b); L.teamAdd(c, np.uid, lead); }
     if (grade >= 3 || np.mut) sys(`${c.name} hợp thể ra Tiên sủng ${np.mut ? 'BIẾN DỊ ' : ''}[${D.GRADES[grade].name}] ${np.name}!`);
     return { ok: true, msg: `Hợp thể thành công: ${np.name}!`, pet: L.petView(np) };
   });
@@ -331,7 +334,8 @@ function register(on, ctx) {
     } else if (kind === 'pet') {
       const p = c.pets.find((x) => x.uid === uid);
       if (!p) return { ok: false, msg: 'Không tìm thấy Tiên sủng.' };
-      if (c.activePet === uid) return { ok: false, msg: 'Hãy cho Tiên sủng khác xuất chiến trước.' };
+      if ((c.activePets || [c.activePet]).includes(uid)) return { ok: false, msg: 'Hãy cho Tiên sủng này nghỉ trước khi bán.' };
+      if (String(p.sid).startsWith('than.')) return { ok: false, msg: 'Thần sủng đã khế ước, không thể giao dịch.' };
       c.pets = c.pets.filter((x) => x.uid !== uid);
       l = { kind, data: p, qty: 1, title: p.name };
     } else return { ok: false, msg: 'Loại hàng không hợp lệ.' };
