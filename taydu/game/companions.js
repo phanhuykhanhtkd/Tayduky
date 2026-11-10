@@ -8,7 +8,7 @@ const idx = (title) => { const i = D.QUESTS.findIndex((q) => q.title === title);
 // nhập đoàn sau khi HOÀN THÀNH nhiệm vụ này; vắng mặt trong khoảng [từ, đến] (chỉ số nhiệm vụ hiện tại)
 const RULES = [
   { id: 'duongtang', name: 'Đường Tam Tạng', look: 'duongtang', join: idx('Ra thành gặp hổ') },
-  { id: 'ngokhong', name: 'Tôn Ngộ Không', look: 'ngokhong', join: idx('Núi Lưỡng Giới'), away: [[idx('Đuổi Tâm Viên') + 1, idx('Đưa thư nước Bảo Tượng')]] },
+  { id: 'ngokhong', name: 'Tôn Ngộ Không', look: 'ngokhong', join: idx('Núi Lưỡng Giới'), away: [[idx('Đuổi Tâm Viên') + 1, idx('Đưa thư nước Bảo Tượng')], [idx('Lại đuổi Tâm Viên'), idx('Lại đuổi Tâm Viên')]] },
   { id: 'batgioi', name: 'Trư Bát Giới', look: 'batgioi', join: idx('Thu phục Bát Giới') },
   { id: 'satang', name: 'Sa Ngộ Tĩnh', look: 'satang', join: idx('Thu được Sa Tăng') },
 ];
