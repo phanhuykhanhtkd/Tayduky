@@ -279,7 +279,46 @@ ${sideLocks}${mark}${lash}
   // đường dẫn tranh thật nếu có (hỗ trợ cả kiểu danh sách cũ)
   function art(k, id) { const a = ASSETS[k]; if (!a || id == null) return null; if (Array.isArray(a)) return a.includes(id) ? `assets/${k}/${id}.png` : null; return a[id] ? `assets/${k}/${a[id]}` : null; }
   function setAssets(a) { if (a) ASSETS = a; if (Art.setOverride) Art.setOverride(art); }
-  function creatureSrc(u) { return (u.bossId && art('bosses', u.bossId)) || (u.form && art('monsters', u.form)) || null; }
+  function creatureSrc(u) { return (u.bossId && ((u.art && art('bosses', u.art)) || art('bosses', u.bossId))) || (u.form && petArt(u.form, u.element)) || (u.hid && art('npcs', u.hid)) || null; }
+  // tiên sủng: có tranh riêng cho hệ thì dùng luôn; không thì lấy tranh gốc của loài rồi nhuộm màu + hào quang theo hệ
+  const ELS = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+  const TINT_COL = { kim: '#f2cf5a', moc: '#5cc85a', thuy: '#4aa8f0', hoa: '#f0583a', tho: '#c8904a' };
+  const TINT = {};
+  function petArt(form, el) {
+    const own = el && art('monsters', form + '_' + el);
+    if (own) return own;
+    let base = art('monsters', form);
+    if (!base) { const alt = ELS.map((e) => art('monsters', form + '_' + e)).find(Boolean); if (!alt) return null; base = alt; }
+    if (!el || !TINT_COL[el]) return base;
+    return tinted(base, el);
+  }
+  function tinted(src, el) {
+    const k = src + '#' + el;
+    if (typeof TINT[k] === 'string') return TINT[k];
+    if (!TINT[k]) {
+      TINT[k] = 1;
+      const im = new Image();
+      im.onload = () => {
+        try {
+          const w = im.naturalWidth, h = im.naturalHeight, pad = Math.round(Math.max(w, h) * 0.06);
+          const a = document.createElement('canvas'); a.width = w; a.height = h;
+          const x = a.getContext('2d');
+          x.drawImage(im, 0, 0);
+          x.globalCompositeOperation = 'color'; x.globalAlpha = 0.5; x.fillStyle = TINT_COL[el]; x.fillRect(0, 0, w, h);
+          x.globalCompositeOperation = 'destination-in'; x.globalAlpha = 1; x.drawImage(im, 0, 0);
+          const b = document.createElement('canvas'); b.width = w + pad * 2; b.height = h + pad * 2;
+          const y = b.getContext('2d');
+          y.shadowColor = TINT_COL[el]; y.shadowBlur = pad * 0.9; y.drawImage(a, pad, pad); y.shadowBlur = pad * 0.4; y.drawImage(a, pad, pad);
+          const url = b.toDataURL('image/webp', 0.85);
+          TINT[k] = url;
+          document.querySelectorAll('img').forEach((i) => { if (i.getAttribute('src') === k) i.src = url; });
+        } catch (e) { TINT[k] = src; }
+      };
+      im.onerror = () => { TINT[k] = src; };
+      im.src = src;
+    }
+    return k;
+  }
   function npcSrc(id) { return art('npcs', id); }
   const mapArt = (id) => art('maps', id), mapFront = (id) => art('maps', id + '_front'), battleArt = (th) => art('battle', th);
 

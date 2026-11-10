@@ -1852,3 +1852,123 @@ img[src^="data:image/svg"] { image-rendering: auto !important; }
 .b-bossplate.nm { box-shadow: 0 0 0 1.5px #c84aff, 0 0 18px rgba(160, 60, 255, .6) !important; }
 .bp-ph { display: flex; align-items: center; gap: 3px; margin-top: 2px; } .bp-ph i { width: 14px; height: 5px; border-radius: 2px; background: rgba(255, 255, 255, .25); }
 .bp-ph i.on { background: linear-gradient(90deg, #ff6a3a, #ffd86a); box-shadow: 0 0 4px #ff6a3a; } .bp-ph small { font-size: 9.5px; color: #ffd8b0; margin-left: 3px; }
+
+/* ===== Tranh vẽ tay: hình biến của boss, chuyển động cho tranh tĩnh ===== */
+.spr.morph { animation: morphOut .38s ease-in forwards; }
+@keyframes morphOut { 0% { filter: none; transform: scale(1); } 60% { filter: brightness(3) saturate(0); transform: scale(1.08); } 100% { filter: brightness(4) saturate(0) blur(2px); opacity: .2; transform: scale(.9); } }
+/* đồ đệ trợ chiến */
+#battle .assist { position: absolute; left: 0; right: 0; top: 30%; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 6px 14px; background: linear-gradient(90deg, rgba(20,12,6,.0), rgba(20,12,6,.82) 18%, rgba(20,12,6,.82) 82%, rgba(20,12,6,0)); color: #fff4dc; animation: asIn .35s cubic-bezier(.2,.8,.3,1); pointer-events: none; }
+#battle .assist img { height: 110px; width: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+#battle .assist .as-txt { display: grid; line-height: 1.25; }
+#battle .assist small { color: #f3d27a; font-size: 12px; }
+#battle .assist b { font-size: 20px; }
+#battle .assist i { font-size: 13px; opacity: .9; }
+#battle .assist.out { animation: asOut .35s ease-in forwards; }
+@keyframes asIn { from { transform: translateX(-60%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes asOut { to { transform: translateX(40%); opacity: 0; } }
+.v-tip { display: flex; gap: 10px; align-items: center; margin: 8px 0; padding: 8px 10px; border-radius: 10px; background: rgba(243,210,122,.12); border: 1px solid rgba(243,210,122,.4); }
+.v-tip img { width: 52px; height: auto; flex: none; }
+.v-tip p { margin: 0; font-size: 13.5px; line-height: 1.4; }
+
+/* ===== Cảnh thoại cốt truyện ===== */
+#scene { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; justify-content: flex-end; background: linear-gradient(180deg, rgba(10,6,3,0) 30%, rgba(10,6,3,.55) 70%, rgba(10,6,3,.8)); animation: scIn .25s ease; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+#scene.out { animation: scOut .25s ease forwards; }
+#scene .sc-skip { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(243,210,122,.6); background: rgba(20,12,6,.7); color: #f3d27a; font: 600 13px/1 inherit; }
+#scene .sc-stage { position: relative; height: 38vh; display: flex; align-items: flex-end; padding: 0 14px; }
+#scene .sc-por { max-height: 100%; max-width: 62%; object-fit: contain; filter: drop-shadow(0 8px 14px rgba(0,0,0,.6)); }
+#scene .sc-por.in { animation: porIn .3s cubic-bezier(.2,.8,.3,1); }
+#scene.me .sc-stage { justify-content: flex-end; }
+#scene.me .sc-por { transform: scaleX(-1); }
+#scene.nar .sc-stage { visibility: hidden; }
+#scene .sc-box { position: relative; margin: 0 10px; padding: 14px 16px 18px; border-radius: 14px; background: linear-gradient(180deg, #fff6e2, #f2dfb8); color: #2b1d14; border: 2px solid #8a5a2a; box-shadow: 0 6px 20px rgba(0,0,0,.5); min-height: 92px; }
+#scene.nar .sc-box { background: linear-gradient(180deg, #2b1d14, #1a120c); color: #f3e3c0; border-color: #c9a35a; font-style: italic; }
+#scene .sc-name { position: absolute; top: -14px; left: 14px; padding: 3px 12px; border-radius: 8px; background: #b3261e; color: #fff4dc; font-weight: 700; font-size: 14px; }
+#scene.me .sc-name { left: auto; right: 14px; background: #2f7a64; }
+#scene .sc-text { margin: 4px 0 0; font-size: 15.5px; line-height: 1.5; }
+#scene .sc-more { position: absolute; right: 12px; bottom: 4px; font-size: 13px; opacity: .6; animation: blink 1s infinite; }
+@keyframes scIn { from { opacity: 0; } }
+@keyframes scOut { to { opacity: 0; } }
+@keyframes porIn { from { transform: translateY(14px); opacity: 0; } }
+#scene.me .sc-por.in { animation: porInMe .3s cubic-bezier(.2,.8,.3,1); }
+@keyframes porInMe { from { transform: scaleX(-1) translateY(14px); opacity: 0; } to { transform: scaleX(-1); } }
+@keyframes blink { 50% { opacity: .15; } }
+/* tranh vẽ tay trong trận: boss to hơn, boss khổng lồ to gấp đôi, phe mình quay mặt sang trái */
+.unit.boss .spr img.art { max-height: 160px; max-width: 170px; }
+.unit.giant .spr img.art { max-height: 215px; max-width: 230px; }
+.unit.side0 .spr img.art { transform: scaleX(-1); }
+.fxart { position: absolute; width: 150px; height: 150px; margin: -75px 0 0 -75px; object-fit: contain; mix-blend-mode: screen; pointer-events: none; z-index: 40; animation: fxArt .85s ease-out forwards; }
+.fxart.big { width: 230px; height: 230px; margin: -115px 0 0 -115px; }
+@keyframes fxArt { 0% { transform: scale(.4); opacity: 0; } 25% { opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
+
+/* ===================== MÀN TRẬN ĐẤU KIỂU MỚI (phông vẽ tay) ===================== */
+/* phông vẽ tay: bỏ bàn cờ, thêm viền tối nhẹ cho nhân vật nổi */
+#battle.artbg .b-board { display: none; }
+#battle.artbg .b-shade { display: block; background: radial-gradient(ellipse at 50% 58%, transparent 52%, rgba(10, 4, 0, .38)), linear-gradient(rgba(10, 4, 0, .28), transparent 16%); }
+#battle.artbg .b-bg { background-size: cover; background-position: center; }
+
+/* khung đếm hiệp có rồng */
+#battle .b-round.banner { position: absolute; left: 50%; top: calc(var(--sat) + 2px); width: 210px; height: 63px; margin: 0; padding: 0; transform: translateX(-50%);
+  border-radius: 0; background: center / contain no-repeat; box-shadow: none; display: grid; place-items: center; z-index: 2; }
+#battle .b-round.banner span { font: 700 19px/1 'Lora VN', 'Lora', serif; color: #ffeaa8; letter-spacing: .04em; padding-top: 7px; text-shadow: 0 2px 0 #6a0a06, 0 0 8px rgba(60, 0, 0, .6); }
+.b-top:has(.b-round.banner) { padding-top: calc(var(--sat) + 66px); }
+
+/* cụm lệnh lục giác giữa sân */
+.b-cmds.hex { position: absolute; left: 50%; bottom: calc(100% + 14px); width: 120px; height: 256px; margin-left: -60px; padding: 0; display: block; background: none;
+  pointer-events: none; z-index: 6; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, .5)); }
+.b-cmds.hex::before, .b-cmds.hex::after { display: none; }
+.b-cmds.hex .seal { position: absolute; left: 0; top: 0; width: 66px; height: 58px; margin: 0; padding: 0; border: 0; border-radius: 0; aspect-ratio: auto; gap: 0;
+  display: grid; place-items: center; pointer-events: auto; box-shadow: none; animation: none;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: linear-gradient(160deg, #fff3b0, #e8b23a 38%, #a86a14 72%, #5a3606);
+  transform: translate(var(--x), var(--y)); transition: transform .3s cubic-bezier(.3, 1.4, .5, 1) var(--d), opacity .22s var(--d), filter .2s; }
+.b-cmds.hex .seal::before { content: ''; position: absolute; inset: 4px; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: radial-gradient(circle at 50% 26%, #ff7050, #c8221a 52%, #6a0a06); }
+.b-cmds.hex .seal::after { content: ''; position: absolute; inset: 8px; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: linear-gradient(rgba(255, 255, 255, .22), transparent 45%); pointer-events: none; }
+.b-cmds.hex .seal i { display: none; }
+.b-cmds.hex .seal span { position: relative; z-index: 1; width: 50px; text-align: center; font: 700 13px/1.06 'Lora VN', 'Lora', serif; color: #fff1c8; white-space: normal;
+  text-shadow: 0 1px 0 #4a0602, 0 0 5px rgba(0, 0, 0, .45); margin: 0; }
+.b-cmds.hex .seal[data-c="attack"]::before { background: radial-gradient(circle at 50% 26%, #ff9a5a, #e0301a 52%, #7a0a06); }
+.b-cmds.hex .seal.sel { filter: brightness(1.2); transform: translate(var(--x), var(--y)) scale(1.08); }
+.b-cmds.hex .seal.sel::before { background: radial-gradient(circle at 50% 26%, #ffd27a, #e07a1a 52%, #7a3a06); }
+.b-cmds.hex .seal:active:not([disabled]) { filter: brightness(1.25); transform: translate(var(--x), var(--y)) scale(.94); }
+.b-cmds.hex .seal[disabled] { filter: grayscale(1) brightness(.65); }
+.b-cmds.hex.wait .seal { transform: translate(var(--x), var(--y)) scale(.3); opacity: 0; pointer-events: none; }
+.b-cmds.hex.picking .seal:not(.sel) { opacity: .15; pointer-events: none; }
+.b-dock:has(.b-cmds.hex) .b-dock-l { width: calc(100% - 20px); }
+
+/* màn "Vào trận": chân dung hai phe đối đầu */
+.vs-wrap { position: absolute; inset: 0; z-index: 400; pointer-events: none; }
+.vs-wrap .vs { position: absolute; inset: 0; background: #1a0602 center / cover no-repeat; display: grid; grid-template-rows: 1fr auto 1fr; gap: 18px; animation: vsIn .25s ease; pointer-events: none; }
+.vs-side { display: flex; align-items: center; }
+.vs-foe { align-self: end; justify-content: flex-start; padding-left: 6%; animation: vsL .5s cubic-bezier(.2, .9, .3, 1.15) .08s both; }
+.vs-me { align-self: start; justify-content: flex-end; padding-right: 6%; animation: vsR .5s cubic-bezier(.2, .9, .3, 1.15) .22s both; }
+.vs-por { position: relative; z-index: 1; width: 112px; height: 112px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 40%, #6a2c12, #1c0804); box-shadow: 0 0 0 3px #2a1206, 0 0 0 6px #f0c048, 0 0 22px rgba(255, 170, 50, .65); }
+.vs-por img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%; }
+.vs-side b { font: 700 21px/1.2 'Lora VN', 'Lora', serif; color: #ffe8a6; padding: 7px 22px; white-space: nowrap; max-width: 62vw; overflow: hidden; text-overflow: ellipsis;
+  background: linear-gradient(90deg, rgba(20, 6, 2, 0), rgba(20, 6, 2, .88) 22%, rgba(20, 6, 2, .88) 78%, rgba(20, 6, 2, 0)); box-shadow: 0 -1px 0 rgba(240, 192, 72, .7), 0 1px 0 rgba(240, 192, 72, .7); }
+.vs-foe b { margin-left: -10px; padding-left: 26px; }
+.vs-me b { margin-right: -10px; padding-right: 26px; }
+.vs.boss .vs-foe .vs-por { width: 132px; height: 132px; box-shadow: 0 0 0 3px #2a0606, 0 0 0 6px #ff6a3a, 0 0 30px rgba(255, 70, 30, .8); }
+.vs-mid { display: grid; justify-items: center; gap: 2px; }
+.vs-mid span { font: 700 66px/1 'Lora VN', 'Lora', serif; color: #ffe6a0; letter-spacing: .04em; text-shadow: 0 4px 0 #5a1404, 0 0 26px rgba(255, 170, 40, .85); animation: vsZoom .55s cubic-bezier(.2, 1.4, .4, 1) .3s both; }
+.vs-mid small { font-size: 15px; color: #ffd27a; text-shadow: 0 1px 2px #000; min-height: 1em; }
+.vs.out { animation: vsOut .28s ease-in forwards; }
+@keyframes vsIn { from { opacity: 0; } }
+@keyframes vsOut { to { opacity: 0; transform: scale(1.06); } }
+@keyframes vsL { from { transform: translateX(-110%); opacity: 0; } }
+@keyframes vsR { from { transform: translateX(110%); opacity: 0; } }
+@keyframes vsZoom { from { transform: scale(2.4); opacity: 0; } }
+#battle.vsing .b-sbanner, #battle.vsing .b-intro { display: none; }
+#battle:has(.b-round.banner) .b-bossplate { display: none; }
+#battle.artbg .b-units .unit { scale: .8; }
+/* cột sáng thăng cấp trên màn chiến thắng */
+.v-lvup { display: block; width: 120px; height: 120px; margin: -10px auto -34px; mix-blend-mode: screen; pointer-events: none; animation: lvup 1.6s ease-out both; }
+@keyframes lvup { 0% { opacity: 0; transform: scaleY(.3); } 30% { opacity: 1; transform: scaleY(1.05); } 100% { opacity: .85; transform: scaleY(1); } }
+/* phông vẽ tay cho đăng nhập / chọn phái */
+#login-bg.artbg, #create-bg.artbg { image-rendering: auto; background-size: cover; background-position: center; }
+#create-bg.artbg.dim { filter: none; }
+#create-bg.artbg { transition: background-image .4s; }
+.scene.dim.artbg::after { background: linear-gradient(rgba(20, 10, 8, 0) 40%, rgba(20, 10, 8, .55)); }
+img[src*="assets/"] { image-rendering: auto !important; }

@@ -61,7 +61,52 @@ const GameMap = (() => {
     initAmb();
   }
 
-  function setMap(id, meta) { mapId = id; M = meta; others.clear(); ground = null; resize(); }
+  function setMap(id, meta) { mapId = id; M = meta; others.clear(); ground = null; trail.length = 0; resize(); }
+  // ===== đoàn thỉnh kinh đi theo sau người chơi =====
+  const trail = [];
+  function trackTrail() {
+    const L0 = trail[trail.length - 1];
+    if (!L0) { trail.push([me.px, me.py]); return; }
+    const d = Math.hypot(me.px - L0[0], me.py - L0[1]);
+    if (d > 2.5) { trail.length = 0; trail.push([me.px, me.py]); return; }
+    if (d > 0.06) { trail.push([me.px, me.py]); if (trail.length > 260) trail.splice(0, trail.length - 260); }
+  }
+  function followers() {
+    const list = (G.me && G.me.companions) || [];
+    if (!list.length || !M) return [];
+    const onMap = new Set(M.npcs.map((n) => n.look || n.id));
+    const out = []; let k = 0;
+    for (const f of list) {
+      if (onMap.has(f.look)) continue;
+      k++;
+      const want = 0.95 * k; let acc = 0, px = me.px, py = me.py, face = me.face || 1;
+      for (let i = trail.length - 1; i > 0; i--) {
+        const [ax, ay] = trail[i], [bx, by] = trail[i - 1], seg = Math.hypot(ax - bx, ay - by);
+        if (acc + seg >= want) { const t = (want - acc) / seg; px = ax + (bx - ax) * t; py = ay + (by - ay) * t; face = ax > bx ? 1 : ax < bx ? -1 : face; break; }
+        acc += seg; px = bx; py = by;
+      }
+      if (trail.length < 2) { px = me.px - 0.55 * k * (me.face || 1); py = me.py + 0.12 * k; }
+      out.push({ f, px, py, face, moving: !!me.to });
+    }
+    return out;
+  }
+  function drawFollower(o, now) {
+    const { f, px, py, face, moving } = o;
+    const cx = (px + 0.5) * T, by = (py + 1) * T;
+    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(cx, by - T * 0.1, T * 0.28, T * 0.08, 0, 0, 7); ctx.fill();
+    const bob = moving ? Math.abs(Math.sin(now / 130)) * T * 0.06 : Math.sin(now / 900 + px) * T * 0.015;
+    const art = f.art && Art.npc(f.art, 0, 4, undefined, f.art);
+    const useArt = art && art.art;
+    ctx.save(); ctx.translate(cx, 0); if (face < 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    if (useArt) { const h = T * 2.3, w = h * art.cv.width / art.cv.height; ctx.drawImage(art.cv, -w / 2, by - h + T * 0.06 - bob, w, h); }
+    else {
+      let lift = 0;
+      if (f.horse && Art.mount) { const mc = Art.mount('bachma'); if (mc) { const h = T * 1.25, w = h * mc.cv.width / mc.cv.height; ctx.drawImage(mc.cv, -w / 2, by - h + T * 0.08 - bob * 0.5, w, h); lift = T * 0.55; } }
+      const pix = Art.npc(f.look, moving ? 1 + (Math.floor(now / 140) % 2) : 0);
+      if (pix) { const hum = pix.cv.width / pix.cv.height < 0.9, h = T * (hum ? 1.85 : 1.25), w = h * pix.cv.width / pix.cv.height; ctx.drawImage(pix.cv, -w / 2, by - h + T * 0.06 - bob - lift, w, h); }
+    }
+    ctx.restore();
+  }
   function setMe(c) {
     me.race = c.race; me.gender = c.gender; me.name = c.name;
     if ((me.x !== c.x || me.y !== c.y) && !me.to) { me.x = c.x; me.y = c.y; me.px = c.x; me.py = c.y; }
@@ -416,6 +461,7 @@ const GameMap = (() => {
     for (const n of M.npcs) ents.push({ z: n.y + 0.6, draw: () => drawNpc(n, now) });
     for (const n of M.nodes || []) ents.push({ z: n.y + 0.5, draw: () => drawNode(n, now) });
     for (const o of others.values()) ents.push({ z: o.py + 0.6, draw: () => drawHero(o.race, o.gender, o.px, o.py, o.name, false, now, o.moving, o.face || 1, o.gear, o) });
+    trackTrail(); for (const fo of followers()) ents.push({ z: fo.py + 0.6, draw: () => drawFollower(fo, now) });
     ents.push({ z: me.py + 0.61, draw: () => drawHero(me.race, me.gender, me.px, me.py, me.name, true, now, !!me.to, me.face, G.me && G.me.gear, G.me) });
     overlay = [];
     ents.sort((a, b) => a.z - b.z).forEach((e) => e.draw());
@@ -454,6 +500,7 @@ const GameMap = (() => {
     for (const n of M.npcs) ents.push({ z: n.y + 0.9, draw: () => drawNpc(n, now) });
     for (const n of M.nodes || []) ents.push({ z: n.y + 0.7, draw: () => drawNode(n, now) });
     for (const o of others.values()) ents.push({ z: o.py + 0.9, draw: () => drawHero(o.race, o.gender, o.px, o.py, o.name, false, now, o.moving, o.face || 1, o.gear, o) });
+    trackTrail(); for (const fo of followers()) ents.push({ z: fo.py + 0.9, draw: () => drawFollower(fo, now) });
     ents.push({ z: meZ + 0.001, draw: () => drawHero(me.race, me.gender, me.px, me.py, me.name, true, now, !!me.to, me.face, G.me && G.me.gear, G.me) });
     overlay = [];
     ents.sort((a, b) => a.z - b.z).forEach((e) => e.draw());
@@ -546,10 +593,10 @@ const GameMap = (() => {
     const npcPos = [];
     for (const n of M.npcs) {
       const bob = Math.sin(now / 700 + n.x * 2) * 0.03;
-      const src = Sprites.npcSrc(n.id);
+      const src = (n.art && Sprites.npcSrc(n.art)) || Sprites.npcSrc(n.id) || Sprites.art('bosses', n.id);
       let c = null, hgt = 1.3, wid = 1;
       if (src) { const im = imgCache[src] || (imgCache[src] = Object.assign(new Image(), { src })); if (im.complete && im.naturalWidth) { c = im; hgt = 1.3 * (n.boss ? 1.1 : 0.92) * 1.3; wid = hgt * im.naturalWidth / im.naturalHeight; } }
-      else { const pix = Art.npc(n.look || n.id); if (pix) { c = pix.cv; const hum = pix.cv.width / pix.cv.height < 0.9; hgt = hum ? (n.boss ? 2.35 : 2.0) : 1.3; wid = hgt * pix.cv.width / pix.cv.height; } }
+      else { const pix = Art.npc(n.look || n.id, 0, 4, undefined, n.art); if (pix) { c = pix.cv; const hum = pix.cv.width / pix.cv.height < 0.9; hgt = hum ? (n.boss ? 2.35 : 2.0) : 1.3; wid = hgt * pix.cv.width / pix.cv.height; } }
       if (c) sprites.push({ c, x: n.x + 0.5, y: Math.max(0, bob), z: n.y + 0.9, w: wid, h: hgt });
       const pulse = 0.6 + 0.4 * Math.sin(now / 500 + n.x);
       glows.push({ x: n.x + 0.5, y: 0.08, z: n.y + 0.95, w: 0.55, h: 0.16, col: n.boss ? [1, 0.3, 0.2, 0.35 * pulse] : n.role ? [1, 0.82, 0.45, 0.3 * pulse] : [1, 1, 1, 0.12 * pulse] });
@@ -569,6 +616,15 @@ const GameMap = (() => {
     };
     for (const o of others.values()) addHero(o.race, o.gender, o.px, o.py, o.name, false, o.moving, o.face || 1, o.gear && o.gear.mount, o.gear);
     addHero(me.race, me.gender, me.px, me.py, me.name, true, !!me.to, me.face, G.me && G.me.gear && G.me.gear.mount, G.me && G.me.gear);
+    trackTrail();
+    for (const fo of followers()) {
+      const f = fo.f, art = f.art && Art.npc(f.art, 0, 4, undefined, f.art), bob = fo.moving ? Math.abs(Math.sin(now / 130)) * 0.06 : 0;
+      if (art && art.art) { sprites.push({ c: art.cv, x: fo.px + 0.5, y: bob, z: fo.py + 0.9, w: 2.3 * art.cv.width / art.cv.height, h: 2.3, flip: fo.face < 0 }); continue; }
+      let lift = 0;
+      if (f.horse && Art.mount) { const mc = Art.mount('bachma'); if (mc) { sprites.push({ c: mc.cv, x: fo.px + 0.5, y: bob * 0.5, z: fo.py + 0.91, w: 1.25 * mc.cv.width / mc.cv.height, h: 1.25 }); lift = 0.55; } }
+      const pix = Art.npc(f.look, fo.moving ? 1 + (Math.floor(now / 140) % 2) : 0);
+      if (pix) { const hum = pix.cv.width / pix.cv.height < 0.9, h = hum ? 1.85 : 1.25; sprites.push({ c: pix.cv, x: fo.px + 0.5, y: lift + bob, z: fo.py + 0.9, w: h * pix.cv.width / pix.cv.height, h, flip: fo.face < 0 }); }
+    }
     M.tiles.forEach((row, y) => { const x = row.indexOf('P'); if (x >= 0) { const p = 0.75 + 0.25 * Math.sin(now / 300); glows.push({ x: x + 0.5, y: 0.7, z: y + 0.6, w: 0.55 * p, h: 0.85 * p, col: [1, 0.85, 0.45, 0.9] }); glows.push({ x: x + 0.5, y: 0.7, z: y + 0.62, w: 0.25, h: 0.45, col: [1, 1, 0.9, 0.9] }); } });
     const lit = night || dusk || th.dark;
     if (lit) for (const [x, y, r] of lights) glows.push({ x: x * k, y: 0.75, z: y * k - 0.1, w: 0.28, h: 0.32, col: [1, 0.6, 0.25, night || th.dark ? 0.9 : 0.4] });
@@ -689,6 +745,11 @@ const GameMap = (() => {
     ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(cx, by, T * 0.38, T * 0.12, 0, 0, 7); ctx.fill();
     if (ready) { const pu = 0.5 + 0.5 * Math.sin(now / 400 + n.x); const gr = ctx.createRadialGradient(cx, by - T * 0.3, 0, cx, by - T * 0.3, T * 0.7); gr.addColorStop(0, `rgba(255,240,170,${0.25 + pu * 0.25})`); gr.addColorStop(1, 'rgba(255,240,170,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, by - T * 0.3, T * 0.7, 0, 7); ctx.fill(); }
     ctx.globalAlpha = ready ? 1 : 0.45;
+    { // tranh vẽ tay (objects/khoang, thao, tuyen) nếu có
+      const src = Sprites.art('objects', ['khoang', 'thao'].includes(n.type) ? n.type : 'tuyen');
+      const im = src && (imgCache[src] || (imgCache[src] = Object.assign(new Image(), { src })));
+      if (im && im.complete && im.naturalWidth) { const w = T * 1.35, h = (w * im.naturalHeight) / im.naturalWidth; ctx.drawImage(im, cx - w / 2, by - h * 0.88, w, h); ctx.restore(); return; }
+    }
     ctx.translate(cx, by); ctx.scale(k, k); ctx.lineJoin = 'round'; ctx.lineWidth = 1.6; ctx.strokeStyle = '#2a1e14';
     if (n.type === 'khoang') { // tảng đá có vân quặng
       ctx.fillStyle = '#8a8478'; ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(-13, -14); ctx.lineTo(-3, -22); ctx.lineTo(9, -19); ctx.lineTo(16, -6); ctx.lineTo(13, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -749,7 +810,7 @@ const GameMap = (() => {
     const sz = T * (n.boss ? 1.1 : 0.92);
     const bob = Math.sin(now / 700 + n.x * 2) * T * 0.03;
     const src = PAINT ? null : Sprites.npcSrc(n.id);
-    const pix = !src && Art.npc(n.look || n.id);
+    const pix = !src && Art.npc(n.look || n.id, 0, 4, undefined, n.art);
     if (pix) {
       const hum = pix.cv.width / pix.cv.height < 0.9;
       const hgt = T * (hum ? (n.boss ? 2.35 : 2.0) : 1.3), wid = hgt * pix.cv.width / pix.cv.height;

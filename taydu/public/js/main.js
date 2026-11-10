@@ -34,7 +34,15 @@ const G = {
   $('#hud-gear').innerHTML = Sprites.ICONS.gear;
   const bg = `url("${Sprites.battleBG('login')}")`;
   ['#login-bg', '#create-bg'].forEach((s) => $(s) && ($(s).style.backgroundImage = bg));
+  // tranh vẽ tay cho màn đăng nhập (nếu có)
+  paintBG('#login-bg', 'assets/ui/login.webp');
 })();
+function paintBG(sel, url) {
+  const el = $(sel); if (!el || el.dataset.art === url) return;
+  const im = new Image();
+  im.onload = () => { el.style.backgroundImage = `url("${url}")`; el.classList.add('artbg'); el.dataset.art = url; };
+  im.src = url;
+}
 
 // ---------------- màn hình ----------------
 function show(id) { ['#scr-splash', '#scr-login', '#scr-create', '#scr-game'].forEach((s) => ($(s).hidden = s !== id)); if (id === '#scr-splash') Title.resume(); else Title.stop(); }
@@ -133,6 +141,7 @@ function showCreate(mode = 'create') {
     $('#create-hero').classList.remove('pop'); void $('#create-hero').offsetWidth; $('#create-hero').classList.add('pop');
     $('#cs-face').src = Sprites.faceURL(cRace, av.gender, look);
     $('#cr-aura').style.setProperty('--aura', F.aura);
+    paintBG('#create-bg', `assets/ui/phai_${cRace}.webp`);
     $('#cs-phai').textContent = `${r.name} (${r.title})`; $('#cs-gioi').textContent = av.gender === 'f' ? 'Nữ' : 'Nam';
     $('#cs-name').textContent = av.name; $('#cs-lore').textContent = av.lore;
     $('#race-list').innerHTML = COL_ORDER.map((k) => `<div class="cs-col c-${k} ${k === cRace ? 'on' : ''} ${mode === 'face' && k !== cRace ? 'lock' : ''}">
@@ -207,7 +216,7 @@ async function enter(first) {
 function mapTitle() {
   const m = G.meta.MAPS[G.me.map];
   const el = $('#map-title');
-  el.innerHTML = `<small>${m.post ? 'Hậu truyện ' + (m.chapter - 15) : 'Chương ' + m.chapter} · ${esc(m.sub || '')}</small><b>${esc(m.name)}</b>`;
+  el.innerHTML = `<small>${m.post ? 'Hậu truyện ' + (m.chapter - (G.meta.NMAIN || 15)) : 'Chương ' + m.chapter} · ${esc(m.sub || '')}</small><b>${esc(m.name)}</b>`;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
 }
 
@@ -451,9 +460,10 @@ async function talk(id) {
     const a = await G.call('npc:act', { id, opt });
     if (!a.ok) return;
     if (opt === 'heal') Sound.sfx('heal');
-    if (a.battle) { UI.closeDialog(); return startBattle(a.battle); }
+    if (a.battle) { UI.closeDialog(); if (a.scene) await UI.scene(a.scene); return startBattle(a.battle); }
     if (a.secret) { UI.closeDialog(); return showSecret(a.secret); }
     if (a.quest) {
+      if (a.scene || a.quest.scene) { UI.closeDialog(); await UI.scene(a.scene); await UI.scene(a.quest.scene); questToast(a.quest); return; }
       UI.dialog({ name: d.name, icon: d.icon, npc: d.npc, text: a.dialogText || 'Tốt lắm!', options: [] });
       questToast(a.quest);
       return;
@@ -484,7 +494,7 @@ function startBattle(b) {
     onEnd: (res) => {
       if (res.players) GameMap.setPlayers(res.players);
       GameMap.snap([G.me.x, G.me.y]);
-      if (res.quest) questToast(res.quest);
+      if (res.quest) { questToast(res.quest); if (res.quest.scene) setTimeout(() => UI.scene(res.quest.scene), 350); }
       Panels3.afterBattle(res);
       if (G.me.hp < G.me.derived.maxHp * 0.3) UI.toast('Khí huyết thấp – dùng Kim Sang Dược hoặc gặp NPC trị thương.', 'err');
     },

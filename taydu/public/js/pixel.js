@@ -1255,6 +1255,13 @@ const Art = (() => {
     bachma: ['quad', { main: '#f4f2ec', light: '#ffffff', acc: '#b8b0a0', mane: '#e8ecf4', maneSize: 0.8, tail: 'tuft', legs: 12, legW: 3.4, neck: 5, hoof: '#4a3a2a', snout: 'long', ears: 'point', size: 1.1 }],
     kylan: ['quad', { main: '#e8b040', light: '#fff0b0', acc: '#a8401a', mane: '#ff6a2a', maneSize: 0.9, horn: 'single', scales: true, tail: 'tuft', legs: 11, neck: 5, hoof: '#3a2418', snout: 'long', ears: 'point', size: 1.1 }],
     hac: ['bird', { main: '#ffffff', light: '#f6f2ea', wing: '#ffffff', wingTip: '#1a1a22', tail: '#1a1a22', headc: '#ffffff', cap: '#e02a2a', beak: '#6a6a5a', beakLen: 6, neckLen: 12, neckX: 9, neckc: '#ffffff', legs: true, headR: 3 }],
+    thanhnguu: ['quad', { main: '#3a5a6a', light: '#8ab0b8', acc: '#1a2a32', horn: 'single', hornc: '#e8e0c8', tail: 'tuft', legs: 11, legW: 4.2, headR: 6, snout: 'short', ears: 'round', size: 1.15, saddle: '#e8c04a' }],
+    thanhmaosu: ['quad', { main: '#4aa8a0', light: '#bff0e8', acc: '#1a5a54', mane: '#2a8a8a', maneSize: 1.2, tail: 'tuft', legs: 10, legW: 4, headR: 6, snout: 'short', ears: 'round', size: 1.12, saddle: '#e8c04a' }],
+    kimmaohong: ['quad', { main: '#e8b030', light: '#fff0b0', acc: '#a8601a', mane: '#ffd04a', maneSize: 1.3, tail: 'tuft', legs: 10, legW: 4, headR: 6, snout: 'short', ears: 'round', size: 1.12, saddle: '#ffffff' }],
+    cuulinh: ['quad', { main: '#e8a028', light: '#fff0b0', acc: '#8a4a10', mane: '#ff8a2a', maneSize: 1.5, tail: 'tuft', legs: 11, legW: 4.4, headR: 6.4, snout: 'short', ears: 'round', size: 1.22, saddle: '#c8261a' }],
+    bachtuong: ['quad', { main: '#f0ece4', light: '#ffffff', acc: '#b8b0a0', legs: 10, legW: 5.2, headR: 6.4, snout: 'long', ears: 'round', size: 1.25, saddle: '#e8c04a' }],
+    bachloc: ['quad', { main: '#f6f2ea', light: '#ffffff', acc: '#c8b8a0', horn: 'antler', hornc: '#e8d0a0', tail: 'tuft', legs: 13, legW: 3, neck: 5, snout: 'long', ears: 'point', size: 1.1, saddle: '#e86a8a' }],
+    hongman: ['quad', { main: '#c8321a', light: '#ff9a6a', acc: '#5a1006', scales: true, tail: 'snake', tailc: '#a8261a', legs: 5, legW: 5, headR: 5.4, snout: 'long', ears: 'none', size: 1.15, saddle: '#e8c04a' }],
     hoho: ['quad', { main: '#e8902a', light: '#fff0d8', acc: '#2a1a10', stripes: true, tail: 'tiger', legs: 10, legW: 4, headR: 6, snout: 'short', ears: 'round', size: 1.12 }],
     longquy: ['quad', { main: '#3a8a7a', light: '#bfe8d8', acc: '#1a4a3a', shell: '#5a8a4a', legs: 7, legW: 5.2, tail: 'snake', tailc: '#2a6a5a', headR: 5.6, snout: 'long', horn: 'antler', hornc: '#ffd04a', mane: '#8ae0d0', maneSize: 0.7, size: 1.2, saddle: '#c8302a' }],
     tuyetlang: ['quad', { main: '#eef6ff', light: '#ffffff', acc: '#7aa0d0', mane: '#cfe8ff', maneSize: 1.0, tail: 'fox', tails: 1, ears: 'point', snout: 'long', legs: 12, legW: 3.6, headR: 5.4, size: 1.15, saddle: '#2a4a8a', glow: '#8ad8ff' }],
@@ -1302,23 +1309,23 @@ const Art = (() => {
     }
     return cache.get(key);
   }
-  function npc(id, frame = 0, scale = 4, expr) { const A = fromArt('npcs', id); if (A) return A; const o = NPCS[id]; return o ? get('npc:' + id, o.kind || 'hum', o, frame, scale, expr) : null; }
+  function npc(id, frame = 0, scale = 4, expr, art) { const A = (art && fromArt('npcs', art)) || fromArt('npcs', id) || fromArt('bosses', id); if (A) return A; const o = NPCS[id]; return o ? get('npc:' + id, o.kind || 'hum', o, frame, scale, expr) : null; }
   function form(formId, element = 'tho', frame = 0, scale = 4, expr) {
-    const A = fromArt('monsters', formId); if (A) return A;
+    const A = fromArt('monsters', formId + '_' + element) || fromArt('monsters', formId); if (A) return A;
     const fn = FORMS[formId]; if (!fn) return null;
     const [kind, opts] = fn(ELEM[element] || ELEM.tho);
     return get('form:' + formId + ':' + element, kind, opts, frame, scale, kind === 'hum' ? expr : undefined);
   }
-  function human(hid, frame = 0, scale = 4, expr) { const o = HUMANS[hid]; return o ? get('hum:' + hid, o.kind || 'hum', o, frame, scale, expr) : null; }
-  function boss(bid, frame = 0, scale = 4, expr) {
-    const A = fromArt('bosses', bid); if (A) return A;
+  function human(hid, frame = 0, scale = 4, expr) { const A = fromArt('npcs', hid); if (A) return A; const o = HUMANS[hid]; return o ? get('hum:' + hid, o.kind || 'hum', o, frame, scale, expr) : null; }
+  function boss(bid, frame = 0, scale = 4, expr, artKey) {
+    const A = (artKey && fromArt('bosses', artKey)) || fromArt('bosses', bid); if (A) return A;
     if (bid === 'world') return get('boss:world', 'king', { main: '#3a5a8a', light: '#a8c8e8', acc: '#e8c45a' }, frame, scale);
     return npc(BOSS_ALIAS[bid] || bid, frame, scale, expr);
   }
   // từ một đơn vị trận đấu
   function unit(u, frame = 0, expr) {
     if (u.hero) return hero(u.hero.race, u.hero.gender, frame, 4, u.hero.gear, expr);
-    if (u.bossId) return boss(u.bossId, frame, 4, expr);
+    if (u.bossId) return boss(u.bossId, frame, 4, expr, u.art);
     if (u.hid) return human(u.hid, frame, 4, expr);
     if (u.form) return form(u.form, u.element, frame, 4, expr);
     return null;

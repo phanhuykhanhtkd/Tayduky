@@ -57,7 +57,7 @@ const Panels = (() => {
             <button class="btn-seal ghost sm" id="al-reset">Tẩy điểm (20 vàng)</button></div>
         </div>
         <div class="sec">Kỹ năng</div>
-        <div class="list">${c.skills.map((k) => { const s = M().SKILLS[k]; const ok = (s.lv || 1) <= c.lvl; return `<div class="li" style="${ok ? '' : 'opacity:.5'}"><span class="ico">${{ heal: '💚', buff: '✨', phys: '🗡️', magic: '🔮' }[s.type]}</span><div class="grow"><div class="t">${s.name}${s.secret ? ' <span class="tag">Bí tịch</span>' : ''}</div><div class="s">${s.desc} · ${s.mp} nội lực${ok ? '' : ` · mở ở cấp ${s.lv}`}</div></div></div>`; }).join('')}</div>
+        <div class="list">${c.skills.map((k) => { const s = M().SKILLS[k]; const ok = (s.lv || 1) <= c.lvl; return `<div class="li" style="${ok ? '' : 'opacity:.5'}"><span class="ico">${{ heal: '💚', buff: '✨', phys: '🗡️', magic: '🔮', control: '🌀', revive: '🕊️' }[s.type] || '📜'}</span><div class="grow"><div class="t">${s.name}${s.secret ? ' <span class="tag">Bí tịch</span>' : ''}</div><div class="s">${s.desc} · ${s.mp} nội lực${ok ? '' : ` · mở ở cấp ${s.lv}`}</div></div></div>`; }).join('')}</div>
         <div class="sec">Tuỳ chọn</div>
         <button class="li" id="t-peace"><span class="ico">🕊️</span><div class="grow"><div class="t">Tránh quái: ${c.peace ? 'đang bật' : 'đang tắt'}</div><div class="s">Bật để đi lại không gặp quái ngẫu nhiên.</div></div></button>
         <button class="li" id="t-logout" style="margin-top:6px"><span class="ico">🚪</span><div class="grow"><div class="t">Đăng xuất</div></div></button>`;
@@ -252,7 +252,7 @@ const Panels = (() => {
     if (tab === 'main') {
       if (q.done) { body.innerHTML = `<p style="text-align:center;font-size:40px;margin:10px 0">☯️</p><p style="text-align:center">Đã vượt 81 kiếp nạn và đánh tan Hỗn Độn Ma Tổ – Kiếp Nạn Thứ 82!<br><b>Hộ Kinh Sứ của Tam Giới.</b></p><p class="muted" style="text-align:center">Tiếp tục với Ác Mộng, Phó bản, Thần sủng, Tu Hành Lệnh, Tam Giới Đấu và Boss thế giới.</p>`; return; }
       const mapName = M().MAPS[q.map].name;
-      body.innerHTML = `<div class="detail"><div class="muted">${q.post ? 'Hậu truyện ' + (M().MAPS[q.map].chapter - 15) : 'Chương ' + M().MAPS[q.map].chapter} · ${mapName} · ${esc(M().MAPS[q.map].sub || '')}</div><h4>${q.no ? `<span style="color:var(--cinnabar)">Nạn thứ ${q.no}:</span> ` : ''}${esc(q.title)}</h4><p style="margin:4px 0">${esc(q.text)}</p>
+      body.innerHTML = `<div class="detail"><div class="muted">${q.post ? 'Hậu truyện ' + (M().MAPS[q.map].chapter - (G.meta.NMAIN || 15)) : 'Chương ' + M().MAPS[q.map].chapter} · ${mapName} · ${esc(M().MAPS[q.map].sub || '')}</div><h4>${q.no ? `<span style="color:var(--cinnabar)">Nạn thứ ${q.no}:</span> ` : ''}${esc(q.title)}</h4><p style="margin:4px 0">${esc(q.text)}</p>
         ${q.type === 'kill' ? `<div class="muted">Tiến độ ${q.prog}/${q.count}</div><div class="pbar"><i style="width:${100 * q.prog / q.count}%"></i></div>` : ''}
         <div class="muted" style="margin-top:6px">${q.nan ? `Hoàn thành để vượt nạn thứ ${q.no}/81.` : q.post ? 'Hậu truyện · Hỗn Độn Kiếp – kiếp nạn thứ 82.' : 'Tiền truyện – chưa tính kiếp nạn.'}</div>
         ${q.needAsc && !c.asc ? `<div class="detail" style="margin-top:8px;background:rgba(200,48,42,.08)"><b>⚡ Cần Phi Thăng</b><div class="muted">Đạt cấp 120 rồi gặp Thái Thượng Lão Quân (hoặc Hoạt động › Phi Thăng) để độ Tam Cửu Thiên Kiếp.</div><div class="btns"><button class="btn-seal sm jade" id="q-asc">Xem Phi Thăng</button></div></div>` : ''}
@@ -268,7 +268,7 @@ const Panels = (() => {
     } else {
       body.innerHTML = M().MAP_ORDER.map((mid) => {
         const steps = QS.map((x, i) => ({ ...x, i })).filter((x) => x.map === mid);
-        return `<div class="sec">${M().MAPS[mid].post ? 'Hậu truyện ' + (M().MAPS[mid].chapter - 15) : 'Chương ' + M().MAPS[mid].chapter}: ${M().MAPS[mid].name}</div><div class="muted" style="margin:-4px 0 6px">${esc(M().MAPS[mid].sub || '')}</div><div class="list">${steps.map((s) => {
+        return `<div class="sec">${M().MAPS[mid].post ? 'Hậu truyện ' + (M().MAPS[mid].chapter - (G.meta.NMAIN || 15)) : 'Chương ' + M().MAPS[mid].chapter}: ${M().MAPS[mid].name}</div><div class="muted" style="margin:-4px 0 6px">${esc(M().MAPS[mid].sub || '')}</div><div class="list">${steps.map((s) => {
           const st = q.done || s.i < q.idx ? 'done' : s.i === q.idx ? 'cur' : 'lock';
           return `<div class="li ${st === 'cur' ? 'on' : ''}" style="${st === 'lock' ? 'opacity:.5' : ''}"><span class="ico">${st === 'done' ? '✅' : st === 'cur' ? '📜' : '🔒'}</span><div class="grow"><div class="t">${s.no ? `${s.no}. ` : ''}${esc(s.title)}</div><div class="s">${st === 'lock' ? 'Chưa mở' : esc(s.text)}</div></div></div>`;
         }).join('')}</div>`;

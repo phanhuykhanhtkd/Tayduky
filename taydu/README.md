@@ -86,6 +86,15 @@ Nếu iPhone không vào được: kiểm tra tường lửa Windows/macOS có c
 
 Người chơi khác trong cùng Wi-Fi chỉ cần mở cùng địa chỉ là vào chung một thế giới.
 
+## Nâng cấp tranh vẽ tay (đang làm theo đợt)
+
+- **35 bản đồ**: 15 chương cũ tách thành 29 bản đồ chính truyện (mỗi địa danh một chỗ) + 6 bản đồ Hậu truyện. Giữ nguyên 137 nhiệm vụ; nhân vật cũ tự chuyển sang bản đồ mới, không mất tiến độ.
+- **Tranh vẽ tay**: game tự nhận tranh trong `public/assets/` (xem `ART-SPEC.md`). Bản đồ vẽ tay dùng lưới đi lại dò theo tranh (`game/story.js` → `PAINTED`). Đã có: Thiên Cung, 2 bản đồ tổng.
+- **Chiêu đặc trưng boss** theo nguyên tác (`game/bossskills.js`): mù, chậm, gọi tên, nuốt, đoạt binh khí, phân thân, hình biến… Độ khó tăng dần theo 5 ải; đo bằng `node tools/balance-test.js`.
+- **Đoàn thỉnh kinh**: Đường Tăng (cưỡi Bạch Long Mã), Ngộ Không, Bát Giới, Sa Tăng đi theo sau người chơi đúng theo tiến độ truyện, và lần lượt vào trợ chiến trong trận boss chính truyện (`game/companions.js`).
+- **Cảnh thoại**: mỗi nhiệm vụ có cảnh mở đầu, lời boss trước trận, lời kết và câu dẫn sang cảnh sau (`game/scenes.js`). Đã viết: Thiên Cung → Hoàng Phong Lĩnh.
+- Thua boss: Ngộ Không nhắc cách khắc chế chiêu của boss đó.
+
 ## Hình ảnh & âm thanh
 
 - **Âm thanh**: nhạc nền ngũ cung (đàn tranh, sáo trúc, trống, cồng) riêng cho từng chương, trận thường và trận boss, cùng hiệu ứng cho mọi chiêu thức và thao tác. Tất cả được tổng hợp trực tiếp trong trình duyệt – không cần file nhạc. Trên iPhone, âm thanh bật sau khi chạm nút **VÀO** (hoặc Đăng ký / Đăng nhập / Khôi phục) ở màn chào (vẫn nghe được cả khi gạt nút im lặng). Nếu không nghe: tăng âm lượng bằng nút bên hông khi đang ở trong game, rồi vào Cài đặt → **Phát thử**.

@@ -68,8 +68,8 @@ Kích thước như nhân vật (**512 × 660 px**, nền trong suốt).
 | `shop4` | Thương Nhân | Bình Đỉnh Sơn · Ô Kê Quốc |
 | `vuaoke` | Hồn Vua Ô Kê | Bình Đỉnh Sơn · Ô Kê Quốc |
 | `thodia` | Sơn Thần Hiệu Sơn | Hiệu Sơn · Hắc Hà |
-| `nhilang` | Thái Tử Ma Ngang | Hiệu Sơn · Hắc Hà |
-| `honghai` | Đứa Bé Treo Trên Cây | Hiệu Sơn · Hắc Hà |
+| `mangang` | Thái Tử Ma Ngang | Hiệu Sơn · Hắc Thủy Hà |
+| `honghai_be` | Đứa Bé Treo Trên Cây (Hồng Hài Nhi giả dạng) | Hiệu Sơn · Hắc Thủy Hà |
 | `tangnhan` | Tăng Nhân Khổ Sai | Xa Trì Quốc |
 | `vua` | Vua Xa Trì | Xa Trì Quốc |
 | `daodong` | Đạo Đồng | Xa Trì Quốc |
@@ -98,6 +98,12 @@ Kích thước như nhân vật (**512 × 660 px**, nền trong suốt).
 | `hatien` | Hà Tiên Cô | Bồng Lai Tiên Đảo |
 | `laoquan` | Thái Thượng Lão Quân | Bồng Lai Tiên Đảo |
 | `ngocde` | Ngọc Hoàng Thượng Đế | Nam Thiên Môn |
+| `ludongtan` | Lữ Động Tân (dùng tranh kiếm khách nam) | Bồng Lai Tiên Đảo |
+| *Nhân vật mới* | | |
+| `caothai` · `tieutang` · `duongtang_ngua` | Cao Thái Công · Tiểu Sa Di · Đường Tăng cưỡi Bạch Long Mã | Cao Lão Trang · Quan Âm Viện · đi theo người chơi |
+| `laodo` · `thanhphong` · `minhnguyet` · `vuaoke_song` · `vanthu` | Lão Lái Đò · Thanh Phong · Minh Nguyệt · Vua Ô Kê · Văn Thù Bồ Tát | Lưu Sa · Ngũ Trang Quán · Ô Kê Quốc |
+| `tranlao` · `baba` · `maonhat` · `dilac` · `vuachutu` | Trần Lão · Bà Lão Nữ Quốc · Mão Nhật Tinh Quan · Di Lặc · Vua Chu Tử | Thông Thiên Hà → Chu Tử Quốc |
+| `thotinh` · `lythienvuong` · `tilam` · `phohien` · `minhvuong` · `thaiat` · `ngutieu` | Thọ Tinh · Lý Thiên Vương · Tì Lam · Phổ Hiền · Khổng Tước Minh Vương · Thái Ất Thiên Tôn · Ngư Ông | Bàn Ti → Bồng Lai |
 | `hatuong` | Hà Binh Hải Tộc (lính) | Đông Hải |
 | `quysai` | Quỷ Sai U Minh (lính) | Địa Phủ |
 | `mabinh` | Ma Binh Hỗn Độn (lính) | Nam Thiên Môn · Hỗn Độn |
@@ -215,52 +221,71 @@ Thần sủng dùng chung tranh boss cùng mã (`tieubachlong`, `nata`, `honghai
 
 ## 6. Bản đồ – `public/assets/maps/`
 
-Mỗi bản đồ là lưới **12 × 20 ô**. Vẽ cả bản đồ thành **một bức tranh 1200 × 2000 px** (100 px mỗi ô), nhìn từ trên xuống chéo như ảnh mẫu. Bám đúng vị trí ô trong `game/data.js` (`.` đường đi, `,` cỏ có quái, `~` nước, `T` cây, `H` nhà, `#` vách/đá, `P` cổng sang bản đồ sau) để nhân vật đi đúng chỗ.
-- `<mã>.jpg` – tranh nền (đã gồm nhà, cây, đá).
-- `<mã>_front.png` *(tuỳ chọn)* – lớp phía trước, nền trong suốt, chỉ chứa phần mái nhà / tán cây cần che lên nhân vật khi đi phía sau.
+Mỗi bản đồ là một **bức tranh vẽ tay khung dọc** (AI vẽ 1024 × 1536). Game cắt giữa đúng tỉ lệ lưới **12 × 20 ô** rồi phóng lên **1200 × 2000 px** (WEBP). Lưới đi lại (đường, nhà, nước, cổng, chỗ NPC) **dò lại theo tranh** trong `game/story.js` → `PAINTED`; tranh không cần khớp lưới cũ.
+- `<mã>.webp` – tranh nền.
+- `<mã>_front.png` *(tuỳ chọn)* – lớp phía trước (mái nhà, tán cây che nhân vật).
+- `world.webp`, `world2.webp` – bản đồ tổng 81 kiếp nạn và Hậu truyện.
 
-| Mã | Tên | Bối cảnh |
-|---|---|---|
-| `ch1` | Thiên Cung | heaven |
-| `ch2` | Trường An · Song Xoa Lĩnh | city |
-| `quanamvien` | Quan Âm Viện · Hoàng Phong Lĩnh | forest |
-| `luusa` | Lưu Sa Hà · Ngũ Trang Quán | river |
-| `ch3` | Bạch Hổ Lĩnh · Bảo Tượng Quốc | forest |
-| `binhdinh` | Bình Đỉnh Sơn · Ô Kê Quốc | cave |
-| `hieuson` | Hiệu Sơn · Hắc Hà | cave |
-| `xatri` | Xa Trì Quốc | desert |
-| `thongthien` | Thông Thiên Hà · Kim Đâu Sơn | snow |
-| `nunhi` | Tây Lương Nữ Quốc | city |
-| `ch4` | Hỏa Diệm Sơn · Tế Tái Quốc | desert |
-| `tieuloiam` | Tiểu Lôi Âm · Chu Tử Quốc | heaven |
-| `sudalinh` | Bàn Ti Động · Sư Đà Lĩnh | cave |
-| `vodedong` | Tỳ Khâu Quốc · Vô Để Động | cave |
-| `thientruc` | Thiên Trúc · Linh Sơn | heaven |
-| `donghai` | Đông Hải Long Cung | sea |
-| `diaphu` | U Minh Địa Phủ | hell |
-| `conlon` | Côn Lôn Tiên Sơn | snow |
-| `bonglai` | Bồng Lai Tiên Đảo | river |
-| `namthien` | Nam Thiên Môn | heaven |
-| `hondon` | Hỗn Độn Hư Không | void |
+35 bản đồ (29 chính truyện + 6 Hậu truyện). Cột *Phông* là tên tranh phông trận đấu dùng cho bản đồ đó.
+
+| Mã | Tên | Bối cảnh | Phông |
+|---|---|---|---|
+| `ch1` | Thiên Cung | heaven | `heaven` |
+| `truongan` | Trường An | city | `city` |
+| `ngusonhanh` | Song Xoa Lĩnh · Ngũ Hành Sơn | forest | `mountain` |
+| `quanamvien` | Quan Âm Viện · Hắc Phong Sơn | forest | `temple` |
+| `caolao` | Cao Lão Trang · Hoàng Phong Lĩnh | forest | `forest` |
+| `luusa` | Lưu Sa Hà | river | `sandriver` |
+| `ngutrang` | Tứ Thánh Trang · Ngũ Trang Quán | forest | `temple` |
+| `bachho` | Bạch Hổ Lĩnh | forest | `mountain` |
+| `baotuong` | Động Ba Nguyệt · Bảo Tượng Quốc | city | `palace` |
+| `binhdinh` | Bình Đỉnh Sơn · Liên Hoa Động | cave | `cave` |
+| `oke` | Bảo Lâm Tự · Ô Kê Quốc | city | `palace` |
+| `hieuson` | Hiệu Sơn · Hắc Thủy Hà | cave | `cave` |
+| `xatri` | Xa Trì Quốc | desert | `desert` |
+| `thongthien` | Trần Gia Trang · Thông Thiên Hà | snow | `frozenriver` |
+| `kimdau` | Kim Đâu Sơn | snow | `frozenriver` |
+| `nunhi` | Tây Lương Nữ Quốc | city | `palace` |
+| `docdich` | Độc Địch Sơn · Thủy Liêm Động | cave | `cave` |
+| `hoadiem` | Hỏa Diệm Sơn | desert | `firemountain` |
+| `tetai` | Tế Tái Quốc · Kinh Cức Lĩnh | city | `palace` |
+| `tieuloiam` | Tiểu Lôi Âm · Thất Tuyệt Sơn | heaven | `temple` |
+| `chutu` | Chu Tử Quốc · Kỳ Lân Sơn | city | `palace` |
+| `banti` | Bàn Ti Động · Hoàng Hoa Quán | cave | `cave` |
+| `suda` | Sư Đà Lĩnh · Sư Đà Thành | cave | `cave` |
+| `tykhau` | Tỳ Khâu Quốc · Liễu Lâm Pha | city | `palace` |
+| `vodedong` | Hắc Tùng Lâm · Vô Để Động | cave | `cave` |
+| `ngochoa` | Phượng Tiên Quận · Ngọc Hoa Châu | city | `palace` |
+| `kimbinh` | Kim Bình Phủ · Thanh Long Sơn | snow | `cave` |
+| `thientruc` | Thiên Trúc Quốc | city | `palace` |
+| `linhson` | Linh Sơn | heaven | `linhson` |
+| `donghai` | Đông Hải Long Cung | sea | `sea` | Hậu truyện
+| `diaphu` | U Minh Địa Phủ | hell | `hell` | Hậu truyện
+| `conlon` | Côn Lôn Tiên Sơn | snow | `snow` | Hậu truyện
+| `bonglai` | Bồng Lai Tiên Đảo | river | `river` | Hậu truyện
+| `namthien` | Nam Thiên Môn | heaven | `heaven` | Hậu truyện
+| `hondon` | Hỗn Độn Hư Không | void | `void` | Hậu truyện
+
+Đã có tranh: `ch1` (lưới đã dò), `world`, `world2`.
 
 ## 7. Phông chiến đấu – `public/assets/battle/`
 
-**1170 × 2532 px** (dọc, tỉ lệ iPhone), JPG. Phần trên ~35% là trời và cảnh xa; giữa–dưới là bãi đấu (phe địch đứng bên trái, phe mình bên phải, khoảng 40%–88% chiều cao). Tránh chi tiết quá rối ở 20% dưới cùng (có nút lệnh đè lên).
+**Dọc 9:16**, JPG/WEBP, **nhìn chéo từ trên xuống ~40°** (gần như không thấy trời): 1/4 phía trên là cảnh nhận ra nơi chốn, giữa là bãi trống phẳng (địch bên trái, phe mình bên phải), đồ trang trí chỉ ở mép và góc. Đã có: `village`, `forest`, `heaven`, `river`, `cave`. Game tìm phông theo cột *Phông* của bản đồ, không có thì dùng phông vẽ bằng code theo bối cảnh.
 
-| Mã | Dùng cho |
-|---|---|
-| `city` | Trường An, Nữ Quốc (thành thị) |
-| `forest` | Rừng núi |
-| `river` | Sông nước |
-| `heaven` | Thiên Cung, Linh Sơn |
-| `cave` | Hang động |
-| `snow` | Núi tuyết |
-| `desert` | Hỏa Diệm Sơn, sa mạc |
-| `arena` | Trấn Yêu Tháp, Tam Giới Đấu |
-| `world` | Boss thế giới |
-| `sea` | Đông Hải Long Cung, phó bản Long Cung |
-| `hell` | U Minh Địa Phủ, phó bản Địa Ngục |
-| `void` | Hỗn Độn Hư Không, Tâm Ma Kiếp |
+Tên phông: `heaven` · `city` · `forest` · `mountain` · `temple` · `sandriver` · `river` · `palace` · `cave` · `desert` · `frozenriver` · `firemountain` · `linhson` · `sea` · `hell` · `kunlun` · `penglai` · `void` · `arena` (Tam Giới Đấu, Trấn Yêu Tháp) · `world` (boss thế giới).
+
+## 8. Tranh theo hệ, hình biến, hiệu ứng, đồ vật
+
+- **Tiên sủng theo hệ**: `monsters/<loài>_<hệ>.png`, hệ = `kim` · `moc` · `thuy` · `hoa` · `tho` (vd. `suvuong_thuy`). Thiếu hệ nào thì dùng `monsters/<loài>.png`, rồi tới hình vẽ code.
+- **Quái dạng người**: `npcs/<mã>.png` (`thienbinh`, `sontac`, `thuytac`, `tieuyeu`, `hoayeu`, `daodong`, `hatuong`, `quysai`, `mabinh`).
+- **Hình biến của boss** (đổi tranh khi sang giai đoạn): `nata_2`, `giavuong_2`, `nguuma_2`, `cuudau_2`, `quoctruong_2`, `chuottinh_2`, `ngoctho_2`, `mato_2`, `mato_3`; Bạch Cốt Tinh: `bachcot_a` (thôn nữ) → `bachcot_b` (bà lão) → `bachcot_c` (ông lão) → `bachcot` (nguyên hình). Bảng ở `game/data.js` → `BOSS_ART`.
+- **Tư thế ra đòn**: `heroes/<mã>_atk.png` (đợt 6).
+- **Hiệu ứng chiêu** `public/assets/fx/` (vẽ trên **nền đen**, game hoà sáng): `loi`, `hoa`, `hoa_cot`, `bang`, `nuoc`, `moc`, `doc`, `tho`, `kim`, `phat_chuong`, `chuong_vang`, `sen`, `bua`, `xoay`, `no`, `thang_cap`.
+- **Đồ vật trên bản đồ** `public/assets/objects/`: `khoang`, `thao`, `tuyen`, `cong`, `ruong`, `ruong_mo`, `sap`, `bia`.
+- **Giao diện** `public/assets/ui/`: `round` (khung đếm hiệp – đã có), `versus` (nền màn Vào trận – đã có), `login`, `phai_phat`, `phai_tien`, `phai_yeu`, `icon`. **Biểu tượng** `public/assets/icons/`: tấm 3 × 2 (Claude tự cắt).
+- **NPC có tranh riêng** dùng trường `art` trong `game/story.js` (vd. Cao Thái Công `art: caothai`), còn `look` là hình vẽ code dự phòng.
+
+Toàn bộ lệnh vẽ (449 ảnh, chia 6 đợt): trang *Bộ Lệnh Vẽ Tây Du Ký · Toàn Tập*.
 
 ## Mẹo tạo tranh bằng công cụ AI
 

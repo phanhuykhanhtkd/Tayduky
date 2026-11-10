@@ -68,7 +68,7 @@ const UI = (() => {
     const box = $('#dialog');
     if (box.hidden) Sound.sfx('open');
     box.hidden = false;
-    const src = d.npc && (Sprites.npcSrc(d.npc) || Art.npc(d.look || d.npc)?.url);
+    const src = d.npc && ((d.art && Sprites.npcSrc(d.art)) || Sprites.npcSrc(d.npc) || Art.npc(d.look || d.npc, 0, 4, undefined, d.art)?.url);
     if (src) $('#dlg-ico').innerHTML = `<img src="${src}" alt="">`; else $('#dlg-ico').textContent = d.icon || '🧙';
     $('#dlg-name').textContent = d.name;
     const p = $('#dlg-text');
@@ -85,5 +85,40 @@ const UI = (() => {
   function closeDialog() { clearInterval(typeTimer); $('#dialog').hidden = true; }
   $('#dialog').addEventListener('click', (e) => { if (e.target.id === 'dialog') closeDialog(); });
 
-  return { toast, modal, confirm, prompt, openSheet, refreshSheet, closeSheet, sheet, dialog, closeDialog };
+  // ---------- cảnh thoại nhiều người (truyện) ----------
+  function portrait(l) {
+    if (l.nar) return '';
+    if (l.me && G.me) return Sprites.heroURL(G.me.race, G.me.gender, 0, G.me.gear);
+    const k = l.art || l.look;
+    return (l.art && Sprites.npcSrc(l.art)) || Sprites.npcSrc(l.look) || Sprites.art('bosses', l.look) || Sprites.art('npcs', l.look)
+      || (Art.npc(l.look, 0, 4, undefined, l.art) || Art.boss(l.look) || Art.human(l.look) || {}).url || '';
+  }
+  function scene(lines) {
+    if (!lines || !lines.length) return Promise.resolve();
+    return new Promise((done) => {
+      const el = document.createElement('div'); el.id = 'scene';
+      el.innerHTML = `<button class="sc-skip" type="button">Bỏ qua ▸▸</button><div class="sc-stage"><img class="sc-por" alt=""></div><div class="sc-box"><div class="sc-name"></div><p class="sc-text"></p><span class="sc-more">▾</span></div>`;
+      document.body.appendChild(el);
+      const img = el.querySelector('.sc-por'), nm = el.querySelector('.sc-name'), tx = el.querySelector('.sc-text');
+      let i = -1, timer = null, full = '';
+      const finish = () => { clearInterval(timer); timer = null; tx.textContent = full; };
+      const close = () => { clearInterval(timer); el.classList.add('out'); setTimeout(() => { el.remove(); done(); }, 260); };
+      const next = () => {
+        if (timer) return finish();
+        i++; if (i >= lines.length) return close();
+        const l = lines[i]; full = l.t || '';
+        el.classList.toggle('nar', !!l.nar); el.classList.toggle('me', !!l.me);
+        const src = portrait(l);
+        img.hidden = !src; if (src && img.getAttribute('src') !== src) { img.src = src; img.classList.remove('in'); void img.offsetWidth; img.classList.add('in'); }
+        nm.textContent = l.nar ? '' : l.n || ''; nm.hidden = !!l.nar;
+        tx.textContent = ''; let k = 0;
+        timer = setInterval(() => { k += 2; tx.textContent = full.slice(0, k); if (k >= full.length) { clearInterval(timer); timer = null; } }, 18);
+        if (typeof Sound !== 'undefined') Sound.sfx('click');
+      };
+      el.addEventListener('click', (e) => { if (e.target.closest('.sc-skip')) { close(); return; } next(); });
+      next();
+    });
+  }
+
+  return { toast, modal, confirm, prompt, openSheet, refreshSheet, closeSheet, sheet, dialog, closeDialog, scene };
 })();

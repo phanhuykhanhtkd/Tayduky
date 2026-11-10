@@ -20,7 +20,7 @@ const Panels2 = (() => {
           <div class="s">Tốc độ đi ×${m.speed} · ${Object.entries(m.bonus).map(([k, v]) => `${{ spd: 'Tốc độ', maxHp: 'Khí huyết', atk: 'Công', matk: 'Phép', def: 'Thủ' }[k] || k} +${v}%`).join(' · ')}</div>
           <div class="s">${esc(m.desc)} · Cần cấp ${m.lvl}</div></div>
           ${m.owned ? (m.riding ? '<button class="btn-seal sm ghost" data-off="1">Xuống</button>' : `<button class="btn-seal sm jade" data-ride="${m.id}">Cưỡi</button>`)
-            : m.craft ? '<button class="btn-seal sm ghost" data-craft="1">Lò Rèn</button>' : `<button class="btn-seal sm" data-buy="${m.id}" ${G.me.lvl >= m.lvl ? '' : 'disabled'}>${m.price.bac ? fmt(m.price.bac) + ' bạc' : m.price.vang + ' vàng'}</button>`}</div>`).join('')}</div>`;
+            : m.boss ? '<button class="btn-seal sm ghost" disabled>Thắng boss</button>' : m.craft ? '<button class="btn-seal sm ghost" data-craft="1">Lò Rèn</button>' : `<button class="btn-seal sm" data-buy="${m.id}" ${G.me.lvl >= m.lvl ? '' : 'disabled'}>${m.price.bac ? fmt(m.price.bac) + ' bạc' : m.price.vang + ' vàng'}</button>`}</div>`).join('')}</div>`;
       body.querySelectorAll('[data-buy]').forEach((b) => (b.onclick = async () => { const m = r.list.find((x) => x.id === b.dataset.buy); if (await UI.confirm(`<p>Mua <b>${esc(m.name)}</b>?</p>`, 'Mua')) { const x = await G.call('mount:buy', { id: m.id }); if (x.ok) Sound.sfx('levelup'); UI.refreshSheet(); } }));
       body.querySelectorAll('[data-ride]').forEach((b) => (b.onclick = async () => { await G.call('mount:ride', { id: b.dataset.ride }); Sound.sfx('portal'); UI.refreshSheet(); }));
       body.querySelectorAll('[data-off]').forEach((b) => (b.onclick = async () => { await G.call('mount:ride', { id: null }); UI.refreshSheet(); }));
@@ -209,7 +209,7 @@ const Panels2 = (() => {
       ${order.map((id, i) => { const m = M().MAPS[id], ok = m.chapter <= c.unlocked, here = id === c.map; const [x, y] = pts[i];
         return `<button class="wnode ${x > 52 ? 'r' : ''} ${ok ? '' : 'lock'} ${here ? 'here' : ''} th-${m.theme}" data-m="${id}" style="left:${x}%;top:${y}px" ${ok ? '' : 'disabled'}>
           <span class="wi">${ok ? TH_ICON[m.theme] || '🗺️' : '🔒'}</span>${here ? `<img class="wme" src="${Sprites.heroURL(c.race, c.gender, 0, c.gear)}" alt="">` : ''}
-          <span class="wl"><b>${i === 0 ? 'Tiền truyện' : m.post ? 'Hậu truyện ' + (m.chapter - 15) : 'Chương ' + m.chapter}</b>${esc(m.name)}<small>${ok ? `Quái cấp ${m.lv[0]}–${m.lv[1]}${m.asc ? ' · Cần Phi Thăng' : ''}` : m.asc && !c.asc ? 'Cần Phi Thăng' : 'Chưa mở'}</small></span></button>`; }).join('')}</div>`;
+          <span class="wl"><b>${i === 0 ? 'Tiền truyện' : m.post ? 'Hậu truyện ' + (m.chapter - (M().NMAIN || 15)) : 'Chương ' + m.chapter}</b>${esc(m.name)}<small>${ok ? `Quái cấp ${m.lv[0]}–${m.lv[1]}${m.asc ? ' · Cần Phi Thăng' : ''}` : m.asc && !c.asc ? 'Cần Phi Thăng' : 'Chưa mở'}</small></span></button>`; }).join('')}</div>`;
     const w = body.querySelector('.world .here'); if (w) setTimeout(() => w.scrollIntoView({ block: 'center' }), 50);
     body.querySelectorAll('[data-m]').forEach((b2) => (b2.onclick = async () => { if (b2.dataset.m === c.map) return; const r = await G.call('map:travel', { map: b2.dataset.m }); if (r.ok) { UI.closeSheet(); G.onTravel(r); } }));
   }
@@ -241,10 +241,10 @@ const Panels2 = (() => {
     const m = M().MAPS[mapId]; if (!m) return Promise.resolve();
     const qs = M().QUESTS.filter((q) => q.map === mapId);
     const bosses = m.npcs.filter((n) => n.boss), friends = (m.npcs.filter((n) => !n.boss && qs.some((q) => q.type === 'talk' && q.npc === n.id)).concat(m.npcs.filter((n) => !n.boss && !n.role))).filter((n, i, arr) => arr.indexOf(n) === i).slice(0, 3);
-    const img = (n, cls = '') => { const a = Art.npc(n.look || n.id); return a ? `<img class="px ${cls}" src="${a.url}" alt="">` : `<span class="emo">${n.icon}</span>`; };
+    const img = (n, cls = '') => { const a = Art.npc(n.look || n.id, 0, 4, undefined, n.art); return a ? `<img class="px ${cls}" src="${a.url}" alt="">` : `<span class="emo">${n.icon}</span>`; };
     const bg = `url('${typeof PaintMap !== 'undefined' ? PaintMap.battleURL(m.theme, 390, 300) : Tiles.battleBG(m.theme)}')`;
     const panels = [
-      { cls: 'p1', html: `<div class="cp-title"><small>${mapId === 'ch1' ? 'Tiền truyện' : m.post ? 'Hậu truyện ' + (m.chapter - 15) : 'Chương ' + m.chapter}</small><b>${esc(m.name)}</b><i>${esc(m.sub || '')}</i></div>` },
+      { cls: 'p1', html: `<div class="cp-title"><small>${mapId === 'ch1' ? 'Tiền truyện' : m.post ? 'Hậu truyện ' + (m.chapter - (M().NMAIN || 15)) : 'Chương ' + m.chapter}</small><b>${esc(m.name)}</b><i>${esc(m.sub || '')}</i></div>` },
       { cls: 'p2', html: `<div class="cp-cast">${friends.map((n) => img(n)).join('')}</div><div class="cp-cap">${esc((qs[0] && qs[0].text) || '')}</div>` },
       bosses.length ? { cls: 'p3', html: `<div class="cp-boss">${img(bosses[bosses.length - 1], 'boss')}</div><div class="cp-cap red">${esc(bosses.map((b) => b.name).join(' · '))} đang chờ phía trước… ${m.post ? 'Hỗn Độn Kiếp' : qs.reduce((s, q) => s + (q.nan || 0), 0) + ' kiếp nạn'}.</div>` } : null,
     ].filter(Boolean);

@@ -283,7 +283,7 @@ const Panels3 = (() => {
         <div class="s">${esc(m.desc)}${m.owned ? '' : ` · Cần cấp ${m.lvl}`}</div>
         ${m.owned && m.lv < m.maxLv ? `<div class="s">Lên cấp: ${m.up.food} Thú Lương · ${fmt(m.up.bac)} bạc</div>` : ''}</div>
         <div class="mt-b">${m.owned ? (m.riding ? BTN('data-off="1"', 'Xuống', 'ghost') : BTN(`data-ride="${m.id}"`, 'Cưỡi', 'jade')) + (m.lv < m.maxLv ? BTN(`data-up="${m.id}"`, 'Nuôi') : '')
-          : m.craft ? BTN('data-craft="1"', 'Lò Rèn', 'ghost') : BTN(`data-buy="${m.id}" ${G.me.lvl >= m.lvl ? '' : 'disabled'}`, m.price.bac ? fmt(m.price.bac) + ' bạc' : m.price.vang + ' vàng')}</div></div>`; }).join('')}</div>`;
+          : m.boss ? BTN('disabled', 'Thắng ' + esc(m.bossName || 'boss'), 'ghost') : m.craft ? BTN('data-craft="1"', 'Lò Rèn', 'ghost') : BTN(`data-buy="${m.id}" ${G.me.lvl >= m.lvl ? '' : 'disabled'}`, m.price.bac ? fmt(m.price.bac) + ' bạc' : m.price.vang + ' vàng')}</div></div>`; }).join('')}</div>`;
     body.querySelectorAll('[data-buy]').forEach((b) => (b.onclick = async () => { const m = r.list.find((x) => x.id === b.dataset.buy); if (await UI.confirm(`<p>Mua <b>${esc(m.name)}</b>?</p>`, 'Mua')) { const x = await G.call('mount:buy', { id: m.id }); if (x.ok) Sound.sfx('levelup'); UI.refreshSheet(); } }));
     body.querySelectorAll('[data-ride]').forEach((b) => (b.onclick = async () => { await G.call('mount:ride', { id: b.dataset.ride }); Sound.sfx('portal'); UI.refreshSheet(); }));
     body.querySelectorAll('[data-off]').forEach((b) => (b.onclick = async () => { await G.call('mount:ride', { id: null }); UI.refreshSheet(); }));

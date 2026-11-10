@@ -8,6 +8,8 @@ const BattleUI = (() => {
   const els = {};
   // đội hình nhìn ngang: địch bên trái, phe mình bên phải, xếp chéo hai hàng
   const SLOT = { 1: [[27, 62], [13, 76], [31, 88], [14, 47], [33, 41]], 0: [[74, 64], [61, 80], [87, 80], [64, 48], [88, 46]] };
+  // cụm lệnh lục giác ở giữa: hai phe dạt ra hai mép, xếp so le
+  const SLOT_HEX = { 1: [[24, 58], [12, 71], [25, 85], [12, 44], [26, 34]], 0: [[76, 60], [88, 73], [75, 87], [88, 46], [74, 34]] };
   FX.attach($('#b-fx'), $('#b-fx-under'), [stage, $('#b-bg'), $('#b-3d')]);
   const ECOL = { thunder: '#9fd8ff', fire: '#ff8a2a', ice: '#bff0ff', poison: '#c88aff', heal: '#7cf09a', gold: '#ffd65a', wind: '#9ff0d8', rock: '#e0b07a', shadow: '#b07af0', rage: '#ff5a2a', slash: '#fff0c8', hit: '#fff0c8' };
 
@@ -23,7 +25,7 @@ const BattleUI = (() => {
     $('#b-bg').style.backgroundImage = `url("${Sprites.battleBG(theme)}")`;
     const bd = $('.b-board', root); if (bd && typeof Tiles !== 'undefined') bd.style.setProperty('--tex', `url("${Tiles.boardTex(theme)}")`);
     root.hidden = false;
-    if (typeof PaintMap !== 'undefined') { root.classList.remove('has3d'); root.classList.add('painted'); $('#b-bg').style.backgroundImage = `url("${Sprites.battleArt(theme) || PaintMap.battleURL(theme, root.clientWidth || innerWidth, root.clientHeight || innerHeight)}")`; }
+    if (typeof PaintMap !== 'undefined') { root.classList.remove('has3d'); root.classList.add('painted'); const bgKey = s.bg || (s.theme ? null : G.meta.MAPS[G.me.map]?.bg); const artBg = (bgKey && Sprites.battleArt(bgKey)) || Sprites.battleArt(theme) || (theme === 'city' && Sprites.battleArt('village')); root.classList.toggle('artbg', !!artBg); $('#b-bg').style.backgroundImage = `url("${artBg || PaintMap.battleURL(theme, root.clientWidth || innerWidth, root.clientHeight || innerHeight)}")`; }
     else root.classList.toggle('has3d', typeof Arena !== 'undefined' && Arena.show(theme));
     closePick();
     $('#b-log').textContent = s.kind === 'boss' ? 'Trận chiến với boss – không thể bỏ chạy!' : s.kind === 'arena' ? 'Tam Giới Đấu bắt đầu!' : s.kind === 'world' ? `Đánh ${s.maxRounds} hiệp, sát thương cộng dồn vào boss chung.` : s.kind === 'tower' ? 'Trấn Yêu Tháp – vượt tầng này để đi tiếp!' : 'Yêu quái xuất hiện!';
@@ -44,7 +46,20 @@ const BattleUI = (() => {
     if (auto) setTimeout(autoAct, 400);
   }
 
+  // màn "Vào trận": nền vẽ tay, chân dung hai phe đối đầu
+  function unitURL(u) { return u ? (Sprites.creatureSrc(u) || (Art.unit(u) || {}).url || '') : ''; }
+  function versus(text, isBoss) {
+    const bg = Sprites.art('ui', 'versus'); if (!bg) return null;
+    const foe = snap.units.find((u) => u.boss) || snap.units.find((u) => u.side === 1), me = snap.units.find((u) => u.id === 'p') || snap.units.find((u) => u.side === 0);
+    const foeName = foe ? (snap.units.filter((u) => u.side === 1).length > 1 && !foe.boss ? foe.name + ' ×' + snap.units.filter((u) => u.side === 1).length : foe.name) : text;
+    const el = document.createElement('div'); el.className = 'vs-wrap'; root.appendChild(el);
+    el.innerHTML = `<div class="vs ${isBoss ? 'boss' : ''}" style="background-image:url('${bg}')"><div class="vs-side vs-foe"><div class="vs-por"><img src="${unitURL(foe)}" alt=""></div><b>${esc(foeName)}</b></div><div class="vs-mid"><span>Chiến Đấu</span><small>${esc(isBoss && text !== foeName ? text : snap.kind === 'boss' ? 'Đánh boss' : '')}</small></div><div class="vs-side vs-me"><b>${esc(me ? me.name : '')}</b><div class="vs-por"><img src="${unitURL(me)}" alt=""></div></div></div>`;
+    root.classList.add('vsing');
+    $$('.unit', box).forEach((u, i) => { u.classList.add('enter'); u.style.animationDelay = 1300 + i * 70 + 'ms'; });
+    return sleep(1650).then(() => { el.querySelector('.vs').classList.add('out'); return sleep(280); }).then(() => { el.remove(); root.classList.remove('vsing'); $$('.unit', box).forEach((u) => { u.classList.remove('enter'); u.style.animationDelay = ''; }); });
+  }
   function intro(text, isBoss) {
+    const vs = versus(text, isBoss); if (vs) return vs;
     const el = $('#b-intro');
     el.innerHTML = `<div class="brush ${isBoss ? 'boss' : ''}"><span>${esc(text)}</span></div>`;
     el.hidden = false;
@@ -81,10 +96,11 @@ const BattleUI = (() => {
     const idx = { 0: 0, 1: 0 };
     const order = [...snap.units].sort((a, b) => (a.id === 'p' ? -1 : b.id === 'p' ? 1 : 0));
     for (const u of order) {
-      const pos = SLOT[u.side][idx[u.side]++ % SLOT[u.side].length];
+      const SL = $('#b-cmds').classList.contains('hex') ? SLOT_HEX : SLOT;
+      const pos = SL[u.side][idx[u.side]++ % SL[u.side].length];
       const el = document.createElement('div');
       el.className = `unit side${u.side}` + (u.boss ? ' boss' : '') + (u.mut ? ' mut' : '') + (u.dead ? ' dead' : '') + (u.hero ? ' is-hero' : '') + (u.form && u.grade >= 2 ? ' aura g' + u.grade : '')
-        + (u.than ? ' than' : '') + (u.chan ? ' chan' : '') + (u.shadow ? ' shadow' : '') + (u.nm ? ' nm' : '') + (u.elite ? ' elite' : '') + (u.phase > 1 ? ' enraged' : '');
+        + (u.than ? ' than' : '') + (u.chan ? ' chan' : '') + (u.shadow ? ' shadow' : '') + (u.nm ? ' nm' : '') + (u.elite ? ' elite' : '') + (u.phase > 1 ? ' enraged' : '') + (u.bossId && GIANT.has(u.bossId) ? ' giant' : '');
       el.style.left = pos[0] + '%'; el.style.top = `calc(${pos[1]}% - ${u.boss ? 176 : 146}px)`;
       el.style.zIndex = Math.round(pos[1]);
       const ring = u.side === 0 ? '#7fd6b7' : u.boss ? '#ff5a3a' : (G.meta.ELEMENTS[u.element]?.color || '#ffd65a');
@@ -131,7 +147,8 @@ const BattleUI = (() => {
       el.classList.toggle('dead', u.dead && !el.classList.contains('caught'));
       el.querySelector('.st').innerHTML = stTags(u);
     }
-    $('#b-round').innerHTML = `<small>Hiệp</small>${s.round + 1}${s.maxRounds ? `<small>/${s.maxRounds}</small>` : ''}`;
+    const rd = $('#b-round'), rArt = Sprites.art('ui', 'round'); rd.classList.toggle('banner', !!rArt); if (rArt) rd.style.backgroundImage = `url("${rArt}")`;
+    rd.innerHTML = rArt ? `<span>Hiệp ${s.round + 1}${s.maxRounds ? ` / ${s.maxRounds}` : ''}</span>` : `<small>Hiệp</small>${s.round + 1}${s.maxRounds ? `<small>/${s.maxRounds}</small>` : ''}`;
     const boss = s.units.find((u) => u.boss);
     $('#b-boss').hidden = !boss;
     if (boss) {
@@ -167,8 +184,11 @@ const BattleUI = (() => {
   const ZIG = ['attack', 'skill', 'catch', 'item', 'pet', 'flee', 'defend'];
   // vòng lệnh (kiểu tay cầm): nút Công lớn ở góc phải, các lệnh khác xếp hai cung quanh
   const WHEEL = { attack: [0, 0], skill: [90, 102], item: [90, 146], pet: [90, 190], catch: [150, 114], defend: [150, 149], flee: [150, 184] };
+  // cụm lệnh lục giác (tổ ong hai cột) ở giữa sân
+  const HEX = { attack: [0, 0], catch: [0, 1], pet: [0, 2], defend: [0, 3], skill: [1, 0.5], item: [1, 1.5], flee: [1, 2.5] };
   function placeCmds() {
     const cm = $('#b-cmds'); if (!cm) return;
+    if (cm.classList.contains('hex')) { $$('.seal', cm).forEach((b, i) => { const [c, r] = HEX[b.dataset.c] || [0, 0]; b.style.setProperty('--x', (c * 54) + 'px'); b.style.setProperty('--y', (r * 63) + 'px'); b.style.setProperty('--d', (i * 35) + 'ms'); }); return; }
     const w = cm.clientWidth || 250, h = cm.clientHeight || 236, cx = w - 62, cy = h - 64;
     cm.style.setProperty('--cx', cx + 'px'); cm.style.setProperty('--cy', cy + 'px');
     $$('.seal', cm).forEach((b, i) => { const [r, deg] = WHEEL[b.dataset.c] || [0, 0], a = deg * Math.PI / 180; b.style.setProperty('--x', (Math.cos(a) * r).toFixed(1) + 'px'); b.style.setProperty('--y', (-Math.sin(a) * r).toFixed(1) + 'px'); b.style.setProperty('--d', i * 40 + 'ms'); });
@@ -207,11 +227,11 @@ const BattleUI = (() => {
 
   function cancel() {
     mode = null; closePick();
-    $$('.seal').forEach((s) => s.classList.remove('sel'));
+    $$('.seal').forEach((s) => s.classList.remove('sel')); $('#b-cmds').classList.remove('picking');
     $$('.unit.target').forEach((u) => u.classList.remove('target'));
     if (!busy) hint('Chọn lệnh');
   }
-  function selSeal(cmd) { $$('.seal').forEach((s) => s.classList.toggle('sel', s.dataset.c === cmd)); }
+  function selSeal(cmd) { $$('.seal').forEach((s) => s.classList.toggle('sel', s.dataset.c === cmd)); $('#b-cmds').classList.toggle('picking', !!cmd); }
 
   function target(m, cb) {
     const pool = snap.units.filter((u) => !u.dead && (m.side === 1 ? u.side === 1 : u.side === 0) && (!m.filter || m.filter(u)));
@@ -281,7 +301,16 @@ const BattleUI = (() => {
     setTimeout(() => el.remove(), 2600);
     el.onclick = () => el.remove();
   }
-  const ST = { stun: ['Định', '#6ac8ff'], seal: ['Ấn', '#c87aff'], chaos: ['Loạn', '#ff7ab0'], burn: ['Bỏng', '#ff8a3a'], poison: ['Độc', '#7fd66a'], shield: ['Khiên', '#ffe08a'] };
+  // boss khổng lồ: tranh vẽ tay hiện to gấp đôi
+  const GIANT = new Set(['culinh', 'nguuma', 'bachtuong', 'cuulinh', 'hondonthu', 'laongoan', 'world', 'manxa', 'khaiminh', 'mato', 'giaoma', 'banglang']);
+  // tranh hiệu ứng (public/assets/fx/*.png, vẽ trên nền đen): hiện chồng lên vệt hạt sáng của FX
+  const FX_ART = { thunder: 'loi', fire: 'hoa', ice: 'bang', water: 'nuoc', wind: 'xoay', poison: 'doc', rock: 'tho', sand: 'tho', gold: 'kim', slash: 'kim', claw: 'kim', bite: 'kim', light: 'phat_chuong', heal: 'sen', shield: 'chuong_vang', shadow: 'xoay', gourd: 'xoay', web: 'bua', roar: 'tho', rage: 'no', seal: 'bua', chaos: 'xoay', vine: 'moc', pillar: 'hoa_cot' };
+  function fxArt(kind, p, big) {
+    const key = kind === 'fire' && big ? 'hoa_cot' : FX_ART[kind], src = key && Sprites.art('fx', key); if (!src || !p || !stage) return;
+    const im = document.createElement('img'); im.className = 'fxart' + (big ? ' big' : ''); im.src = src; im.alt = '';
+    im.style.left = p.x + 'px'; im.style.top = p.y + 'px'; stage.appendChild(im); setTimeout(() => im.remove(), 900);
+  }
+  const ST = { stun: ['Định', '#6ac8ff'], seal: ['Ấn', '#c87aff'], chaos: ['Loạn', '#ff7ab0'], burn: ['Bỏng', '#ff8a3a'], poison: ['Độc', '#7fd66a'], shield: ['Khiên', '#ffe08a'], blind: ['Mù', '#9a8a7a'], slow: ['Chậm', '#9aa8ff'], mark: ['Tên', '#ffd65a'] };
   function stTags(u) { const bf = (u.buffs || []).filter((b) => b !== 'enrage'); return Object.entries(ST).filter(([k]) => u[k] > 0).map(([k, [l, c]]) => `<i style="background:${c}">${l}</i>`).join('') + (bf.length ? '<i style="background:#ffd65a">Buff</i>' : '') + ((u.buffs || []).includes('enrage') ? '<i style="background:#e8201a;color:#fff">Cuồng nộ</i>' : ''); }
   function pickCatch() {
     const list = ['bau_bac', 'bau_vang'].map((id) => {
@@ -355,10 +384,11 @@ const BattleUI = (() => {
   function applyHit(h, ev) {
     const u = unit(h.t); if (!u) return;
     const p = rectOf(h.t);
-    if (h.miss) { num(h.t, 'Né!', 'miss'); Sound.sfx('miss'); return; }
+    if (h.miss) { num(h.t, h.blindMiss ? 'Trượt (mù)' : 'Né!', 'miss'); Sound.sfx('miss'); return; }
+    if (h.st === 'debuff') { if (h.dispel) num(h.t, 'Mất buff!', 'info'); if (h.debuff) setTimeout(() => num(h.t, h.debuff, 'info'), 200); if (p) FX.ring(p.x, p.y, '#ffd65a', 52, 26, 3); Sound.sfx('charge'); return; }
     if (h.st) {
       const [l, c] = ST[h.st] || ['?', '#fff'];
-      if (h.ok) { num(h.t, { stun: 'Định Thân!', seal: 'Phong Ấn!', chaos: 'Loạn Hồn!' }[h.st] || l, 'info'); if (p) FX.ring(p.x, p.y, c, 52, 26, 3); u[h.st] = h.turns; els[h.t].querySelector('.st').innerHTML = stTags(u); Sound.sfx('charge'); }
+      if (h.ok) { if (p && (h.st === 'seal' || h.st === 'chaos')) fxArt(h.st, p); num(h.t, h.label || { stun: 'Định Thân!', seal: 'Phong Ấn!', chaos: 'Loạn Hồn!', blind: 'Mù!', slow: 'Chậm!', mark: 'Bị gọi tên!' }[h.st] || l, 'info'); if (h.debuff) setTimeout(() => num(h.t, h.debuff, 'info'), 250); if (p) FX.ring(p.x, p.y, c, 52, 26, 3); u[h.st] = h.turns; els[h.t].querySelector('.st').innerHTML = stTags(u); Sound.sfx('charge'); }
       else { num(h.t, 'Kháng!', 'miss'); Sound.sfx('shield'); }
       return;
     }
@@ -366,6 +396,7 @@ const BattleUI = (() => {
     if (h.h != null) { A3.burst(h.t, '#8af0a8', { r: 2.6, i: 1.5, dur: 900, sigil: 1.2 }); const nh = Math.min(u.maxHp, u.hp + h.h); setBars(h.t, nh, u.maxHp, u.mp, u.maxMp); num(h.t, '+' + fmt(h.h), 'heal'); setExpr(h.t, 'smile', 800); if (p) FX.impact('heal', p); Sound.sfx('heal'); return; }
     const kind = ev.fx && ev.fx !== 'hit' ? ev.fx : (ev.k === 'atk' ? 'slash' : 'hit');
     if (p) FX.impact(ev.k === 'atk' ? (h.crit ? 'slash' : 'hit') : kind, p, h.crit);
+    if (p && ev.k !== 'atk') fxArt(kind, p, ev.aoe);
     A3.burst(h.t, ev.k === 'atk' ? (h.crit ? '#fff2c0' : '#ffe8c8') : (ECOL[kind] || '#fff0c8'), { r: ev.k === 'atk' ? 2 : 2.8, i: h.crit ? 2.2 : ev.k === 'atk' ? 1.1 : 1.8, dur: ev.k === 'atk' ? 420 : 760, sigil: ev.k === 'atk' ? 0 : ev.aoe ? 1.1 : 1.3 });
     if (h.crit) A3.flash('#ffffff', 0.35, 220);
     if (kind === 'thunder') A3.flash('#cfe6ff', 0.55, 320);
@@ -374,8 +405,12 @@ const BattleUI = (() => {
     u.hp = Math.max(0, u.hp - h.d); setExpr(h.t, 'hurt', h.dead ? 0 : 560); u.hp += h.d;
     setBars(h.t, Math.max(0, u.hp - h.d), u.maxHp, u.mp, u.maxMp);
     if (h.dead) { u.dead = true; setTimeout(() => { els[h.t]?.classList.add('dead'); turnBar(); if (p) FX.death(p, u.side === 1 ? '#ffc8a0' : '#c8e8ff', !!u.boss); Sound.sfx(u.boss ? 'bossdeath' : 'death'); }, 330); }
-    if (h.stun) setTimeout(() => num(h.t, 'Choáng', 'info'), 250);
-    if (h.poison) setTimeout(() => num(h.t, 'Trúng độc', 'poison'), 300);
+    if (h.stun) setTimeout(() => num(h.t, h.label || 'Choáng', 'info'), 250);
+    if (h.poison) setTimeout(() => num(h.t, h.label || 'Trúng độc', 'poison'), 300);
+    if (h.blind) setTimeout(() => num(h.t, 'Mù', 'info'), 330);
+    if (h.slow) setTimeout(() => num(h.t, 'Chậm', 'info'), 360);
+    if (h.dispel) setTimeout(() => num(h.t, 'Mất buff!', 'info'), 380);
+    if (h.feed) setTimeout(() => num(h.t, 'Lửa bùng mạnh hơn!', 'crit'), 260);
     if (h.burn) setTimeout(() => num(h.t, 'Bỏng', 'crit'), 320);
     if (h.absorb) setTimeout(() => num(h.t, 'Khiên -' + fmt(h.absorb), 'info'), 150);
     if (h.mpDrain) setTimeout(() => num(h.t, '-' + h.mpDrain + ' MP', 'info'), 350);
@@ -388,7 +423,18 @@ const BattleUI = (() => {
     for (const ev of events) {
       const a = ev.a && els[ev.a];
       if (ev.a) turnBar(ev.a);
-      if (ev.k === 'atk' || (ev.k === 'skill' && !(ev.hits[0] && ev.hits[0].h != null))) {
+      if (ev.k === 'skill' && ev.summons) { // gọi phân thân / lính
+        banner(ev.s, unit(ev.a)?.side); $('#b-log').textContent = `${nameOf(ev.a)} thi triển ${ev.s}`;
+        const me = rectOf(ev.a); if (me) { FX.cast(me, '#c9a8ff'); FX.ring(me.x, me.y, '#c9a8ff', 90, 40, 4); }
+        Sound.sfx('shadow'); await sleep(700);
+      } else if (ev.k === 'assist') { await assist(ev);
+      } else if (ev.k === 'mark') {
+        const u = unit(ev.t), p = rectOf(ev.t); if (u) setBars(ev.t, Math.max(0, u.hp - ev.d), u.maxHp, u.mp, u.maxMp);
+        banner(ev.def ? 'Phòng thủ kịp – hồ lô hút yếu đi!' : 'Hồ lô hút hồn!', 1);
+        if (p) { FX.ring(p.x, p.y, '#ffd65a', 90, 40, 5); FX.impact('gold', p, true); }
+        Sound.sfx('gong'); num(ev.t, '-' + fmt(ev.d), 'crit'); if (ev.dead && u) { u.dead = true; els[ev.t]?.classList.add('dead'); }
+        await sleep(800);
+      } else if (ev.k === 'atk' || (ev.k === 'skill' && !(ev.hits[0] && ev.hits[0].h != null))) {
         const sk = ev.s && skillOf(ev.s);
         const me = rectOf(ev.a), t0 = rectOf(ev.hits[0].t);
         if (ev.s) {
@@ -493,6 +539,7 @@ const BattleUI = (() => {
       } else if (ev.k === 'phase') { // boss chuyển giai đoạn – Cuồng Nộ
         const u = unit(ev.a), p = rectOf(ev.a), el = els[ev.a];
         if (u) { u.phase = ev.n; if (ev.h) { u.hp = Math.min(u.maxHp, u.hp + ev.h); setBars(ev.a, u.hp, u.maxHp, u.mp, u.maxMp); } }
+        if (u && ev.art && ev.art !== u.art) { u.art = ev.art; const sp = el && el.querySelector('.spr'); if (sp) { sp.classList.add('morph'); setTimeout(() => { sp.innerHTML = creatureHTML(u); sp.classList.remove('morph'); }, 380); } }
         if (el) { el.classList.add('enraged'); el.classList.remove('phase-hit'); void el.offsetWidth; el.classList.add('phase-hit'); }
         root.classList.remove('quake'); void root.offsetWidth; root.classList.add('quake');
         Sound.sfx('gong'); Sound.sfx('rage');
@@ -561,6 +608,16 @@ const BattleUI = (() => {
   }
 
   // bóng mờ khi lướt tới
+  async function assist(ev) {
+    const box = document.createElement('div'); box.className = 'assist';
+    const pix = Art.npc(ev.who, 0, 4, 'angry');
+    box.innerHTML = `${pix ? `<img src="${pix.url}" alt="">` : ''}<div class="as-txt"><small>${esc(ev.name)}</small><b>${esc(ev.s)}</b><i>${esc(ev.line || '')}</i></div>`;
+    root.appendChild(box); Sound.sfx(ev.fx === 'heal' ? 'heal' : 'charge');
+    await sleep(650);
+    for (const h of ev.hits) { applyHit(h, { k: 'skill', fx: ev.fx, a: 'p' }); await sleep(ev.hits.length > 1 ? 140 : 60); }
+    $('#b-log').textContent = `${ev.name} trợ chiến: ${ev.s}`;
+    await sleep(550); box.classList.add('out'); setTimeout(() => box.remove(), 350); await sleep(200);
+  }
   function ghosts(a, dx, dy) {
     if (FX.low) return;
     const spr = a.querySelector('.spr'); if (!spr) return;
@@ -632,9 +689,11 @@ const BattleUI = (() => {
     if (res.kind === 'world' && res.outcome !== 'lose') html += `<p class="muted center">Phần thưởng theo sát thương bạn gây ra cho boss.</p>`;
     if (slots.length) html += `<div class="v-stats">${slots.map(([i, v, l]) => `<div><span>${i}</span><b>${v}</b><small>${l}</small></div>`).join('')}</div>`;
     if (loot.length) html += `<div class="sec">Chiến lợi phẩm</div><div class="v-loot">${loot.join('')}</div>`;
-    if (res.ups.length) html += `<p class="v-note gold">Thăng lên cấp ${res.ups[res.ups.length - 1]}! Nhớ cộng điểm tiềm năng.</p>`;
+    if (res.ups.length) html += `${Sprites.art('fx', 'thang_cap') ? `<img class="v-lvup" src="${Sprites.art('fx', 'thang_cap')}" alt="">` : ''}<p class="v-note gold">Thăng lên cấp ${res.ups[res.ups.length - 1]}! Nhớ cộng điểm tiềm năng.</p>`;
     if (res.petUps) html += `<p class="v-note">Tiên sủng tăng ${res.petUps} cấp.</p>`;
     if (res.towerFloor) html += `<p class="v-note gold">🗼 Vượt tầng ${res.towerFloor} Trấn Yêu Tháp!${res.towerGot && res.towerGot.length ? ' Nhận: ' + res.towerGot.map(esc).join(', ') : ''}</p>`;
+    if (res.mountGot) html += `<p class="v-note">🐎 Thuần phục được thú cưỡi thần <b>${esc(res.mountGot)}</b>! Vào Thú cưỡi để cưỡi.</p>`;
+    if (res.tip) { const wk = Art.npc('ngokhong', 0, 3, 'angry'); html += `<div class="v-tip">${wk ? `<img src="${wk.url}" alt="">` : '🐵'}<p><b>Ngộ Không:</b> ${esc(res.tip)}</p></div>`; }
     if (res.quest) html += `<p class="v-note">📜 Hoàn thành «${esc(res.quest.title)}» · vượt ${res.quest.nan} kiếp nạn</p>`;
     if (res.outcome === 'lose' && res.respawn) html += `<p class="muted center">Bạn được đưa về điểm hồi sinh.</p>`;
     await UI.modal(html, [{ id: 'ok', label: 'Tiếp tục' }]);
