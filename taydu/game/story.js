@@ -97,7 +97,7 @@ const B = (id) => [id, BOSS[id][0], BOSS[id][1], { boss: true }];
 const HEAL = (id, look, name = 'Thầy Thuốc') => [id, name, '👨‍⚕️', { role: 'heal', look }];
 const SHOP = (id, look, name = 'Thương Nhân') => [id, name, '🧑‍💼', { role: 'shop', look }];
 
-const CHAPTERS = [
+const OLD_CHAPTERS = [
   // =================================================================
   {
     id: 'ch1', name: 'Thiên Cung', sub: 'Tiền truyện · Đại Náo Thiên Cung', theme: 'heaven', layout: ['A', false], lv: [1, 9],
@@ -426,4 +426,163 @@ const CHAPTERS = [
   },
 ];
 
-module.exports = { CHAPTERS, BOSS, layout };
+// =====================================================================
+//  TÁCH BẢN ĐỒ (bản 3): 15 chương cũ → 29 bản đồ, mỗi địa danh một chỗ.
+//  Giữ nguyên tên và thứ tự 137 nhiệm vụ; chỉ chia lại nhiệm vụ theo bản đồ.
+//  part: [mã, tên, phụ đề, theme, phông trận, [bố cục, lật], [bước từ, đến), npcs]
+//  npcs: chuỗi = lấy NPC cùng mã của chương cũ (hoặc chương bất kỳ); mảng = NPC mới.
+//  NPC có thể mang `art` (tranh riêng) khác `look` (hình vẽ code dự phòng).
+// =====================================================================
+const N = (id, name, icon, o) => [id, name, icon, o || {}];
+const SPLIT = {
+  ch1: [['ch1', 'Thiên Cung', 'Tiền truyện · Đại Náo Thiên Cung', 'heaven', 'heaven', ['A', false], [0, 6], null]],
+  ch2: [
+    ['truongan', 'Trường An', 'Hồi 8 – 12', 'city', 'village', ['B', false], [0, 5], ['duongtang', 'quanam', 'laoong', 'duocsu2', 'shop2', 'casino', 'luuhong']],
+    ['ngusonhanh', 'Song Xoa Lĩnh · Ngũ Hành Sơn', 'Hồi 13 – 15', 'forest', 'mountain', ['C', false], [5, 9], ['duongtang', HEAL('heal_ns', 'duocsu4'), SHOP('shop_ns', 'shop4'), 'dantuong', 'nguhanh', 'tieubachlong',
+      N('thaibach_ns', 'Thái Bạch Kim Tinh', '🧙‍♂️', { look: 'thaibach', talk: 'Hố sâu này do yêu hổ đào sẵn. Ta hoá thành ông lão dắt thầy trò ra đây. Đi tiếp về phía tây sẽ gặp người cần gặp.' })]],
+  ],
+  quanamvien: [
+    ['quanamvien', 'Quan Âm Viện · Hắc Phong Sơn', 'Hồi 16 – 17', 'forest', 'temple', ['C', true], [0, 2], ['kimtri', 'heal_qav', 'shop_qav', 'hachhung',
+      N('tieutang', 'Tiểu Sa Di', '🧑', { look: 'duocsu1', art: 'tieutang', talk: 'Sư cụ Kim Trì sưu tầm bảy tám trăm tấm cà sa rồi mà vẫn chưa thấy đủ…' })]],
+    ['caolao', 'Cao Lão Trang · Hoàng Phong Lĩnh', 'Hồi 18 – 21', 'forest', 'village', ['D', false], [2, 5], [N('caothai', 'Cao Thái Công', '👨‍🦳', { look: 'laoong', art: 'caothai', talk: 'Con rể lão ăn khoẻ như heo, mặt mũi càng ngày càng giống heo… Hắn nhốt con gái lão trong hậu viện!' }),
+      HEAL('heal_cl', 'duocsu4'), SHOP('shop_cl', 'shop4'), 'batgioi', 'hoangphong', 'linhcat']],
+  ],
+  luusa: [
+    ['luusa', 'Lưu Sa Hà', 'Hồi 22', 'river', 'sandriver', ['A', true], [0, 2], ['heal_ls', 'satang', 'shop_ls',
+      N('laodo', 'Lão Lái Đò', '🚣', { look: 'laoong', art: 'laodo', talk: 'Sông Lưu Sa rộng tám trăm dặm, lông ngỗng thả xuống cũng chìm. Già này chở khách cả đời, chưa thuyền nào sang được bờ tây.' })]],
+    ['ngutrang', 'Tứ Thánh Trang · Ngũ Trang Quán', 'Hồi 23 – 26', 'forest', 'temple', ['B', true], [2, 5], ['lesonlaomau',
+      N('thanhphong', 'Thanh Phong', '🧒', { look: 'duocsu1', art: 'thanhphong', talk: 'Quả Nhân Sâm ba nghìn năm mới nở hoa, ba nghìn năm mới kết quả. Ăn một quả sống bốn vạn bảy nghìn năm đấy!' }),
+      N('minhnguyet', 'Minh Nguyệt', '🧒', { look: 'duocsu1', art: 'minhnguyet', talk: 'Sư phụ dặn tiếp đãi Đường Tăng tử tế… nhưng hai con khỉ, heo kia thì phải canh chừng.' }),
+      'tranguyen', 'quanam_ls', HEAL('heal_ngt', 'duocsu1'), SHOP('shop_ngt', 'shop1')]],
+  ],
+  ch3: [
+    ['bachho', 'Bạch Hổ Lĩnh', 'Hồi 27 – 28', 'forest', 'mountain', ['C', false], [0, 2], ['laohau', 'duocsu3', 'shop3', 'bachcot', 'dummy3'], { secret: true }],
+    ['baotuong', 'Động Ba Nguyệt · Bảo Tượng Quốc', 'Hồi 28 – 31', 'city', 'palace', ['B', false], [2, 4], ['bachhoa', 'hoangbao', 'ngokhong3', HEAL('heal_bt', 'duocsu2'), SHOP('shop_bt', 'shop2')]],
+  ],
+  binhdinh: [
+    ['binhdinh', 'Bình Đỉnh Sơn · Liên Hoa Động', 'Hồi 32 – 35', 'cave', 'cave', ['D', true], [0, 2], ['heal_bd', 'shop_bd', 'tieuphu', 'ngangiac', 'kimgiac',
+      N('laoquan_bd', 'Thái Thượng Lão Quân', '🧓', { look: 'laoquan', talk: 'Hai đồng tử giữ lò vàng lò bạc của ta trộm bảo bối xuống trần. Hồ lô, tịnh bình, quạt Ba Tiêu… đều là đồ của lão cả.' })]],
+    ['oke', 'Bảo Lâm Tự · Ô Kê Quốc', 'Hồi 36 – 39', 'city', 'palace', ['A', false], [2, 4], ['vuaoke', 'vanthu', 'giavuong', HEAL('heal_ok', 'duocsu2'), SHOP('shop_ok', 'shop2')]],
+  ],
+  hieuson: [['hieuson', 'Hiệu Sơn · Hắc Thủy Hà', 'Hồi 40 – 43', 'cave', 'cave', ['B', true], [0, 5], null]],
+  xatri: [['xatri', 'Xa Trì Quốc', 'Hồi 44 – 46', 'desert', 'desert', ['D', true], [0, 3], null]],
+  thongthien: [
+    ['thongthien', 'Trần Gia Trang · Thông Thiên Hà', 'Hồi 47 – 49', 'snow', 'frozenriver', ['A', false], [0, 3], ['tranlao', 'dan_tt', 'heal_tt', 'shop_tt', 'quanam_tt', 'linhcam']],
+    ['kimdau', 'Kim Đâu Sơn', 'Hồi 50 – 52', 'snow', 'frozenriver', ['C', true], [3, 6], ['docgiac', 'laoquan', 'dummy_tt', HEAL('heal_kd', 'duocsu1'), SHOP('shop_kd', 'shop1')]],
+  ],
+  nunhi: [
+    ['nunhi', 'Tây Lương Nữ Quốc', 'Hồi 53 – 54', 'city', 'palace', ['B', true], [0, 2], ['nuquan', 'dummy_nn', 'baba', 'heal_nn', 'shop_nn', 'nuvuong']],
+    ['docdich', 'Độc Địch Sơn · Thủy Liêm Động', 'Hồi 55 – 58', 'cave', 'cave', ['D', false], [2, 5], ['bocap', 'duongtang_nn', 'lucnhi', HEAL('heal_dd', 'duocsu3'), SHOP('shop_dd', 'shop3'),
+      N('maonhat', 'Mão Nhật Tinh Quan', '🐓', { look: 'thaibach', art: 'maonhat', talk: 'Ta vốn là gà trống trên trời. Bò cạp sợ nhất tiếng gáy của ta.' })]],
+  ],
+  ch4: [
+    ['hoadiem', 'Hỏa Diệm Sơn', 'Hồi 59 – 61', 'desert', 'firemountain', ['D', false], [0, 3], ['laonhan', 'thodia', 'duocsu4', 'shop4', 'thietphien', 'nguuma']],
+    ['tetai', 'Tế Tái Quốc · Kinh Cức Lĩnh', 'Hồi 62 – 64', 'city', 'palace', ['A', true], [3, 6], ['cuudau', 'hanhtien', 'tangtap', HEAL('heal_te', 'duocsu2'), SHOP('shop_te', 'shop2')]],
+  ],
+  tieuloiam: [
+    ['tieuloiam', 'Tiểu Lôi Âm · Thất Tuyệt Sơn', 'Hồi 65 – 67', 'heaven', 'temple', ['C', true], [0, 3], ['tangtl', 'heal_tl', 'shop_tl', 'hoangmi', 'manxa',
+      N('dilac', 'Di Lặc Phật', '😄', { look: 'nhulai', art: 'dilac', talk: 'Đồng tử đánh khánh của ta trộm chũm chọe và túi Nhân Chủng xuống trần. Để ta bày ruộng dưa dụ nó.' })]],
+    ['chutu', 'Chu Tử Quốc · Kỳ Lân Sơn', 'Hồi 68 – 71', 'city', 'palace', ['B', false], [3, 6], ['vuachutu', 'dummy_tl', 'kimmao', HEAL('heal_ct', 'duocsu2'), SHOP('shop_ct', 'shop2')]],
+  ],
+  sudalinh: [
+    ['banti', 'Bàn Ti Động · Hoàng Hoa Quán', 'Hồi 72 – 73', 'cave', 'cave', ['C', false], [0, 2], ['nhentinh', 'bachnhan', 'lesonsd', 'heal_sd', 'shop_sd',
+      N('tilam', 'Tì Lam Bồ Tát', '👵', { look: 'laomau', art: 'tilam', talk: 'Kim quang của Bách Nhãn Ma Quân chỉ cây kim thêu của lão mới phá nổi.' })]],
+    ['suda', 'Sư Đà Lĩnh · Sư Đà Thành', 'Hồi 74 – 77', 'cave', 'cave', ['D', true], [2, 6], ['thanhsu', 'bachtuong', 'daibang', 'thaibach_sd', 'dummy_sd', 'dummy_sd2', 'nhulai_sd', HEAL('heal_su', 'duocsu4'), SHOP('shop_su', 'shop4')]],
+  ],
+  vodedong: [
+    ['tykhau', 'Tỳ Khâu Quốc · Liễu Lâm Pha', 'Hồi 78 – 79', 'city', 'palace', ['B', false], [0, 2], ['dan_vd', 'quoctruong', 'dichtram', 'thotinh', 'heal_vd', 'shop_vd']],
+    ['vodedong', 'Hắc Tùng Lâm · Vô Để Động', 'Hồi 80 – 86', 'cave', 'cave', ['C', true], [2, 7], ['thieunu', 'duongtang_vd', 'chuottinh', 'baotinh', 'dummy_vd', 'dancu', HEAL('heal_vd2', 'duocsu2'), SHOP('shop_vd2', 'shop2'),
+      N('lythienvuong', 'Lý Thiên Vương', '🗼', { look: 'thaibach', art: 'lythienvuong', talk: 'Con chuột trắng ấy từng ăn trộm hương hoa ở Linh Sơn, được ta tha chết nhận làm con nuôi… Ta sẽ đích thân bắt nó về.' })]],
+  ],
+  thientruc: [
+    ['ngochoa', 'Phượng Tiên Quận · Ngọc Hoa Châu', 'Hồi 87 – 90', 'city', 'palace', ['A', true], [0, 4], ['thaithu', 'hoangsu', 'cuulinh', 'heal_tc', 'shop_tc',
+      N('thaiat', 'Thái Ất Thiên Tôn', '🧙', { look: 'laoquan', art: 'thaiat', talk: 'Sư tử chín đầu là thú cưỡi của ta, nhân lúc người hầu say rượu mà trốn xuống trần.' })]],
+    ['kimbinh', 'Kim Bình Phủ · Thanh Long Sơn', 'Hồi 91 – 92', 'snow', 'cave', ['D', false], [4, 6], ['teguu', 'dummy_tc', HEAL('heal_kb', 'duocsu1'), SHOP('shop_kb', 'shop1')]],
+    ['thientruc', 'Thiên Trúc Quốc', 'Hồi 93 – 97', 'city', 'palace', ['B', true], [6, 8], ['ngoctho', 'khau', HEAL('heal_ttr', 'duocsu2'), SHOP('shop_ttr', 'shop2'),
+      N('hangnga_tc', 'Hằng Nga', '👸', { look: 'hangnga', talk: 'Thỏ Ngọc giã thuốc của Quảng Hàn Cung trốn xuống trần đã một năm. Xin Đại Thánh nương tay.' })]],
+    ['linhson', 'Linh Sơn', 'Hồi 98 – 100', 'heaven', 'linhson', ['A', false], [8, 10], ['tiepdan', 'laongoan', 'nhulai_tc', HEAL('heal_lsn', 'duocsu1'), SHOP('shop_lsn', 'shop1')], { finale: true }],
+  ],
+};
+// ---------- bản đồ vẽ tay: lưới đi lại dò theo tranh (public/assets/maps/<mã>) ----------
+// Tranh được cắt đúng tỉ lệ 12 × 20 ô. tiles/spawn/slots thay bố cục mẫu; slots theo thứ tự npcs.
+const PAINTED = {
+  ch1: {
+    tiles: ['############', 'HHH######HHH', 'HHH##.P.##HH', 'HHH#....#HHH', 'TT,..###..,.', 'TT,..###.,,,', 'TT.,....,.TT',
+      '~~~~~..~~~~~', 'TTT~~..~~~~~', 'TTT~....TTTT', 'TTT.....TTTT', 'HHH#....,TTT', 'HHHT....,#.,', 'HHHT...,,HHH',
+      'HHH.,..,.HHH', '#,,...,..HHH', '#.#.....,HHH', '#.#........#', '##........##', '############'],
+    spawn: [6, 17],
+    slots: [[5, 16], [4, 11], [3, 16], [8, 15], [2, 6], [6, 8], [3, 5], [7, 3], [9, 4]],
+    secret: { id: 'hangnga', x: 2, y: 4 },
+  },
+  truongan: {
+    tiles: ['############', '############', '####..P...TT', 'TTT#####...T', 'TT######....', '###.........', '###.#......H', 'TTT......HHH',
+      '#####..#HHHH', 'HHHT#...##HH', 'HHH##...#HHH', 'HHH##...#HHH', 'HHH#.....HHH', 'TT##......HH', 'TT##.#..##HH', '######...#HH',
+      '~~~#......#H', '~~~.....~TTT', '~~~~~~~~~~TT', '~~~~~~~~~~~T'],
+    spawn: [6, 15],
+    slots: [[6, 6], [10, 4], [4, 12], [5, 10], [8, 12], [7, 9], [5, 17], [9, 13], [3, 17]],
+  },
+  ngusonhanh: {
+    tiles: ['#####.P#####', '#####...####', '######..####', '######...###', '########.###', '########.###', '########.###', '###...#..###',
+      '##........##', 'TT,#.....,TT', 'TTTT,...,TTT', 'TTTT,..TTTTT', 'TTT,...TTTTT', 'TT,..###,,TT', 'HH,....,,,,T', 'HHHH....####',
+      'HHHHH#..####', 'HHHHH...#TTT', 'HHHHH..#####', 'HHHHH..#####'],
+    spawn: [6, 18],
+    slots: [[7, 17], [9, 14], [4, 15], [9, 13], [6, 8], [7, 2], [3, 8], [9, 8], [4, 9]],
+  },
+  quanamvien: {
+    tiles: ['#######P####', '#######..###', '#######..###', '###..##..###', '####.....###', '####......##', '####,..#..##', '####.,#..###',
+      '######..####', '#####..#####', '#####..#####', '#####..#####', '#####..#####', 'HHHHH..#####', '##......,###', '##,......###',
+      'HHHHH...HHHH', 'HHHHH...HHHH', 'HHHH#...#HHH', '###.......##'],
+    spawn: [6, 19],
+    slots: [[3, 14], [8, 15], [2, 15], [3, 3], [7, 14], [6, 5], [8, 5]],
+  },
+  caolao: {
+    tiles: ['######P#####', '######..####', '#####.,..###', '##......,###', '##,....,####', '###.##..####', '###.....####', '###....#####',
+      '####...#####', '####..######', '###...######', '###..#######', '###.,HHHHHHH', 'HHH..HHHHHHH', 'HH,.##..,#HH', '###.......##',
+      '###.########', '##...,.,####', '~~....######', '~~~...######'],
+    spawn: [4, 19],
+    slots: [[6, 14], [9, 15], [2, 17], [7, 14], [2, 3], [5, 4], [4, 8], [3, 10]],
+  },
+};
+
+const NPC_ALL = {};
+OLD_CHAPTERS.forEach((ch) => ch.npcs.forEach((n) => { if (!NPC_ALL[n[0]]) NPC_ALL[n[0]] = n; }));
+// tranh riêng cho các NPC trước đây mượn hình
+const ART_FIX = { bachlong_hh: 'mangang', dummy_hs: 'honghai_be', tranlao: 'tranlao', baba: 'baba', vuachutu: 'vuachutu', thotinh: 'thotinh', thaithu: 'quan', bachhoa: 'congchua', vanthu: 'vanthu' };
+const CHAPTERS = [];
+OLD_CHAPTERS.forEach((old, oi) => {
+  const parts = SPLIT[old.id];
+  if (!parts) throw new Error('Thiếu cách tách cho chương ' + old.id);
+  const total = old.steps.length;
+  const bossIdx = []; old.steps.forEach((s, i) => { if (s.t === 'boss') bossIdx.push(i); });
+  let lvFrom = old.lv[0];
+  parts.forEach(([id, name, sub, theme, bg, lay, [a, b], npcList, extra], pi) => {
+    if (b > total) throw new Error('Sai bước khi tách ' + id);
+    const lvTo = pi === parts.length - 1 ? old.lv[1] : Math.round(old.lv[0] + ((old.lv[1] - old.lv[0]) * b) / total);
+    const steps = old.steps.slice(a, b).map((s, k) => {
+      const si = a + k, bi = bossIdx.indexOf(si);
+      return { ...s, _eq: oi + pi / parts.length, _bi: bi < 0 ? 0 : bi, _phase2: bi >= 0 && bi === bossIdx.length - 1, _last: si === total - 1, _oldMap: old.id };
+    });
+    const npcs = (npcList || old.npcs.map((n) => n[0])).map((n) => {
+      const def = typeof n === 'string' ? (old.npcs.find((x) => x[0] === n) || NPC_ALL[n]) : n;
+      if (!def) throw new Error('Không tìm thấy NPC ' + n + ' cho bản đồ ' + id);
+      const o = { ...(def[3] || {}) };
+      if (ART_FIX[def[0]] && !o.art) o.art = ART_FIX[def[0]];
+      // thầy thuốc / thương nhân dọc đường dùng chung tranh đại phu, chưởng quầy
+      if (!o.art && /^heal_/.test(def[0])) o.art = 'duocsu2';
+      if (!o.art && /^shop_/.test(def[0])) o.art = 'shop2';
+      return [def[0], def[1], def[2], o];
+    });
+    steps.forEach((s) => { if (s.t === 'talk' && !npcs.some((n) => n[0] === s.npc)) throw new Error('Nhiệm vụ "' + s.title + '" cần NPC ' + s.npc + ' trên bản đồ ' + id); });
+    const ch = { id, name, sub, theme, bg, layout: lay, lv: [lvFrom, Math.max(lvFrom + 2, lvTo)], enc: old.enc, npcs, steps, oldId: old.id, eq: oi + pi / parts.length };
+    if (extra && extra.secret) ch.secret = old.secret;
+    if (!npcList && old.secret) ch.secret = old.secret;
+    if (extra && extra.finale) ch.finale = true;
+    if (PAINTED[id]) { const P = PAINTED[id]; ch.tiles = P.tiles; ch.spawn = P.spawn; ch.slots = P.slots; if (P.secret) ch.secret = P.secret; ch.painted = true; }
+    CHAPTERS.push(ch);
+    lvFrom = Math.max(lvFrom, lvTo - 1);
+  });
+});
+// mã bản đồ cũ không còn → bản đồ mới đầu tiên của chương đó
+const MAP_ALIAS = { ch2: 'truongan', ch3: 'bachho', ch4: 'hoadiem', sudalinh: 'banti' };
+
+module.exports = { CHAPTERS, OLD_CHAPTERS, BOSS, layout, MAP_ALIAS };

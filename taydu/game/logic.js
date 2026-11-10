@@ -72,7 +72,7 @@ function createChar(id, user, name, race, gender, face) {
     daily: { date: today(), peach: 0, arena: 0, treasure: 0 },
     arena: 1000, guild: null, contrib: 0,
     spouse: null, master: null, disciples: [],
-    kills: 0, createdAt: Date.now(), storyVer: 2,
+    kills: 0, createdAt: Date.now(), storyVer: 2, mapVer: 3,
     checkin: { n: 0, last: null }, tower: { best: 0 }, tut: 0,
   };
   c.equip.vukhi = makeEquip('vukhi', 1, 0);
@@ -265,7 +265,7 @@ function makeBoss(bid) {
   st.maxHp = Math.round(st.maxHp * B.hpMul);
   st.atk = Math.round(st.atk * B.atkMul / 1.2);
   st.matk = Math.round(st.matk * B.atkMul / 1.2);
-  const units = [{ kind: 'boss', bossId: bid, name: B.name, icon: B.icon, element: B.element, lvl: B.lv, ...st, skills: B.skills, catchable: false, boss: true, phases: B.phases || 1 }];
+  const units = [{ kind: 'boss', bossId: bid, name: B.name, icon: B.icon, element: B.element, lvl: B.lv, ...st, skills: B.skills, catchable: false, boss: true, phases: B.phases || 1, art: (D.BOSS_ART[bid] || {})[1], ctl: B.ctl || 1, feed: B.feed }];
   for (const [hid, lv] of B.minions) units.push(makeHuman(hid, lv));
   return units;
 }
@@ -328,6 +328,7 @@ function completeQuestStep(c) {
   const res = applyReward(c, q.reward);
   res.title = q.title; res.nan = q.nan; res.no = q.no;
   const nq = D.QUESTS[c.quest];
+  res.scene = require('./scenes').after(q, nq, c);
   if (nq && D.MAPS[nq.map].chapter > c.unlocked) { c.unlocked = D.MAPS[nq.map].chapter; res.unlocked = nq.map; res.unlockedName = D.MAPS[nq.map].name; }
   return res;
 }
@@ -352,7 +353,7 @@ function publicChar(c, extra = {}) {
     bag: c.bag.map((b) => (b.t === 'eq' ? { ...b, total: equipStats(b), price: equipPrice(b) } : b)),
     pets: c.pets.map(petView), activePet: c.activePet, activePets: c.activePets || [],
     skills: [...c.skills, ...(c.secretSkills || [])],
-    quest: questView(c), nan: c.nan, unlocked: c.unlocked,
+    quest: questView(c), nan: c.nan, unlocked: c.unlocked, companions: require('./companions').list(c),
     secrets: c.secrets, daily: c.daily, arena: c.arena, guild: c.guild, contrib: c.contrib,
     spouse: c.spouse, master: c.master, disciples: c.disciples, power: power(c), kills: c.kills,
     peace: !!c.peace, gear: gearBrief(c),

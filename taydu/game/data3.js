@@ -125,6 +125,16 @@ Object.assign(X.MOUNTS, {
   tuyetlang: { name: 'Tuyết Lang', icon: '🐺', lvl: 95, price: { vang: 600 }, speed: 1.75, bonus: { atk: 9, spd: 9, crit: 2 }, desc: 'Sói tuyết Côn Lôn – thuần phục từ bầy của Băng Lang Vương.' },
   aodieu: { name: 'Ảo Điểu', icon: '🦚', lvl: 110, price: null, craft: true, speed: 2.0, bonus: { matk: 10, spd: 12, maxHp: 5 }, desc: 'Chim ngũ sắc Bồng Lai, đuôi kéo cầu vồng. Chỉ rèn được từ 30 Lông Ảo Điểu.' },
 });
+// Thú cưỡi thần: thú cưỡi của thần Phật trốn xuống trần làm yêu – thắng boss đó thì được nhận
+Object.assign(X.MOUNTS, {
+  thanhmaosu: { name: 'Thanh Mao Sư', icon: '🦁', lvl: 31, price: null, boss: 'giavuong', speed: 1.5, bonus: { atk: 5, maxHp: 4 }, desc: 'Sư tử lông xanh – thú cưỡi của Văn Thù Bồ Tát.' },
+  thanhnguu: { name: 'Thanh Ngưu', icon: '🐃', lvl: 43, price: null, boss: 'docgiac', speed: 1.5, bonus: { def: 8, mdef: 6, maxHp: 5 }, desc: 'Trâu xanh – thú cưỡi của Thái Thượng Lão Quân.' },
+  hongman: { name: 'Hồng Lân Mãng', icon: '🐍', lvl: 52, price: null, boss: 'manxa', speed: 1.55, bonus: { atk: 6, spd: 5 }, desc: 'Mãng xà vảy đỏ ở Thất Tuyệt Sơn, đã được thuần phục.' },
+  kimmaohong: { name: 'Kim Mao Hống', icon: '🦁', lvl: 55, price: null, boss: 'kimmao', speed: 1.6, bonus: { matk: 7, mdef: 5, spd: 4 }, desc: 'Thú lông vàng – thú cưỡi của Quan Âm Bồ Tát.' },
+  bachtuong: { name: 'Bạch Tượng', icon: '🐘', lvl: 58, price: null, boss: 'bachtuong', speed: 1.55, bonus: { maxHp: 10, def: 8 }, desc: 'Voi trắng sáu ngà – thú cưỡi của Phổ Hiền Bồ Tát.' },
+  bachloc: { name: 'Bạch Lộc', icon: '🦌', lvl: 60, price: null, boss: 'quoctruong', speed: 1.7, bonus: { matk: 8, maxHp: 6 }, desc: 'Hươu trắng – thú cưỡi của Thọ Tinh Nam Cực.' },
+  cuulinh: { name: 'Cửu Linh Sư Tử', icon: '🦁', lvl: 65, price: null, boss: 'cuulinh', speed: 1.75, bonus: { atk: 9, matk: 9, spd: 6 }, desc: 'Sư tử chín đầu – thú cưỡi của Thái Ất Thiên Tôn.' },
+});
 const MOUNT_MAX_LV = 10;
 const mountUpCost = (lv) => ({ food: lv * 2, bac: lv * 3000 });
 

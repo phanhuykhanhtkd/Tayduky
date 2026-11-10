@@ -38,6 +38,31 @@ for (const c of Object.values(db.chars)) {
   if (!'.,P'.includes(ch || '#') || M.npcs.some((n) => n.x === c.x && n.y === c.y)) { c.x = M.spawn[0]; c.y = M.spawn[1]; }
   c.storyVer = 2;
 }
+// ---- tách 15 chương thành 29 bản đồ (bản đồ v3): tính lại chương đã mở, đổi mã bản đồ cũ ----
+for (const c of Object.values(db.chars)) {
+  if (c.mapVer === 3) continue;
+  const qi = Math.min(c.quest || 0, D.QUESTS.length - 1), cur = D.QUESTS[qi];
+  const done = (c.quest || 0) >= D.QUESTS.length;
+  c.unlocked = done ? D.MAP_ORDER.length : Math.max(1, D.MAPS[cur.map].chapter);
+  if (D.MAP_ALIAS[c.map]) c.map = D.MAP_ALIAS[c.map];
+  if (!D.MAPS[c.map] || D.MAPS[c.map].chapter > c.unlocked) c.map = cur.map;
+  const M = D.MAPS[c.map], ch = (M.tiles[c.y] || '')[c.x];
+  if (!'.,P'.includes(ch || '#') || M.npcs.some((n) => n.x === c.x && n.y === c.y)) { c.x = M.spawn[0]; c.y = M.spawn[1]; }
+  c.mapVer = 3;
+}
+// ---- thú cưỡi thần: ai đã qua nhiệm vụ boss đó thì nhận bù ----
+for (const c of Object.values(db.chars)) {
+  for (const [mid, m] of Object.entries(require('./game/data2').MOUNTS)) {
+    if (!m.boss) continue; const qi = D.QUESTS.findIndex((q) => q.boss === m.boss);
+    if (qi >= 0 && (c.quest || 0) > qi && !(c.mounts || []).includes(mid)) c.mounts = [...(c.mounts || []), mid];
+  }
+}
+// ---- mỗi lần khởi động: ai đứng trên ô không đi được (bản đồ vừa vẽ lại lưới) thì về điểm xuất phát ----
+for (const c of Object.values(db.chars)) {
+  const M = D.MAPS[c.map]; if (!M) continue;
+  const ch = (M.tiles[c.y] || '')[c.x];
+  if (!'.,P'.includes(ch || '#') || M.npcs.some((n) => n.x === c.x && n.y === c.y)) { c.x = M.spawn[0]; c.y = M.spawn[1]; }
+}
 // ---- 3 phái Phật/Tiên/Yêu + đội 3 Tiên sủng ----
 for (const c of Object.values(db.chars)) L.migrateChar(c);
 DB.save();
@@ -122,8 +147,8 @@ function walkable(mapId, x, y) {
 function metaBundle() {
   const maps = {};
   for (const [k, m] of Object.entries(D.MAPS)) {
-    maps[k] = { name: m.name, chapter: m.chapter, theme: m.theme, lv: m.lv, spawn: m.spawn, tiles: m.tiles,
-      sub: m.sub, post: m.post, asc: m.asc, nodes: m.nodes || [], npcs: m.npcs.map(({ id, name, icon, x, y, boss, role, look }) => ({ id, name, icon, x, y, boss: !!boss, role, look })) };
+    maps[k] = { name: m.name, chapter: m.chapter, theme: m.theme, bg: m.bg, lv: m.lv, spawn: m.spawn, tiles: m.tiles,
+      sub: m.sub, post: m.post, asc: m.asc, nodes: m.nodes || [], npcs: m.npcs.map(({ id, name, icon, x, y, boss, role, look, art }) => ({ id, name, icon, x, y, boss: !!boss, role, look, art })) };
   }
   return {
     RACES: D.RACES, SKILLS: D.SKILLS, ELEMENTS: D.ELEMENTS, GRADES: D.GRADES, ITEMS: D.ITEMS, SLOTS: D.SLOTS,
@@ -131,7 +156,7 @@ function metaBundle() {
     QUESTS: D.QUESTS.map((q) => ({ title: q.title, text: q.text, map: q.map, nan: q.nan, no: q.no, type: q.type, count: q.count })),
     SECRETS: Object.fromEntries(Object.entries(D.SECRETS).map(([k, v]) => [k, { name: v.name, reward: v.reward }])),
     SPECIES_COUNT: D.SPECIES_COUNT, FORMS: D.FORMS.map((f) => ({ id: f.id, name: f.name, icon: f.icon })),
-    ENHANCE_RATE: D.ENHANCE_RATE, MOUNTS: require('./game/data2').MOUNTS, STORY_END: D.STORY_END,
+    ENHANCE_RATE: D.ENHANCE_RATE, MOUNTS: require('./game/data2').MOUNTS, STORY_END: D.STORY_END, NMAIN: D.NMAIN,
     X3: { THAN: Z.THAN, THAN_COST: Z.THAN_COST, MENH: Z.MENH, MENH_LVL: Z.MENH_LVL, MENH_CHANGE_VANG: Z.MENH_CHANGE_VANG, TRAITS: Z.TRAITS, TITLES: Z.TITLES, GATHER: { ...Z.GATHER, needLv: undefined },
       WORLD_EVENTS: Z.WORLD_EVENTS, ASCEND: Z.ASCEND, NIGHTMARE: Z.NIGHTMARE, MOUNT_MAX_LV: Z.MOUNT_MAX_LV },
   };
@@ -140,7 +165,7 @@ const META = metaBundle();
 // Tranh tuỳ chỉnh: public/assets/<thư mục>/<mã>.png|webp|jpg  (xem ART-SPEC.md)
 function scanAssets() {
   const out = {};
-  for (const k of ['monsters', 'bosses', 'npcs', 'heroes', 'maps', 'battle', 'mounts']) {
+  for (const k of ['monsters', 'bosses', 'npcs', 'heroes', 'maps', 'battle', 'mounts', 'fx', 'objects', 'ui', 'icons']) {
     out[k] = {};
     try { for (const f of fs.readdirSync(path.join(PUBLIC, 'assets', k))) { const m = /^(.+)\.(png|webp|jpe?g)$/i.exec(f); if (m) out[k][m[1]] = f; } } catch {}
   }
@@ -464,7 +489,7 @@ io.on('connection', (socket) => {
       text = k === 1 ? 'Ta là Thổ Địa vùng này, chẳng biết gì đâu…' : k === 2 ? 'Lại là ngươi? Đã bảo ta không biết gì mà…' : 'Thôi được… ngươi kiên nhẫn thật. Hãy niệm câu mật ngữ của Bồ Tát, ta sẽ trao bảo vật.';
       if (k >= 3) opts.push({ id: 'mantra', label: '🕉️ Niệm: “Án Ma Ni Bát Di Hồng”' });
     }
-    return { ok: true, dialog: { npc: n.id, look: n.look, name: n.name, icon: n.icon, text, options: opts }, noState: true };
+    return { ok: true, dialog: { npc: n.id, look: n.look, art: n.art, name: n.name, icon: n.icon, text, options: opts }, noState: true };
   });
 
   on('npc:act', true, (c, { id, opt }) => {
@@ -476,14 +501,14 @@ io.on('connection', (socket) => {
       const gate = F3.questGate(c, q); if (gate) return gate;
       const res = L.completeQuestStep(c);
       sysIfLevel(c, res.ups);
-      return { ok: true, dialogText: q.dialog, quest: res };
+      return { ok: true, dialogText: q.dialog, scene: require('./game/scenes').open(q, c), quest: res };
     }
     if (opt === 'fight' && n.boss) {
       const si = bossStepIdx(n.boss);
       const isQuest = q && q.type === 'boss' && q.boss === n.boss;
       if (!isQuest && !(si >= 0 && c.quest > si)) return { ok: false, msg: 'Chưa thể khiêu chiến.' };
       if (c.hp < 1) return { ok: false, msg: 'Khí huyết cạn, hãy trị thương trước.' };
-      return { ok: true, battle: startBattle(c, L.makeBoss(n.boss), { kind: 'boss', bossId: n.boss, quest: isQuest }) };
+      return { ok: true, scene: isQuest ? require('./game/scenes').boss(q, c) : undefined, battle: startBattle(c, L.makeBoss(n.boss), { kind: 'boss', bossId: n.boss, quest: isQuest, assist: D.BOSSES[n.boss].post ? [] : require('./game/companions').assistFor(c) }) };
     }
     { const x = F3hook.act(c, n, opt); if (x) return x; }
     if (opt === 'heal' && n.role === 'heal') {
@@ -606,6 +631,12 @@ io.on('connection', (socket) => {
         if (!opp.bot && db.chars[opp.id]) db.chars[opp.id].arena = Math.max(0, db.chars[opp.id].arena - 10);
         sys(`[Tam Giới Đấu] ${c.name} đánh bại ${opp.name}!`);
       } else { c.arena = Math.max(0, c.arena - 10); res.arena = -10; }
+    }
+    if (out === 'lose' && b.kind === 'boss' && b.opts.bossId) {
+      // Ngộ Không nhắc cách khắc chế chiêu đặc trưng của boss vừa thua
+      const BS = require('./game/bossskills'), B0 = D.BOSSES[b.opts.bossId] || {};
+      const k = (B0.skills || []).find((x) => BS.TIPS[x]);
+      res.tip = B0.feed ? BS.FEED_TIP : k ? BS.TIPS[k] : 'Boss mạnh dần theo từng ải. Lên thêm vài cấp, nâng đồ và mang đủ Tiên sủng rồi quay lại.';
     }
     if (out === 'lose') {
       if (!['arena', 'world', 'tower', 'nightmare', 'dungeon', 'trial'].includes(b.kind)) {
@@ -1123,7 +1154,9 @@ io.on('connection', (socket) => {
   const F3hook = F3.register(on, { db, notInBattle, startBattle, sys, toast, pushState, online, battles, io, socket, travel, mapPlayers, heroUnitsFrom, addChat, levelUp: (c, ups) => sysIfLevel(c, ups) });
   // lệnh chỉ dùng khi chạy kiểm thử (TDK_TEST=1) – KHÔNG bật trên máy chủ thật
   if (process.env.TDK_TEST === '1') on('test:give', true, (c, d2) => {
-    const { items, bac, vang, lvl, petLvl, points, quest, asc, energy, onl } = d2;
+    const { items, bac, vang, lvl, petLvl, points, quest, asc, energy, onl, gearQ, pets } = d2;
+    if (Number.isInteger(gearQ)) for (const s of D.SLOT_KEYS) c.equip[s] = L.makeEquip(s, lvl || c.lvl, gearQ);
+    if (Number.isInteger(pets)) { c.pets = []; c.activePets = []; for (let i = 0; i < pets; i++) { const p = L.makePet(D.speciesId(['hoyeu', 'kylan', 'phuong'][i % 3], D.ELEMENT_KEYS[i % 5], 2), lvl || c.lvl); c.pets.push(p); c.activePets.push(p.uid); } }
     if (points) c.points += points;
     if (Number.isInteger(quest)) { c.quest = Math.min(D.QUESTS.length, quest); c.qprog = 0; const q = D.QUESTS[c.quest]; c.unlocked = Math.max(c.unlocked, q ? D.MAPS[q.map].chapter : D.MAP_ORDER.length); if (c.quest >= D.STORY_END) c.nan = 81; }
     if (asc != null) c.asc = asc ? 1 : 0;

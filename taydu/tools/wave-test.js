@@ -32,7 +32,16 @@ async function player(tag, race = 'tien') {
   console.log('\n═══ A. Dữ liệu ═══');
   const D = require('../game/data'); require('../game/data2'); const Z = require('../game/data3');
   const L = require('../game/logic'); const F3 = require('../game/features3'); const { Battle } = require('../game/battle');
-  ok(D.MAP_ORDER.length === 21, '21 bản đồ (15 chính + 6 hậu truyện)', D.MAP_ORDER.length);
+  ok(D.MAP_ORDER.length === 35 && D.NMAIN === 29, '35 bản đồ (29 chính + 6 hậu truyện)', D.MAP_ORDER.length);
+  ok(D.QUESTS.length === 137 && D.STORY_END === 87, 'Giữ nguyên 137 nhiệm vụ, 87 bước chính truyện', D.QUESTS.length);
+  { const bad = []; for (const id of D.MAP_ORDER) { const M = D.MAPS[id], occ = new Set(M.npcs.map((n) => n.x + ',' + n.y)), seen = new Set([M.spawn + '']), q = [M.spawn];
+      const walk = (x, y) => M.tiles[y] && '.,P'.includes(M.tiles[y][x]) && !occ.has(x + ',' + y);
+      while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy); if (!seen.has(k) && walk(x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+      for (const n of M.npcs) if (![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((n.x + dx) + ',' + (n.y + dy)))) bad.push(id + ':' + n.id);
+      const py = M.tiles.findIndex((r) => r.includes('P')); if (py >= 0 && !seen.has(M.tiles[py].indexOf('P') + ',' + py)) bad.push(id + ':cổng'); }
+    ok(!bad.length, 'Mọi NPC và cổng ra trên 35 bản đồ đều đi tới được', bad.join(' ')); }
+  ok(D.QUESTS.every((q) => q.type !== 'talk' || D.MAPS[q.map].npcs.some((n) => n.id === q.npc)), 'NPC của mọi nhiệm vụ trò chuyện có trên đúng bản đồ');
+  ok(D.MAP_ORDER.every((id) => { const M = D.MAPS[id]; return M.npcs.every((n) => '.,'.includes(M.tiles[n.y][n.x]) || M.tiles[n.y][n.x] === 'P'); }), 'Mọi NPC đứng trên ô đi được');
   ok(D.QUESTS.slice(0, D.STORY_END).reduce((s, q) => s + q.nan, 0) === 81 && D.QUESTS.slice(D.STORY_END).every((q) => !q.nan), 'Đủ 81 nạn ở cốt truyện chính, hậu truyện không tính nạn');
   ok(D.MAPS.hondon.lv[1] === 160 && D.MAPS.namthien.asc && D.MAPS.hondon.asc && !D.MAPS.bonglai.asc, 'Hậu truyện tới cấp 160, 2 cõi cuối cần Phi Thăng');
   ok(Object.values(D.MAPS).every((m) => m.nodes.length >= 3 && m.nodes.every((n) => m.tiles[n.y][n.x] === '.')), 'Mỗi bản đồ có ≥3 điểm khai thác trên ô đất trống');
@@ -40,7 +49,8 @@ async function player(tag, race = 'tien') {
   const sp = D.getSpecies('than.nata.1');
   ok(sp && sp.than === 'nata' && sp.grade === 5 && sp.chan && sp.skills.includes('ts_nata2') && sp.look === 'nata', 'Loài Thần sủng ảo than.<mã>.<Chân>');
   ok(!D.getSpecies('than.khong.0') && !D.getSpecies('than.__proto__.0'), 'Mã Thần sủng lạ bị từ chối');
-  ok(Object.values(D.SKILLS).filter((s) => s.sig).length === 24, '24 tuyệt kỹ Thần sủng');
+  ok(Object.keys(D.SKILLS).filter((k) => k.startsWith('ts_')).length === 24, '24 tuyệt kỹ Thần sủng');
+  { const BS = require('../game/bossskills'); ok(Object.keys(BS.BOSS).every((b) => D.BOSSES[b] && BS.BOSS[b].sig.every((k) => D.SKILLS[k] && D.BOSSES[b].skills.includes(k))), 'Mọi boss chính truyện có chiêu đặc trưng'); ok(Object.values(D.BOSSES).filter((b) => b.map).every((b) => b.tier >= 0 && b.tier <= 4), 'Boss được xếp ải độ khó'); }
 
   // ------------------------------------------------------------------
   console.log('\n═══ B. Chiến đấu mới (trong tiến trình) ═══');
@@ -72,6 +82,8 @@ async function player(tag, race = 'tien') {
     const s0 = L.calcStats(c3).atk; c3.asc = 1; ok(L.calcStats(c3).atk > s0, 'Phi Thăng tăng chỉ số');
     // bế quan
     const c4 = L.createChar('x4', 'u', 'ThuW', 'tien', 'm', 0); c4.lvl = 40; c4.lastSeen = Date.now() - 3 * 3600e3;
+    const c5 = L.createChar('x5', 'u', 'ThuV', 'tien', 'm', 0); c5.quest = D.STORY_END; c5.unlocked = 15; c5.nan = 81;
+    F3.ensure(c5); ok(c5.unlocked === D.MAPS.donghai.chapter, 'Nhân vật cũ đã xong 81 nạn được tự mở Hậu truyện (Đông Hải)', c5.unlocked);
     const off = F3.onEnter(c4); ok(off && off.offline.min >= 179 && off.offline.exp > 0, 'Bế quan 3 giờ có phần thưởng', off && off.offline.min);
   }
 

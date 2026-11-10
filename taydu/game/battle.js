@@ -2,6 +2,7 @@
 //  CHIẾN ĐẤU THEO LƯỢT (máy chủ quyết định mọi kết quả)
 // =====================================================================
 const D = require('./data');
+const BS = require('./bossskills');
 const L = require('./logic');
 
 const PRIORITY = { defend: 3, item: 2, catch: 2, flee: 2, pet: 2 };
@@ -65,9 +66,9 @@ class Battle {
         id: u.id, side: u.side, kind: u.kind, name: u.name, lvl: u.lvl, icon: u.icon, hero: u.hero,
         element: u.element, grade: u.grade, mut: u.mut, boss: !!u.boss,
         hp: u.hp, maxHp: u.maxHp, mp: u.mp, maxMp: u.maxMp, dead: u.dead,
-        poison: u.poison, stun: u.stun, seal: u.seal, chaos: u.chaos, burn: u.burn, shield: u.shield, pos: u.pos,
+        poison: u.poison, stun: u.stun, seal: u.seal, chaos: u.chaos, burn: u.burn, shield: u.shield, pos: u.pos, blind: u.blind || undefined, slow: u.slow || undefined, mark: u.mark || undefined,
         buffs: u.buffs.map((b) => b.key), catchable: !!u.catchable,
-        spd: u.spd, form: u.sid ? u.sid.split('.')[0] : undefined, bossId: u.bossId, hid: u.hid,
+        spd: u.spd, form: u.sid ? u.sid.split('.')[0] : undefined, bossId: u.bossId, hid: u.hid, art: u.art || undefined,
         phase: u.phase || undefined, phases: u.phases || undefined, elite: u.elite || undefined, nm: u.nm || undefined, than: u.than || undefined, chan: u.chan || undefined, shadow: u.shadow || undefined,
       })),
       skills: this.get('p').skills,
@@ -82,7 +83,7 @@ class Battle {
     for (const u of this.units) {
       if (!u.boss || u.dead || !(u.phases > 1)) continue;
       u.phase = u.phase || 1;
-      const marks = u.phases === 2 ? [0.5] : [0.66, 0.33];
+      const marks = Array.from({ length: u.phases - 1 }, (_, i) => +(1 - (i + 1) / u.phases).toFixed(2));
       if (u.phase > marks.length || u.hp / u.maxHp > marks[u.phase - 1]) continue;
       u.phase++;
       const last = u.phase === u.phases;
@@ -90,7 +91,9 @@ class Battle {
       u.buffs.push({ key: 'enrage', turns: 999, atkUp: 0.18 * (u.phase - 1), dodgeUp: 0 });
       u.spd = Math.round(u.spd * 1.12); u.stun = 0; u.seal = 0; u.chaos = 0;
       const heal = Math.round(u.maxHp * (last ? 0.12 : 0.06)); u.hp = Math.min(u.maxHp, u.hp + heal);
-      const ev = { k: 'phase', a: u.id, n: u.phase, of: u.phases, h: heal, msg: last ? `${u.name} hiện nguyên hình – CUỒNG NỘ!` : `${u.name} nổi giận – sức mạnh tăng vọt!` };
+      const pa = D.BOSS_ART[u.bossId]; if (pa && pa[u.phase]) u.art = pa[u.phase];
+      const pm = (BS.BOSS[u.bossId] || {}).phaseMsg;
+      const ev = { k: 'phase', a: u.id, n: u.phase, of: u.phases, h: heal, art: u.art, msg: (pm && pm[u.phase]) || (last ? `${u.name} hiện nguyên hình – CUỒNG NỘ!` : `${u.name} nổi giận – sức mạnh tăng vọt!`) };
       if (this.opts.summonOnPhase && last && this.alive(1).length < 5) {
         const add = this.opts.summonOnPhase(u);
         ev.summons = [];
@@ -112,6 +115,7 @@ class Battle {
     const type = sk ? sk.type : 'phys';
     const power = sk ? sk.power : 1;
     const ev = { t: def.id };
+    if (att.blind > 0 && Math.random() < (type === 'phys' ? 0.4 : 0.2)) { ev.miss = true; ev.blindMiss = true; return ev; }
     if (type === 'phys') {
       const dodge = (def.dodge || 0) + this.buffVal(def, 'dodgeUp');
       if (Math.random() * 100 < dodge) { ev.miss = true; return ev; }
@@ -125,13 +129,17 @@ class Battle {
       else if (D.ELEMENTS[def.element].beats === att.element) { dmg *= 0.85; ev.adv = -1; }
     }
     if (def.defending) dmg *= 0.5;
-    if (Math.random() * 100 < (att.crit || 5)) { dmg *= 1.6; ev.crit = true; }
+    if (def.feed && att.element === def.feed) { dmg *= 0.6; ev.feed = true; const fb = def.buffs.filter((b) => b.key === 'feed').length; if (fb < 3) def.buffs.push({ key: 'feed', turns: 99, atkUp: 0.06, dodgeUp: 0 }); }
+    if (Math.random() * 100 < (att.crit || 5) + ((sk && sk.critUp) || 0)) { dmg *= 1.6; ev.crit = true; }
     dmg = Math.max(1, Math.round(dmg * L.randf(0.92, 1.08)));
     if (this.kind === 'world' && def.boss) dmg = Math.round(dmg * 1); // chừa chỗ cân bằng
     ev.d = dmg;
     this.applyDamage(def, dmg, ev);
-    if (sk && sk.stun && !def.dead && Math.random() < sk.stun * (1 - (def.res.stun || 0) / 100) * (def.boss ? 0.4 : 1)) { def.stun = Math.max(def.stun, 1); ev.stun = true; }
-    if (sk && sk.poison && !def.dead) { def.poison = sk.poison; def.poisonDmg = Math.round(att.matk * 0.35); ev.poison = true; }
+    const ctl = att.ctl || 1;
+    if (sk && sk.stun && !def.dead && Math.random() < sk.stun * ctl * (1 - (def.res.stun || 0) / 100) * (def.boss ? 0.4 : 1)) { def.stun = Math.max(def.stun, 1); ev.stun = true; if (sk.stunLabel) ev.label = sk.stunLabel; }
+    if (sk && sk.poison && !def.dead) { def.poison = sk.poison; def.poisonDmg = Math.round(Math.max(att.matk, sk.type === 'phys' ? att.atk : 0) * (sk.poisonMul || 0.35)); ev.poison = true; if (sk.poisonLabel) ev.label = sk.poisonLabel; }
+    for (const k of ['blind', 'slow']) if (sk && sk[k] && !def.dead && Math.random() < sk[k] * ctl * (def.boss ? 0.5 : 1)) { def[k] = Math.max(def[k] || 0, 2); ev[k] = true; }
+    if (sk && sk.dispel && !def.dead) this.dispel(def, ev);
     if (sk && sk.burn && !def.dead) { def.burn = Math.max(def.burn, sk.burn); def.burnDmg = Math.round(att.matk * 0.3); ev.burn = true; }
     if (sk && sk.drain) { const h = Math.round(dmg * sk.drain); att.hp = Math.min(att.maxHp, att.hp + h); ev.drain = h; }
     if (sk && sk.mpDrain && !def.dead) { const m = Math.round(def.mp * sk.mpDrain); def.mp -= m; att.mp = Math.min(att.maxMp, att.mp + m); ev.mpDrain = m; }
@@ -142,13 +150,24 @@ class Battle {
   applyStatus(att, def, sk) {
     const ev = { t: def.id, st: sk.status };
     const res = (def.res && def.res[sk.status]) || 0;
-    const p = sk.chance * (1 - res / 100) * (def.boss ? 0.55 : 1);
+    const p = sk.chance * (att.ctl || 1) * (1 - res / 100) * (def.boss ? 0.55 : 1);
     if (def.dead || Math.random() >= p) { ev.resist = true; return ev; }
     if (sk.status === 'stun') def.stun = Math.max(def.stun, sk.turns);
     else def[sk.status] = Math.max(def[sk.status] || 0, sk.turns);
-    ev.ok = true; ev.turns = sk.turns;
+    if (sk.status === 'mark') def.markDmg = Math.round(def.maxHp * 0.3);
+    if (sk.dot) { def.poison = Math.max(def.poison || 0, sk.turns); def.poisonDmg = Math.round(def.maxHp * sk.dot); }
+    ev.ok = true; ev.turns = sk.turns; if (sk.label) ev.label = sk.label;
     return ev;
   }
+
+  // xoá buff có lợi và khiên
+  dispel(def, ev) {
+    const n = def.buffs.length + (def.shield > 0 ? 1 : 0);
+    def.buffs = def.buffs.filter((b) => !((b.atkUp || 0) > 0 || (b.dodgeUp || 0) > 0) || b.key === 'enrage');
+    if (def.shield > 0) { def.shield = 0; def.shieldT = 0; }
+    if (n) ev.dispel = true;
+  }
+  debuff(def, d, ev) { if (def.dead) return; def.buffs = def.buffs.filter((b) => b.key !== d.key); def.buffs.push({ key: d.key, turns: d.turns + 1, atkUp: d.atkUp || 0, dodgeUp: d.dodgeUp || 0 }); ev.debuff = d.label || d.key; }
 
   applyDamage(u, dmg, ev) {
     if (u.shield > 0) { const ab = Math.min(u.shield, dmg); u.shield -= ab; dmg -= ab; if (ev) ev.absorb = ab; }
@@ -169,18 +188,27 @@ class Battle {
     const foes = this.alive(1 - u.side);
     const friends = this.alive(u.side);
     if (!foes.length) return null;
-    const usable = u.seal > 0 ? [] : (u.skills || []).map((k) => [k, D.SKILLS[k]]).filter(([, s]) => s && (s.mp || 0) <= u.mp);
+    const usable = u.seal > 0 ? [] : (u.skills || []).map((k) => [k, D.SKILLS[k]]).filter(([k, s]) => s && (s.mp || 0) <= u.mp && (!s.phaseMin || (u.phase || 1) >= s.phaseMin) && !((u.cd || {})[k] > this.round));
     const deadAlly = this.units.find((f) => f.side === u.side && f.dead && f.id !== 'p' && !f.caught);
     const rev = usable.find(([, s]) => s.type === 'revive');
     if (rev && deadAlly && Math.random() < 0.6) return { type: 'skill', skill: rev[0], target: deadAlly.id };
-    const ctl = usable.find(([, s]) => s.type === 'control');
-    if (ctl && Math.random() < 0.3) { const t = foes.find((f) => !f.stun && !f.seal && !f.chaos && f.id === 'p') || foes.find((f) => !f.stun && !f.seal && !f.chaos); if (t) return { type: 'skill', skill: ctl[0], target: t.id }; }
+    const sum = usable.find(([, s]) => s.type === 'summon');
+    if (sum && friends.length < 4 && Math.random() < 0.35) return { type: 'skill', skill: sum[0], target: u.id };
+    const ctls = usable.filter(([, s]) => s.type === 'control');
+    if (ctls.length && Math.random() < (u.boss ? 0.34 : 0.3)) {
+      const ctl = L.pick(ctls), cs = ctl[1];
+      const free = (f) => !f.stun && !f.seal && !f.chaos && !(cs.status && f[cs.status] > 0);
+      const t = cs.pick ? this.pickBy(foes.filter(free).length ? foes.filter(free) : foes, cs.pick) : (foes.find((f) => free(f) && f.id === 'p') || foes.find(free));
+      if (t) return { type: 'skill', skill: ctl[0], target: t.id };
+    }
+    const hb = usable.find(([, s]) => s.type === 'buff' && s.heal);
+    if (hb && u.hp / u.maxHp < 0.5 && Math.random() < 0.5) return { type: 'skill', skill: hb[0], target: u.id };
     const healSk = usable.find(([, s]) => s.type === 'heal');
     const hurt = friends.filter((f) => f.hp / f.maxHp < 0.4).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
     if (healSk && hurt && Math.random() < 0.7) return { type: 'skill', skill: healSk[0], target: hurt.id };
     if (healSk && healSk[1].target === 'allAlly' && friends.filter((f) => f.hp / f.maxHp < 0.7).length >= 2 && Math.random() < 0.6) return { type: 'skill', skill: healSk[0], target: u.id };
     const offensive = usable.filter(([, s]) => s.type === 'phys' || s.type === 'magic');
-    const buff = usable.find(([, s]) => s.type === 'buff');
+    const buff = usable.find(([, s]) => s.type === 'buff' && !s.heal);
     if (buff && !u.buffs.some((b) => b.key !== 'enrage') && !(buff[1].shield && u.shield > 0) && !((u.cd || {})[buff[0]] > this.round) && Math.random() < (buff[1].sig ? 0.4 : 0.25)) return { type: 'skill', skill: buff[0], target: u.id };
     let target;
     if (u.side === 1) {
@@ -189,11 +217,20 @@ class Battle {
     } else {
       target = foes.slice().sort((a, b) => a.hp - b.hp)[0];
     }
-    const sig = offensive.find(([, s]) => s.sig);
-    if (sig && Math.random() < 0.4) return { type: 'skill', skill: sig[0], target: target.id };
+    const sigs = offensive.filter(([, s]) => s.sig);
+    if (sigs.length && Math.random() < 0.42) { const sg = L.pick(sigs); return { type: 'skill', skill: sg[0], target: (sg[1].pick ? this.pickBy(foes, sg[1].pick) : target).id }; }
     const skillChance = u.boss ? (u.phase > 1 ? 0.65 : 0.5) : u.kind === 'pet' ? 0.45 : 0.3;
     if (offensive.length && Math.random() < skillChance) return { type: 'skill', skill: L.pick(offensive)[0], target: target.id };
     return { type: 'attack', target: target.id };
+  }
+
+  pickBy(pool, how) {
+    if (!pool.length) return null;
+    if (how === 'low') return pool.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+    if (how === 'strong') return pool.slice().sort((a, b) => Math.max(b.atk, b.matk) - Math.max(a.atk, a.matk))[0];
+    if (how === 'pet') return L.pick(pool.filter((f) => f.kind === 'pet')) || L.pick(pool);
+    if (how === 'player') return pool.find((f) => f.id === 'p') || L.pick(pool);
+    return L.pick(pool);
   }
 
   // ---------- 1 hiệp ----------
@@ -225,7 +262,7 @@ class Battle {
     }
     // phòng thủ có hiệu lực ngay từ đầu hiệp
     for (const p of plan) if (p.a && p.a.type === 'defend') p.u.defending = true;
-    plan.forEach((p) => { p.sp = (PRIORITY[p.a?.type] || 0) * 10000 + p.u.spd * L.randf(0.9, 1.1); });
+    plan.forEach((p) => { p.sp = (PRIORITY[p.a?.type] || 0) * 10000 + p.u.spd * (p.u.slow > 0 ? 0.7 : 1) * L.randf(0.9, 1.1); });
     plan.sort((a, b) => b.sp - a.sp);
 
     for (const { u, a } of plan) {
@@ -242,6 +279,20 @@ class Battle {
       this.exec(u, a, events);
       this.phaseCheck(events);
       this.checkEnd(events);
+    }
+
+    // đồ đệ trợ chiến (boss chính truyện): mỗi 3 hiệp một người ra tay
+    const AS = this.opts.assist;
+    if (!this.over && AS && AS.length && this.round % 3 === 2) {
+      const who = AS[Math.floor(this.round / 3) % AS.length], A = require('./companions').ASSIST[who];
+      const foe = this.alive(1).find((x) => x.boss) || this.alive(1)[0];
+      if (A && foe) {
+        const ev = { k: 'assist', who, name: A.name, s: A.s, fx: A.fx, line: A.line, hits: [] };
+        if (A.heal) for (const f of this.alive(0)) { const h = Math.min(f.maxHp - f.hp, Math.round(f.maxHp * A.heal)); f.hp += h; ev.hits.push({ t: f.id, h }); }
+        else for (let i = 0; i < A.hits; i++) { const t = this.alive(1).find((x) => x.boss) || this.alive(1)[0]; if (!t) break; const me = this.get('p'); const pw = Math.max(me.atk, me.matk) * A.pow; const K = 50 + me.lvl * 4; const d = Math.max(1, Math.round(pw * (K / (K + t.def)) * L.randf(0.9, 1.1))); const h = { t: t.id, d }; this.applyDamage(t, d, h); ev.hits.push(h); }
+        events.push(ev);
+        this.phaseCheck(events); this.checkEnd(events);
+      }
     }
 
     // cuối hiệp: độc, buff
@@ -261,6 +312,12 @@ class Battle {
           this.applyDamage(u, dmg, ev); u.burn--; events.push(ev);
         }
         if (u.seal > 0) u.seal--;
+        if (u.blind > 0) u.blind--;
+        if (u.slow > 0) u.slow--;
+        if (u.mark > 0 && --u.mark === 0 && !u.dead) {
+          const dmg = Math.max(1, Math.round((u.markDmg || u.maxHp * 0.3) * (u.defending ? 0.5 : 1)));
+          const ev = { k: 'mark', t: u.id, d: dmg, def: !!u.defending }; this.applyDamage(u, dmg, ev); events.push(ev);
+        }
         if (u.regenPct && !u.dead) { const h = Math.min(u.maxHp - u.hp, Math.round(u.maxHp * u.regenPct)); if (h > 0) { u.hp += h; events.push({ k: 'regen', t: u.id, h }); } }
         if (u.shieldT > 0 && --u.shieldT === 0) u.shield = 0;
         u.buffs = u.buffs.filter((b) => --b.turns > 0);
@@ -349,6 +406,23 @@ class Battle {
       if (!sk || u.mp < (sk.mp || 0)) sk = null;
       else u.mp -= sk.mp || 0;
     }
+    if (sk && sk.copy) {
+      const pl = this.get('p');
+      const best = pl && (pl.skills || []).map((k) => D.SKILLS[k]).filter((x) => x && (x.type === 'magic' || x.type === 'phys')).sort((x, y) => (y.power || 0) * (y.target === 'allEnemy' ? 1.6 : 1) - (x.power || 0) * (x.target === 'allEnemy' ? 1.6 : 1))[0];
+      if (best) sk = { ...best, name: sk.name + ' · ' + best.name, mp: 0 };
+    }
+    if (sk && sk.type === 'summon') {
+      const room = 5 - this.alive(u.side).length, ids = [];
+      for (const [hid, d] of (sk.summon || []).slice(0, Math.max(0, room))) {
+        const m = L.makeHuman(hid, Math.max(1, u.lvl + d)), id = 'e' + this.units.length;
+        const nu = this.mk({ ...m, id, side: u.side, hp: m.maxHp, mp: m.maxMp, res: { seal: 20, chaos: 20, stun: 20 } });
+        nu.pos = Math.max(...this.units.filter((x) => x.side === u.side).map((x) => x.pos || 0)) + 1;
+        this.units.push(nu); ids.push(id);
+      }
+      u.cd = u.cd || {}; u.cd[a.skill] = this.round + 4;
+      events.push({ k: 'skill', a: u.id, s: sk.name, fx: sk.fx, hits: [], summons: ids });
+      return;
+    }
     if (sk && sk.type === 'heal') {
       if (sk.target === 'allAlly') {
         const hits = this.alive(u.side).map((f) => { const h = Math.round(u.matk * sk.power * L.randf(0.95, 1.05) + 20), b0 = f.hp; f.hp = Math.min(f.maxHp, f.hp + h); return { t: f.id, h: f.hp - b0 }; });
@@ -364,6 +438,7 @@ class Battle {
       return;
     }
     if (sk && sk.type === 'buff') {
+      if (sk.heal) { const h = Math.min(u.maxHp - u.hp, Math.round(u.maxHp * sk.heal)); u.hp += h; events.push({ k: 'skill', a: u.id, s: sk.name, fx: sk.fx || 'heal', hits: [{ t: u.id, h }] }); u.cd = u.cd || {}; u.cd[a.skill] = this.round + 3; return; }
       u.buffs.push({ key: a.skill, turns: sk.buff.turns + 1, atkUp: sk.buff.atkUp || 0, dodgeUp: sk.buff.dodgeUp || 0 });
       if (u.side === 1) { u.cd = u.cd || {}; u.cd[a.skill] = this.round + sk.buff.turns + 3; } // quái/boss: hồi chiêu buff
       if (sk.shield) { u.shield = Math.round(u.maxHp * sk.shield); u.shieldT = sk.buff.turns + 1; }
@@ -379,9 +454,19 @@ class Battle {
       return;
     }
     if (sk && sk.type === 'control') {
-      const targets = sk.target === 'allEnemy' ? this.alive(enemySide) : [this.pickTarget(enemySide, a.target)].filter(Boolean);
+      let targets = sk.target === 'allEnemy' ? this.alive(enemySide) : [this.pickTarget(enemySide, a.target)].filter(Boolean);
+      if (sk.count && targets.length > sk.count) targets = targets.sort(() => Math.random() - 0.5).slice(0, sk.count);
       if (!targets.length) return;
-      events.push({ k: 'skill', a: u.id, s: sk.name, fx: sk.fx, aoe: sk.target === 'allEnemy', hits: targets.map((t) => this.applyStatus(u, t, sk)) });
+      const hits = targets.map((t) => {
+        if (sk.status) return this.applyStatus(u, t, sk);
+        const ev = { t: t.id, st: 'debuff', ok: true };
+        if (sk.dispel) this.dispel(t, ev);
+        if (sk.debuff) this.debuff(t, sk.debuff, ev);
+        return ev;
+      });
+      if (sk.status && (sk.dispel || sk.debuff)) hits.forEach((h) => { const t = this.get(h.t); if (h.ok && t) { if (sk.dispel) this.dispel(t, h); if (sk.debuff) this.debuff(t, sk.debuff, h); } });
+      if (sk.cd || u.side === 1) { u.cd = u.cd || {}; u.cd[a.skill] = this.round + (sk.cd || 2); }
+      events.push({ k: 'skill', a: u.id, s: sk.name, fx: sk.fx, aoe: sk.target === 'allEnemy' && !sk.count, hits });
       return;
     }
     if (sk && sk.selfCost) { const c2 = Math.min(u.hp - 1, Math.round(u.maxHp * sk.selfCost)); u.hp -= c2; events.push({ k: 'selfcost', a: u.id, d: c2 }); }
@@ -389,7 +474,15 @@ class Battle {
     if (sk && sk.target === 'allEnemy') targets = this.alive(enemySide);
     else { const t = this.pickTarget(enemySide, a.target); targets = t ? [t] : []; }
     if (!targets.length) return;
-    const hits = targets.map((t) => this.calcHit(u, t, sk));
+    let hits;
+    if (sk && sk.hits > 1) {
+      hits = [];
+      for (let i = 0; i < sk.hits; i++) {
+        const pool = this.alive(enemySide); if (!pool.length) break;
+        const t = sk.rand ? L.pick(pool) : (targets[0].dead ? L.pick(pool) : targets[0]);
+        hits.push(this.calcHit(u, t, sk));
+      }
+    } else hits = targets.map((t) => this.calcHit(u, t, sk));
     if (sk && sk.healAll) for (const f of this.alive(u.side)) { const h = Math.min(f.maxHp - f.hp, Math.round(f.maxHp * sk.healAll)); f.hp += h; if (h) hits.push({ t: f.id, h }); }
     events.push({ k: sk ? 'skill' : 'atk', a: u.id, s: sk ? sk.name : null, fx: sk ? sk.fx : 'hit', aoe: sk && sk.target === 'allEnemy', hits });
   }

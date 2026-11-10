@@ -241,6 +241,7 @@ let STORY_END = 0; // số bước của cốt truyện chính (81 nạn) – sa
   let nanNo = 0;
   CHAPTERS_ALL.forEach((ch, ci) => {
     const L = STORY.layout(ch.layout[0], ch.layout[1]);
+    if (ch.tiles) { L.tiles = ch.tiles.slice(); L.spawn = ch.spawn.slice(); }
     if (ch.slots) L.slots = ch.slots;
     const npcs = ch.npcs.map(([id, name, icon, o = {}], i) => {
       const [x, y] = L.slots[i];
@@ -248,25 +249,28 @@ let STORY_END = 0; // số bước của cốt truyện chính (81 nạn) – sa
       if (o.boss) { delete n.boss; n.boss = id; }
       return n;
     });
-    const k = Math.min(1, ci / (NMAIN - 1));
+    // eq = vị trí tương đương trong 15 chương cũ (giữ nguyên độ khó khi tách 29 bản đồ)
+    const eq = ch.post ? 15 + (ci - NMAIN) : (ch.eq != null ? ch.eq : ci);
+    const k = Math.min(1, eq / 14);
     const grades = ch.post ? [Math.max(4, 14 - (ci - NMAIN) * 2), 30, 32, 16 + (ci - NMAIN), 8 + (ci - NMAIN)]
       : [72 - 47 * k, 23 + 9 * k, 5 + 20 * k, Math.max(0, 13 * k - 1), Math.max(0, 6 * k - 1)].map((v) => Math.round(v));
     MAPS[ch.id] = {
-      name: ch.name, sub: ch.sub, chapter: ci + 1, theme: ch.theme, lv: ch.lv, spawn: L.spawn, tiles: L.tiles, npcs,
+      name: ch.name, sub: ch.sub, chapter: ci + 1, theme: ch.theme, bg: ch.bg || ch.theme, lv: ch.lv, spawn: L.spawn, tiles: L.tiles, npcs, oldId: ch.oldId || ch.id,
       encounter: { forms: ch.enc.forms, humans: ch.enc.humans || [], grades, rate: 0.16, group: ci === 0 ? [1, 2] : ch.post ? [2, 3] : [1, 3] },
       secret: ch.secret, post: !!ch.post, asc: !!ch.asc,
     };
     // boss: cấp tăng dần trong chương
     const bossSteps = ch.steps.filter((s) => s.t === 'boss');
-    bossSteps.forEach((s, bi) => {
+    bossSteps.forEach((s, bi0) => {
+      const bi = s._bi != null ? s._bi : bi0;
       const [name, icon, element, skills, minions] = BOSSDEF[s.boss];
-      const lv = Math.round(ch.lv[0] + 1 + ((ch.lv[1] - ch.lv[0] - 1) * (bi + 1)) / bossSteps.length);
+      const lv = Math.round(ch.lv[0] + 1 + ((ch.lv[1] - ch.lv[0] - 1) * (bi0 + 1)) / bossSteps.length);
       BOSSES[s.boss] = {
         name, icon, element, skills, lv, post: !!ch.post, map: ch.id,
-        hpMul: Math.min(9, +(3 + ci * 0.38 + bi * 0.3).toFixed(2)),
-        atkMul: +(1.12 + ci * 0.018 + bi * 0.02).toFixed(3),
+        hpMul: Math.min(9, +(3 + eq * 0.38 + bi * 0.3).toFixed(2)),
+        atkMul: +(1.12 + eq * 0.018 + bi * 0.02).toFixed(3),
         minions: minions.map(([hid, d]) => [hid, Math.max(1, lv + d)]),
-        phases: ch.post ? (s.boss === 'mato' ? 3 : 2) : (bi === bossSteps.length - 1 ? 2 : 1),
+        phases: ch.post ? (s.boss === 'mato' ? 3 : 2) : (s._phase2 != null ? (s._phase2 ? 2 : 1) : (bi === bossSteps.length - 1 ? 2 : 1)),
       };
     });
     // nhiệm vụ + phần thưởng tự tính
@@ -280,13 +284,13 @@ let STORY_END = 0; // số bước của cốt truyện chính (81 nạn) – sa
       if (s.t === 'boss' && si % 3 === 2) items.bau_vang = 1;
       if (ch.post && s.t === 'boss') items.chan_linh = 1;
       if (ch.post && s.boss === 'aodieu') items.aodieu_vu = 10;
-      const last = si === ch.steps.length - 1;
+      const last = s._last != null ? s._last : si === ch.steps.length - 1;
       const nan = ci === 0 || ch.post ? 0 : 1;
       if (nan) nanNo++;
       QUESTS.push({
         map: ch.id, title: s.title, type: s.t, npc: s.npc, boss: s.boss, count: s.n, text: s.text, dialog: s.dialog,
         nan, no: nan ? nanNo : 0, chapter: ci + 1, post: !!ch.post, needAsc: !!s.needAsc,
-        reward: { exp: Math.round(need(lvT) * f), bac: Math.round(lvT * { talk: 12, kill: 20, boss: 45 }[s.t]), vang: (s.t === 'boss' ? 2 + Math.floor(ci / 2) : 0) + (last ? 15 : 0), items },
+        reward: { exp: Math.round(need(lvT) * f), bac: Math.round(lvT * { talk: 12, kill: 20, boss: 45 }[s.t]), vang: (s.t === 'boss' ? 2 + Math.floor(eq / 2) : 0) + (last ? 15 : 0), items },
       });
     });
     if (ci === NMAIN - 1) STORY_END = QUESTS.length;
@@ -295,6 +299,16 @@ let STORY_END = 0; // số bước của cốt truyện chính (81 nạn) – sa
 }
 // Boss thế giới
 BOSSES.world = { name: 'Cửu Đầu Trùng', icon: '🐲', lv: 40, element: 'thuy', hpMul: 1, atkMul: 1.1, skills: ['pet_aoe', 'pet_thuy'], minions: [] };
+
+// Chiêu đặc trưng + độ khó theo ải (game/bossskills.js)
+require('./bossskills').apply({ SKILLS, BOSSES, MAP_ORDER });
+
+// Tranh theo giai đoạn của boss (bosses/<mã>.png): giai đoạn → tranh
+const BOSS_ART = {
+  nata: { 2: 'nata_2' }, giavuong: { 2: 'giavuong_2' }, nguuma: { 2: 'nguuma_2' }, cuudau: { 2: 'cuudau_2' },
+  quoctruong: { 2: 'quoctruong_2' }, chuottinh: { 2: 'chuottinh_2' }, ngoctho: { 2: 'ngoctho_2' },
+  mato: { 2: 'mato_2', 3: 'mato_3' }, bachcot: { 1: 'bachcot_a', 2: 'bachcot_b', 3: 'bachcot_c', 4: 'bachcot' },
+};
 
 // ---------------- Nhiệm vụ ẩn ----------------
 const SECRETS = {
@@ -321,5 +335,5 @@ module.exports = {
   RACE_ALIAS,
   RACES, SKILLS, ELEMENTS, ELEMENT_KEYS, GRADES, FORMS, FORM_BY_ID, getSpecies, speciesId, SPECIES_COUNT,
   ITEMS, GEM_IDS, SLOTS, SLOT_KEYS, MATERIALS, QUALITIES, ENHANCE_RATE, STAT_NAMES,
-  MAPS, MAP_ORDER, HUMANS, BOSSES, QUESTS, SECRETS, CONFIG, STORY_END,
+  MAPS, MAP_ORDER, HUMANS, BOSSES, QUESTS, SECRETS, CONFIG, STORY_END, NMAIN: STORY.CHAPTERS.length, MAP_ALIAS: STORY.MAP_ALIAS, BOSS_ART,
 };

@@ -24,6 +24,8 @@ function seasonEnds() { const d = vn(); return Date.UTC(d.getUTCFullYear(), d.ge
 //  KHỞI TẠO DỮ LIỆU NHÂN VẬT (lười – gọi ở mọi nơi cần)
 // =====================================================================
 function ensure(c) {
+  // nhân vật đã xong cốt truyện trước khi có Hậu truyện: luôn mở khoá chương chứa nhiệm vụ hiện tại
+  if (Number.isInteger(c.quest)) { const q = D.QUESTS[c.quest]; if (q && D.MAPS[q.map] && (c.unlocked || 1) < D.MAPS[q.map].chapter) c.unlocked = D.MAPS[q.map].chapter; }
   if (c._x3) return c;
   Object.defineProperty(c, '_x3', { value: true, enumerable: false, writable: true });
   if (c.menh === undefined) c.menh = null;
@@ -636,7 +638,7 @@ function register(on, ctx) {
   });
   on('mount3:list', true, (c) => {
     ensure(c);
-    return { ok: true, noState: true, list: Object.entries(X.MOUNTS).map(([id, m]) => ({ id, ...m, owned: (c.mounts || []).includes(id), riding: c.mount === id, lv: c.mountLv[id] || 1, up: Z.mountUpCost(c.mountLv[id] || 1), maxLv: Z.MOUNT_MAX_LV, recipe: X.RECIPES[id] ? true : false })), food: L.countItem(c, 'thu_luong') };
+    return { ok: true, noState: true, list: Object.entries(X.MOUNTS).map(([id, m]) => ({ id, ...m, bossName: m.boss ? D.BOSSES[m.boss].name : undefined, owned: (c.mounts || []).includes(id), riding: c.mount === id, lv: c.mountLv[id] || 1, up: Z.mountUpCost(c.mountLv[id] || 1), maxLv: Z.MOUNT_MAX_LV, recipe: X.RECIPES[id] ? true : false })), food: L.countItem(c, 'thu_luong') };
   });
 
   // ---------------- ÁC MỘNG ----------------
@@ -844,6 +846,10 @@ function afterBattle(c, b, res, ctx) {
   if (!win) {
     if (b.kind === 'dungeon' || b.kind === 'trial') { res.run = { failed: true, stage: b.opts.stage }; c.run = null; }
     return;
+  }
+  if (b.kind === 'boss' && b.opts.bossId) {
+    const mid = Object.keys(X.MOUNTS).find((k) => X.MOUNTS[k].boss === b.opts.bossId);
+    if (mid && !(c.mounts || []).includes(mid)) { c.mounts = [...(c.mounts || []), mid]; res.mountGot = X.MOUNTS[mid].name; if (ctx && ctx.sys) ctx.sys(`${c.name} thuần phục được thú cưỡi thần ${X.MOUNTS[mid].name}!`); }
   }
   const kills = enemies.filter((e) => e.dead && !e.caught).length;
   if (['wild', 'boss', 'nightmare', 'dungeon', 'tower', 'peach'].includes(b.kind)) track(c, 'kill', kills);

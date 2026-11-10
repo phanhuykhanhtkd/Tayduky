@@ -26,7 +26,8 @@ function client() {
   async function fight(b) { for (let i = 0; i < 80 && b; i++) { const foe = b.units.find((u) => u.side === 1 && !u.dead); const a = await emit('battle:act', { type: 'attack', target: foe?.id }); if (a.result) { st = a.state; return a.result; } b = a.snapshot; } }
   async function walk(route) { for (const [x, y] of route) { const m = await emit('move', { x, y }); if (!m.ok) return { fail: m.msg }; st.x = x; st.y = y; if (m.battle) { const res = await fight(m.battle); return { battle: res }; } } return {}; }
   const t0 = Date.now(); let steps = 0, lastQ = -1, stuck = 0;
-  while (!st.quest.done && steps < 4000) {
+  const STOP = +process.env.STOP || 1e9; // dừng sớm ở bước nhiệm vụ này (thử nhanh vài chương đầu)
+  while (!st.quest.done && st.quest.idx < STOP && steps < 4000) {
     steps++;
     const q = st.quest;
     if (q.idx === lastQ) { if (++stuck > 400) throw new Error('kẹt ở bước ' + q.idx + ' ' + q.title); } else { stuck = 0; lastQ = q.idx; console.log(`[${q.idx}] Chương ${meta.MAPS[q.map].chapter} · ${q.no ? 'Nạn ' + q.no + ': ' : ''}${q.title}`); }
