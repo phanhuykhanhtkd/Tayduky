@@ -19,6 +19,16 @@ const SPEAKERS = {
   hachhung: ['Hắc Hùng Tinh', 'hachhung'], batgioi: ['Trư Bát Giới', 'batgioi'], caothai: ['Cao Thái Công', 'laoong', 'caothai'],
   hoangphong: ['Hoàng Phong Quái', 'hoangphong'], linhcat: ['Linh Cát Bồ Tát', 'linhcat'], thienbinh: ['Thiên Binh', 'thienbinh'],
   tieutang: ['Tiểu Sa Di', 'duocsu1', 'tieutang'], satang: ['Sa Ngộ Tĩnh', 'satang'], laodo: ['Lão Lái Đò', 'laoong', 'laodo'], phudan: ['Bà Mẹ', 'laomau'],
+  // ---- đợt 2: Hồi 22 – 46 ----
+  laomau: ['Lê Sơn Lão Mẫu', 'laomau'], giathi: ['Bà Góa Họ Giả', 'laomau'], thanhphong: ['Thanh Phong', 'daodong', 'thanhphong'], minhnguyet: ['Minh Nguyệt', 'daodong', 'minhnguyet'],
+  tranguyen: ['Trấn Nguyên Đại Tiên', 'tranguyen'], laohau: ['Lão Hầu Thông Bối', 'laohau'], tieuphu: ['Tiều Phu', 'tieuphu'],
+  bachcot: ['Bạch Cốt Tinh', 'bachcot'], thonnu: ['Cô Thôn Nữ', 'bachcot', 'bachcot_a'], balao: ['Bà Lão', 'bachcot', 'bachcot_b'], onglao: ['Ông Lão', 'bachcot', 'bachcot_c'],
+  congchua: ['Công Chúa Bách Hoa Tu', 'congchua'], hoangbao: ['Hoàng Bào Quái', 'hoangbao'], bachlongma: ['Bạch Long Mã', 'tieubachlong'],
+  ngangiac: ['Ngân Giác Đại Vương', 'ngangiac'], kimgiac: ['Kim Giác Đại Vương', 'kimgiac'], laoquan: ['Thái Thượng Lão Quân', 'laoquan'], tieuyeu: ['Tiểu Yêu Tinh Tế Quỷ', 'tieuyeu'],
+  vuaoke: ['Hồn Vua Ô Kê', 'vuaoke'], vuaoke_song: ['Vua Ô Kê', 'vuaoke', 'vuaoke_song'], vanthu: ['Văn Thù Bồ Tát', 'vanthu'], giavuong: ['Giả Quốc Vương', 'giavuong'], thaitu: ['Thái Tử Ô Kê', 'vua'],
+  sonthan: ['Sơn Thần Hiệu Sơn', 'thodia'], honghai: ['Hồng Hài Nhi', 'honghai'], honghai_be: ['Đứa Bé Treo Trên Cây', 'honghai', 'honghai_be'], hoayeu: ['Hỏa Yêu Binh', 'hoayeu'],
+  ngudan: ['Ngư Phủ Hắc Hà', 'tieuphu'], dalong: ['Đà Long', 'dalong'], mangang: ['Thái Tử Ma Ngang', 'tieubachlong', 'mangang'],
+  tangnhan: ['Tăng Nhân Khổ Sai', 'tangnhan'], vuaxatri: ['Vua Xa Trì', 'vua'], holuc: ['Hổ Lực Đại Tiên', 'holuc'], duongluc: ['Lộc Lực · Dương Lực', 'duongluc'], daodong: ['Đạo Đồng', 'daodong'],
 };
 
 const S = {
@@ -245,6 +255,315 @@ const S = {
       ['nar', 'Bảo trượng hoá thành con rồng vàng tám móng, quắp con chồn vàng lên trời.'],
       ['ngokhong', 'Đa tạ Bồ Tát! Sư phụ, đi tiếp thôi. Phía trước là sông Lưu Sa.'],
     ],
+  },
+
+  // ============================ ĐỢT 2 · HỒI 22 – 46 ============================
+  'Lưu Sa khó qua': {
+    open: [
+      ['nar', 'Một dòng sông mênh mông chắn ngang đường. Tấm bia đá bên bờ khắc ba chữ "Lưu Sa Hà": rộng tám trăm dặm, sâu ba nghìn trượng, lông ngỗng thả xuống cũng chìm.'],
+      ['laodo', 'Ở đây không có thuyền đâu khách ơi. Nước sông này nuốt cả lá lau, ai bước xuống là chìm mất xác.'],
+      ['batgioi', 'Sư phụ xem kìa, dưới nước có bóng đen lớn lắm đang bơi quanh!'],
+      ['ngokhong', 'Yêu khí nặng thật. Thủy quái dưới sông kéo lên cả bầy rồi. Hộ pháp, dẹp bọn nhãi nhép trước đã!'],
+    ],
+    win: [
+      ['laodo', 'Bầy thủy quái tan rồi… nhưng con quỷ lớn nhất vẫn ở dưới đáy. Nó đeo chuỗi chín cái đầu lâu, nghe nói đều là người đi thỉnh kinh.'],
+    ],
+  },
+  'Thu được Sa Tăng': {
+    boss: [
+      ['nar', 'Sóng cát dựng đứng. Một yêu quái mặt xanh, tóc đỏ rối bù, cổ đeo chuỗi chín đầu lâu, tay cầm bảo trượng nhảy vọt lên bờ.'],
+      ['satang', 'Kẻ nào dám tới bờ Lưu Sa của ta? Đúng lúc ta đang đói!'],
+      ['batgioi', 'Đói thì ăn đinh ba của lão Trư đây này!'],
+      ['ngokhong', 'Con quỷ này lặn giỏi lắm. Đánh nó lên bờ, đừng để nó chui xuống nước!'],
+    ],
+    win: [
+      ['nar', 'Mộc Tra Huệ Ngạn, đệ tử Quan Âm, giáng xuống bờ sông.'],
+      ['satang', 'Bồ Tát dặn ta chờ người đi thỉnh kinh… Thì ra là các vị! Ta vốn là Quyển Liêm Đại Tướng, vì đánh vỡ chén lưu ly ở hội Bàn Đào mà bị đày xuống đây, bảy ngày lại bị phi kiếm đâm sườn một lần.'],
+      ['duongtang', 'A di đà Phật. Từ nay con theo thầy, pháp danh là Sa Ngộ Tĩnh.'],
+      ['nar', 'Sa Tăng tháo chuỗi đầu lâu, kết với hồ lô của Bồ Tát thành chiếc bè, đưa thầy trò vượt tám trăm dặm Lưu Sa.'],
+      ['satang', 'Hộ pháp, nhờ có người mà đệ được gột rửa tội lỗi. Đường còn dài, đệ sẽ gánh hành lý cho cả đoàn.'],
+    ],
+    next: 'Qua sông, trời đã tối. Phía trước có một trang viện đèn đuốc sáng trưng giữa nơi đồng không mông quạnh…',
+  },
+  'Bốn Thánh hiển hóa': {
+    open: [
+      ['giathi', 'Các vị sư từ Đông Thổ tới ư? Nhà ta giàu có, ruộng nghìn khoảnh, chỉ tiếc chồng mất sớm, còn ba đứa con gái Chân Chân, Ái Ái, Liên Liên chưa gả.'],
+      ['giathi', 'Bốn thầy trò ở lại làm rể nhà ta, khỏi phải lặn lội sang Tây Thiên làm gì cho khổ.'],
+      ['duongtang', 'Bần tăng một lòng hướng Phật, xin bà thứ lỗi.'],
+      ['batgioi', 'Sư phụ không ở thì… lão Trư ở cũng được mà! Hì hì.'],
+      ['nar', 'Đêm ấy Bát Giới lén ra sau nhà. Bà góa bảo hắn mặc thử chiếc áo lưới của các con gái…'],
+      ['nar', 'Sáng ra, trang viện biến mất. Chỉ còn cánh rừng thông, và Bát Giới bị trói treo lơ lửng trên cành cây.'],
+      ['laomau', 'Ta là Lê Sơn Lão Mẫu. Ba cô con gái là Quan Âm, Văn Thù, Phổ Hiền. Bốn Thánh hóa phép để thử lòng thiền của thầy trò đấy. Bát Giới, nhớ chưa? Ha ha!'],
+      ['batgioi', 'Nhớ rồi, nhớ rồi! Lão Trư không dám nữa đâu… Hộ pháp ơi, cởi trói giúp với!'],
+    ],
+    next: 'Đi tiếp về phía tây, thầy trò tới núi Vạn Thọ, nơi có đạo quán Ngũ Trang của Trấn Nguyên Đại Tiên.',
+  },
+  'Ngũ Trang Quán': {
+    open: [
+      ['thanhphong', 'Sư phụ chúng con là Trấn Nguyên Đại Tiên, đi nghe giảng ở cung Di La. Trước khi đi người dặn: lấy hai quả Nhân Sâm mời Đường Tam Tạng.'],
+      ['minhnguyet', 'Cây Nhân Sâm ba nghìn năm ra hoa, ba nghìn năm kết quả, ba nghìn năm mới chín. Ngửi một lần sống ba trăm sáu mươi tuổi, ăn một quả sống bốn vạn bảy nghìn năm.'],
+      ['duongtang', 'Quả… quả này giống hệt đứa trẻ mới sinh! Bần tăng không dám ăn!'],
+      ['batgioi', 'Thầy không ăn thì phí! Sư huynh, lấy kim kích tử khều trộm mấy quả đi…'],
+      ['nar', 'Ngộ Không lẻn vào vườn, hái ba quả. Thanh Phong, Minh Nguyệt đếm thiếu, mắng chửi thầy trò không tiếc lời.'],
+      ['ngokhong', 'Mắng Lão Tôn à? Được! Không ai ăn được nữa!'],
+      ['nar', 'Ngộ Không vung gậy quật đổ cả cây Nhân Sâm. Trời vừa sáng, Trấn Nguyên Đại Tiên trở về.'],
+    ],
+    boss: [
+      ['tranguyen', 'Khỉ đá! Ngươi phá cây tiên mà trời đất sinh ra từ thuở hỗn mang. Hôm nay không trồng lại được cây thì đừng hòng đi!'],
+      ['ngokhong', 'Sư phụ, ống tay áo lão rộng như trời đất, Tụ Lý Càn Khôn đấy! Đừng để lão phẩy trúng!'],
+      ['me', 'Để ta chặn ống tay áo, Đại Thánh đánh chính diện!'],
+    ],
+    win: [
+      ['tranguyen', 'Bản lĩnh không tồi… Nhưng đánh thắng ta thì cây Nhân Sâm cũng không sống lại được.'],
+      ['ngokhong', 'Lão Tôn sẽ đi khắp Bồng Lai, Phương Trượng, Doanh Châu tìm phương thuốc. Cứu được cây, lão phải thả sư phụ!'],
+      ['nar', 'Phúc Lộc Thọ ở Bồng Lai, Đông Hoa Đế Quân ở Phương Trượng, Cửu Lão ở Doanh Châu… ai cũng lắc đầu. Ngộ Không đành bay về Nam Hải.'],
+    ],
+  },
+  'Cứu cây Nhân Sâm': {
+    open: [
+      ['quanam', 'Con khỉ này lại gây chuyện. Thôi được, nước cam lộ trong tịnh bình của ta đã từng cứu sống cây dương liễu bị Lão Quân đốt khô.'],
+      ['nar', 'Bồ Tát rảy cành dương liễu. Cây Nhân Sâm từ từ đứng thẳng, cành lá xanh tươi, ba mươi quả lại treo lủng lẳng.'],
+      ['tranguyen', 'Bồ Tát đại từ! Hôm nay ta mở hội Nhân Sâm mời cả Bồ Tát lẫn thầy trò.'],
+      ['tranguyen', 'Tôn Ngộ Không, ngươi phá cây ta, nhưng cũng vì cây ta mà lặn lội ba đảo tiên. Ta với ngươi kết làm huynh đệ!'],
+      ['ngokhong', 'Ha ha, Lão Tôn có thêm một ông anh ở núi Vạn Thọ rồi!'],
+    ],
+    next: 'Rời Ngũ Trang Quán, đường lên Bạch Hổ Lĩnh vắng ngắt, đá trắng như xương phơi giữa nắng.',
+  },
+  'Đuổi Tâm Viên': {
+    open: [
+      ['duongtang', 'Đi cả ngày, bụng đói quá. Ngộ Không, con đi xin ít cơm chay về đây.'],
+      ['nar', 'Ngộ Không vừa đi, một cô thôn nữ xinh xắn xách giỏ cơm bước tới.'],
+      ['thonnu', 'Chồng ta làm ruộng trên núi, ta mang cơm cho chàng… Các sư cứ ăn trước, đừng ngại.'],
+      ['batgioi', 'Sư phụ, người ta có lòng mà!'],
+    ],
+    boss: [
+      ['ngokhong', 'Sư phụ, nó là yêu tinh! Hỏa Nhãn Kim Tinh của Lão Tôn không nhìn nhầm đâu!'],
+      ['nar', 'Ngộ Không giáng gậy. Bạch Cốt Tinh hóa làn khói bỏ chạy, để lại cái xác giả. Rồi nó quay lại thành một bà lão tìm con gái, lần thứ ba thành một ông lão tìm vợ…'],
+      ['me', 'Đây đều là một con yêu. Ta che chắn cho Đường Tăng, Đại Thánh cứ đánh!'],
+      ['duongtang', 'Ngộ Không! Con giết liền ba mạng người!'],
+    ],
+    win: [
+      ['nar', 'Gậy cuối cùng đập tan Bạch Cốt Tinh. Trên đất chỉ còn đống xương trắng, sống lưng có dòng chữ "Bạch Cốt Phu Nhân".'],
+      ['batgioi', 'Sư phụ đừng tin. Sư huynh sợ bị niệm chú nên hóa phép ra đống xương đấy…'],
+      ['duongtang', 'Con hung ác như vậy, ta không cần đồ đệ như con nữa. Đây là biếm thư, con đi đi!'],
+      ['ngokhong', 'Sư phụ… Lão Tôn đi rồi, nhỡ yêu quái tới thì ai bảo vệ người?'],
+      ['nar', 'Ngộ Không nhổ lông hóa ra ba thân nữa, cả bốn cùng quỳ bốn phía lạy thầy, rồi cưỡi mây bay về Hoa Quả Sơn.'],
+      ['ngokhong', 'Hộ pháp, nhờ người trông sư phụ giúp Lão Tôn…'],
+    ],
+  },
+  'Lạc nhau rừng Hắc Tùng': {
+    open: [
+      ['nar', 'Không có Ngộ Không dẫn đường, thầy trò lạc vào rừng Hắc Tùng. Thông đen đặc kín, giữa trưa mà tối như chạng vạng.'],
+      ['tieuphu', 'Rừng này nhiều yêu lắm. Bát Giới đi xin cơm, Sa Tăng đi tìm Bát Giới, cả hai chưa thấy về…'],
+      ['satang', 'Hộ pháp, đệ ở lại giữ sư phụ. Người mở đường giúp đệ, quét sạch đám yêu đang vây quanh!'],
+    ],
+    win: [
+      ['nar', 'Tiếng chuông xa vọng lại. Đường Tăng lần theo tiếng chuông, tới trước một ngọn tháp vàng… đó là động Ba Nguyệt của Hoàng Bào Quái.'],
+    ],
+  },
+  'Đưa thư nước Bảo Tượng': {
+    open: [
+      ['congchua', 'Thánh tăng đừng sợ. Ta là Bách Hoa Tu, con gái vua Bảo Tượng. Mười ba năm trước, đêm rằm ngắm trăng, ta bị Hoàng Bào Quái cuốn về động này.'],
+      ['congchua', 'Ta đã sinh cho hắn hai đứa con, nhưng ngày nào cũng nhớ phụ vương. Xin Thánh tăng mang bức thư này về nước Bảo Tượng.'],
+      ['duongtang', 'Bần tăng nhất định chuyển tới.'],
+      ['congchua', 'Hộ pháp, ta sẽ nói với hắn là thả các người vì ta làm phúc. Đi mau, kẻo hắn đổi ý!'],
+    ],
+    win: [
+      ['nar', 'Vua Bảo Tượng đọc thư, khóc ròng, xin thầy trò cứu công chúa. Bát Giới và Sa Tăng ra trận, Sa Tăng bị bắt.'],
+      ['nar', 'Hoàng Bào Quái hóa thành một chàng trai tuấn tú, vào triều tự xưng phò mã…'],
+    ],
+  },
+  'Hóa hổ trên điện Kim Loan': {
+    open: [
+      ['hoangbao', 'Bệ hạ! Hòa thượng kia là hổ tinh, chính nó đã bắt công chúa! Để thần cho bệ hạ xem nguyên hình.'],
+      ['nar', 'Hắn ngậm nước phun một ngụm, Đường Tăng hóa thành con hổ vằn, bị nhốt vào cũi sắt.'],
+      ['bachlongma', 'Sư phụ! Ta hóa thành cung nữ múa kiếm hành thích hắn, nhưng đánh không lại… Bát Giới, chỉ còn một cách: lên Hoa Quả Sơn mời Đại sư huynh về!'],
+      ['batgioi', 'Lão Trư bị đuổi khéo đây… Thôi được, đi thì đi. Ta sẽ nói con yêu bảo nó không sợ Tôn Ngộ Không!'],
+      ['ngokhong', 'Hừ! Con yêu nào dám coi thường Lão Tôn? Sư phụ có nạn, Lão Tôn đi ngay!'],
+    ],
+    boss: [
+      ['hoangbao', 'Tôn Ngộ Không? Ngươi bị đuổi rồi còn quay lại à?'],
+      ['ngokhong', 'Thầy đuổi thì là việc của thầy trò ta. Ngươi bắt thầy ta thì là việc của cây gậy này!'],
+    ],
+    win: [
+      ['nar', 'Hoàng Bào Quái biến mất giữa trời. Ngộ Không lên Thiên Cung tra sổ: sao Khuê Mộc Lang trong Nhị Thập Bát Tú vắng mặt đã mười ba ngày, tức mười ba năm dưới trần.'],
+      ['ngokhong', 'Thì ra là Khuê Mộc Lang trốn xuống trần làm yêu! Ngọc Đế phạt hắn đi đốt lò cho Lão Quân rồi.'],
+      ['nar', 'Ngộ Không phun nước giải phép. Đường Tăng trở lại hình người, nắm tay Ngộ Không không nói nên lời.'],
+      ['duongtang', 'Ngộ Không… là thầy sai rồi.'],
+    ],
+    next: 'Thầy trò lại lên đường. Mùa thu tới, phía trước là núi Bình Đỉnh cao chót vót.',
+  },
+  'Núi Bình Đỉnh gặp ma': {
+    open: [
+      ['tieuphu', 'Các sư dừng bước! Núi này có động Liên Hoa, hai yêu vương Kim Giác, Ngân Giác có năm món bảo bối, chuyên chờ bắt Đường Tăng để ăn thịt.'],
+      ['ngokhong', 'Lão tiều này… là Nhật Trị Công Tào hóa thân báo tin. Đa tạ!'],
+      ['nar', 'Giữa đường có một đạo sĩ ngã gãy chân, kêu cứu thảm thiết. Đường Tăng bảo Ngộ Không cõng ông ta.'],
+    ],
+    boss: [
+      ['ngangiac', 'Tu Di Sơn, Nga Mi Sơn, Thái Sơn! Đè!'],
+      ['nar', 'Ba ngọn núi từ trên trời rơi xuống, đè chặt Ngộ Không. Đạo sĩ hiện nguyên hình Ngân Giác Đại Vương, cuốn Đường Tăng đi.'],
+      ['me', 'Thả Thánh tăng ra! Để ta đánh tới khi Đại Thánh thoát ra được!'],
+    ],
+    win: [
+      ['nar', 'Sơn thần, Thổ địa vội dời ba ngọn núi. Ngộ Không vọt ra, mắt bốc lửa.'],
+      ['ngokhong', 'Hai tiểu yêu Tinh Tế Quỷ và Linh Lợi Trùng đang ôm hồ lô Tử Kim đi bắt Lão Tôn đấy. Để Lão Tôn lừa chúng một vố!'],
+    ],
+  },
+  'Treo ở động Liên Hoa': {
+    open: [
+      ['ngokhong', 'Hồ lô của các ngươi chỉ hút được người. Hồ lô của Lão Tôn hút được cả trời! Có đổi không?'],
+      ['tieuyeu', 'Thật à? Đổi! Đổi ngay!'],
+      ['nar', 'Ngộ Không xin Ngọc Đế mượn trời tối nửa canh giờ. Hai tiểu yêu tưởng thật, đổi luôn hồ lô Tử Kim lẫn tịnh bình Dương Chi.'],
+    ],
+    boss: [
+      ['kimgiac', 'Tôn Hành Giả! Ta gọi tên, ngươi có dám thưa không?'],
+      ['ngokhong', 'Gọi "Giả Hành Giả" thì Lão Tôn thưa, xem cái hồ lô của ngươi làm gì được!'],
+      ['me', 'Cẩn thận! Hồ lô ấy gọi tên ai mà người đó thưa là bị hút vào!'],
+    ],
+    win: [
+      ['nar', 'Ngân Giác bị chính hồ lô hút vào hóa nước. Kim Giác thua chạy, Ngộ Không cứu Đường Tăng đang bị treo trong động.'],
+      ['laoquan', 'Đại Thánh dừng tay! Hai đứa này là đồng tử giữ lò vàng lò bạc của ta. Quan Âm mượn chúng để thử lòng thầy trò đó.'],
+      ['ngokhong', 'Lại là thử! Lão quan già, mang bảo bối với đồng tử về đi!'],
+      ['laoquan', 'Hồ lô đựng tiên đan, tịnh bình đựng nước, kiếm luyện ma, quạt quạt lửa, dây buộc áo… Đủ cả rồi. Ha ha.'],
+    ],
+    next: 'Thầy trò đến chùa Bảo Lâm ở nước Ô Kê, xin nghỉ qua đêm. Đêm ấy, một bóng người ướt sũng hiện ra bên giường Đường Tăng…',
+  },
+  'Cứu vua nước Ô Kê': {
+    open: [
+      ['vuaoke', 'Thánh tăng đừng sợ. Trẫm là vua Ô Kê. Năm năm trước nước hạn, một đạo sĩ Toàn Chân cầu được mưa, trẫm kết làm anh em.'],
+      ['vuaoke', 'Ba năm trước, hắn đẩy trẫm xuống giếng bát giác trong ngự uyển, rồi hóa thành trẫm ngồi lên ngai vàng. Đến hoàng hậu, thái tử cũng không ai hay.'],
+      ['vuaoke', 'Đây là ngọc khuê làm tin. Mai thái tử đi săn ngoài thành, xin Thánh tăng đưa cho nó.'],
+      ['nar', 'Sáng hôm sau, Ngộ Không hóa con thỏ trắng dụ thái tử vào chùa.'],
+      ['thaitu', 'Ngọc khuê của phụ vương… Mẫu hậu từng nói, ba năm nay phụ vương lạnh như băng, chưa từng gần ai…'],
+      ['batgioi', 'Lão Trư lặn xuống giếng vớt xác vua lên. Long Vương giếng giữ xác bằng định nhan châu, ba năm vẫn như người ngủ!'],
+      ['ngokhong', 'Lão Tôn lên cung Đâu Suất xin Lão Quân một viên Cửu Chuyển Hoàn Hồn Đan.'],
+    ],
+    win: [
+      ['vuaoke_song', 'Trẫm… trẫm sống lại rồi! Đa tạ Thánh tăng, đa tạ các vị!'],
+    ],
+  },
+  'Bị ma hóa thân': {
+    boss: [
+      ['nar', 'Trên điện vàng, hai vị vua giống hệt nhau đứng đối mặt. Văn võ bá quan không biết ai thật ai giả.'],
+      ['giavuong', 'Lũ hòa thượng yêu thuật! Ngự lâm quân, bắt chúng lại!'],
+      ['ngokhong', 'Đừng chạy! Hộ pháp, chặn hắn lại!'],
+    ],
+    win: [
+      ['vanthu', 'Ngộ Không dừng tay. Đây là con sư tử lông xanh ta cưỡi.'],
+      ['vanthu', 'Xưa vua Ô Kê thích làm việc thiện, Phật Tổ sai ta hóa thành sư đến độ. Vua không nhận ra, trói ta ngâm dưới sông ba ngày. Nay sư tử ngâm vua ba năm, đó là quả báo.'],
+      ['ngokhong', 'Quả báo thì quả báo, nhưng sư tử của Bồ Tát hại người thì Bồ Tát dắt về mà dạy!'],
+      ['vuaoke_song', 'Trẫm xin nhường ngôi cho Thánh tăng… Không nhận ư? Vậy trẫm xin tiễn thầy trò ra tận biên giới.'],
+    ],
+    next: 'Qua nước Ô Kê, trước mặt là núi Hiệu. Một đám mây đỏ vần vũ trên đỉnh núi.',
+  },
+  'Núi Hiệu gặp yêu': {
+    open: [
+      ['ngokhong', 'Đám mây đỏ kia là yêu khí. Sư phụ cứ đi chậm thôi.'],
+      ['hoayeu', 'Đại vương có lệnh: lục soát cả núi, thấy hòa thượng từ phương Đông thì bắt về động Hỏa Vân!'],
+      ['batgioi', 'Bọn tiểu yêu này mặc áo lửa, đinh ba của lão Trư nóng cả tay!'],
+    ],
+    win: [
+      ['nar', 'Bên đường, một đứa bé bị trói treo trên cây, khóc thảm thiết: "Cứu cháu với! Cướp giết cả nhà cháu rồi!"'],
+      ['honghai_be', 'Ông sư ơi, cõng cháu về nhà với…'],
+      ['ngokhong', 'Hừ, đứa bé này nặng như ngàn cân. Lão Tôn ném nó vào vách đá…'],
+      ['nar', 'Một trận gió xoáy cuốn tung cát bụi. Khi gió tan, Đường Tăng đã biến mất.'],
+    ],
+  },
+  'Gió cuốn Thánh tăng': {
+    open: [
+      ['nar', 'Ngộ Không gõ gậy xuống đất. Một đám sơn thần, thổ địa áo quần rách rưới chui lên, quỳ lạy.'],
+      ['sonthan', 'Đại Thánh tha tội! Đứa bé ấy là Thánh Anh Đại Vương Hồng Hài Nhi, con của Ngưu Ma Vương và La Sát Nữ.'],
+      ['sonthan', 'Nó tu luyện ba trăm năm ở núi Hỏa Diệm, luyện được Tam Muội Chân Hỏa. Bọn tiểu thần bị nó bắt trực đêm, thu tiền lễ, khổ không kể xiết.'],
+      ['ngokhong', 'Ngưu Ma Vương à? Năm xưa Lão Tôn kết nghĩa với lão. Vậy thằng bé phải gọi ta bằng chú!'],
+      ['me', 'Lửa ấy không phải lửa thường, Đại Thánh đừng chủ quan.'],
+    ],
+    next: 'Động Hỏa Vân ở khe Khô Tùng. Cửa động bốc lửa ngùn ngụt.',
+  },
+  'Tâm Viên bị hại': {
+    boss: [
+      ['honghai', 'Ngưu Ma Vương là cha ta thì sao? Ta chưa từng nghe có ông chú lông lá nào cả!'],
+      ['nar', 'Hồng Hài Nhi đấm vào mũi mình, năm chiếc xe lửa bốc cháy. Tam Muội Chân Hỏa phun ra cuồn cuộn.'],
+      ['ngokhong', 'Lão Tôn mời Đông Hải Long Vương làm mưa rồi! Ơ… nước mưa lại làm lửa bùng to hơn!'],
+      ['me', 'Đừng dùng thủy pháp! Lửa này gặp nước càng mạnh. Đánh thẳng vào nó!'],
+    ],
+    win: [
+      ['nar', 'Ngộ Không bị khói lửa xông vào mắt, nhảy xuống suối lạnh, lửa nóng gặp nước lạnh làm tim ngừng đập.'],
+      ['batgioi', 'Sư huynh! Sư huynh tỉnh lại đi!'],
+      ['nar', 'Bát Giới xoa bóp mãi, Ngộ Không mới thở ra một hơi. Bát Giới đi mời Quan Âm, giữa đường bị Hồng Hài Nhi giả làm Bồ Tát lừa vào bao da.'],
+      ['ngokhong', 'Lão Tôn đi Nam Hải. Lần này phải mời đúng Bồ Tát thật!'],
+    ],
+  },
+  'Mời thánh hàng yêu': {
+    open: [
+      ['quanam', 'Con yêu dám giả dạng ta? Ngộ Không, ta đi cùng ngươi.'],
+      ['nar', 'Bồ Tát mượn ba mươi sáu thanh thiên cương đao của Thác Tháp Thiên Vương, hóa thành tòa sen nghìn cánh.'],
+      ['honghai', 'Ha, tòa sen đẹp thế! Để ta ngồi thử!'],
+      ['nar', 'Hồng Hài Nhi vừa ngồi lên, cánh sen hóa lại thành mũi đao xuyên chân. Bồ Tát ném năm chiếc vòng vàng, một vòng vào cổ, bốn vòng vào tay chân.'],
+      ['quanam', 'Đứa trẻ này có căn cơ. Từ nay nó là Thiện Tài Đồng Tử, theo hầu ta ở Lạc Già Sơn.'],
+      ['honghai', 'Á! Vòng siết đau quá! Con… con xin quy y!'],
+    ],
+    next: 'Một tháng sau, thầy trò tới bờ sông Hắc Hà. Nước sông đen như mực, sóng cuộn ầm ầm.',
+  },
+  'Chìm sông Hắc Hà': {
+    open: [
+      ['ngudan', 'Sông này nước đen, chẳng ai dám lái đò. Có một người chèo chiếc thuyền con đến đón khách, nhưng chở rồi ít khi thấy về…'],
+      ['nar', 'Một chiếc thuyền nhỏ ghé bờ. Người lái đò nói thuyền chỉ chở được hai người. Đường Tăng và Bát Giới bước lên trước.'],
+      ['nar', 'Ra tới giữa dòng, sóng đen dựng đứng, thuyền lật úp. Cả người lẫn thuyền chìm nghỉm.'],
+      ['satang', 'Nước là chỗ của đệ. Hộ pháp, cùng đệ xuống đáy sông!'],
+    ],
+    boss: [
+      ['dalong', 'Ta là cháu Tây Hải Long Vương. Đang định mời cậu ăn thịt Đường Tăng mừng thọ, các ngươi đến phá đám à?'],
+      ['satang', 'Yêu long! Trả sư phụ ta đây!'],
+    ],
+    win: [
+      ['mangang', 'Ta là Ma Ngang, thái tử Tây Hải. Phụ vương sai ta tới bắt tên em họ hư hỏng này. Đại Thánh, đừng giận Tây Hải.'],
+      ['dalong', 'Anh họ tha cho em…'],
+      ['nar', 'Ma Ngang trói Đà Long đem về Tây Hải chịu tội. Hà Thần rẽ nước đen, mở một lối đi cho thầy trò qua sông.'],
+    ],
+    next: 'Bên kia sông là nước Xa Trì. Vừa vào thành, đã nghe tiếng hò kéo xe và tiếng roi quất đen đét.',
+  },
+  'Khuân vác ở Xa Trì': {
+    open: [
+      ['tangnhan', 'Các sư mau trốn đi! Hai mươi năm trước nước hạn, ba vị quốc sư Hổ Lực, Lộc Lực, Dương Lực cầu được mưa. Từ đó nhà vua tin đạo, bắt hết tăng nhân làm nô lệ.'],
+      ['tangnhan', 'Năm trăm sư huynh đệ phải kéo xe gạch đá lên dốc dựng đạo quán. Chết đã quá nửa, ai trốn cũng bị bắt về.'],
+      ['daodong', 'Lũ trọc kia! Kéo nhanh lên, chậm là ăn roi!'],
+      ['ngokhong', 'Hộ pháp, dẹp hết bọn đạo đồng cầm roi kia. Lão Tôn phá mấy cái xe!'],
+    ],
+    win: [
+      ['nar', 'Ngộ Không nhổ năm trăm sợi lông, phát cho mỗi tăng nhân một sợi: hễ bị bắt thì gọi "Tề Thiên Đại Thánh", lập tức có một Ngộ Không hiện ra che chở.'],
+      ['tangnhan', 'Đại Thánh! Tối qua chúng con nằm mơ thấy Thái Bạch Kim Tinh báo có người cứu. Thì ra là thật!'],
+    ],
+  },
+  'Đánh cuộc thắng thua': {
+    open: [
+      ['vuaxatri', 'Các ngươi là hòa thượng mà dám đánh đạo đồng? Quốc sư, hãy cho chúng thấy pháp lực của Đạo môn!'],
+      ['holuc', 'Bệ hạ, thần xin đấu phép với chúng: cầu mưa, ngồi thiền trên đài cao, đoán vật trong tủ. Thua thì chém đầu!'],
+      ['nar', 'Hổ Lực đánh lệnh bài gọi gió mưa. Ngộ Không bay lên trời giữ chân Phong Bà, Lôi Công, Long Vương. Gậy chỉ đâu, mưa đổ đó.'],
+      ['nar', 'Đường Tăng ngồi thiền trên đài năm mươi chiếc bàn, Ngộ Không hóa con rệp cắn lại kẻ cắn trộm. Trong tủ, bộ áo gấm hóa thành áo rách, quả đào chỉ còn cái hạt, đạo đồng hóa thành chú tiểu.'],
+    ],
+    boss: [
+      ['holuc', 'Thua cuộc thì chơi tới cùng! Chém đầu mà vẫn mọc lại mới là đại pháp!'],
+      ['ngokhong', 'Chém đầu ư? Lão Tôn chơi!'],
+      ['me', 'Đầu hắn lăn xuống… có con chó vàng ngoạm chạy mất! Giờ là lúc ra tay!'],
+    ],
+    win: [
+      ['nar', 'Không mọc được đầu, Hổ Lực Đại Tiên ngã xuống, hiện nguyên hình con hổ vằn không đầu.'],
+      ['vuaxatri', 'Quốc sư… là hổ tinh ư?'],
+    ],
+  },
+  'Diệt đạo hưng tăng': {
+    boss: [
+      ['duongluc', 'Đại ca chết oan! Ta mổ bụng, ta xuống chảo dầu sôi, xem con khỉ kia có dám không!'],
+      ['ngokhong', 'Mổ bụng thì Lão Tôn rửa ruột cho sạch. Xuống dầu thì Lão Tôn tắm cho ấm!'],
+      ['me', 'Hai con yêu này dùng tà thuật. Đánh lộ nguyên hình chúng!'],
+    ],
+    win: [
+      ['nar', 'Lộc Lực mổ bụng, chim ưng quắp mất ruột, hiện hình con hươu trắng. Dương Lực ngồi chảo dầu, mất con rồng lạnh hộ thân, hiện hình con linh dương.'],
+      ['vuaxatri', 'Hai mươi năm trẫm mê muội… Từ nay Phật đạo cùng tôn, trả tự do cho tất cả tăng nhân!'],
+      ['ngokhong', 'Nhớ đấy: đạo cũng tôn, tăng cũng kính, nhân tài cũng phải trọng. Như thế mới vững giang sơn!'],
+      ['tangnhan', 'Nam mô A di đà Phật! Chúng con được sống rồi!'],
+    ],
+    next: 'Rời Xa Trì, trời đã sang đông. Phía trước là sông Thông Thiên mênh mông, gió lạnh thổi buốt da.',
   },
 };
 

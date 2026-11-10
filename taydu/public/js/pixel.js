@@ -1309,7 +1309,9 @@ const Art = (() => {
     }
     return cache.get(key);
   }
-  function npc(id, frame = 0, scale = 4, expr, art) { const A = (art && fromArt('npcs', art)) || fromArt('npcs', id) || fromArt('bosses', id); if (A) return A; const o = NPCS[id]; return o ? get('npc:' + id, o.kind || 'hum', o, frame, scale, expr) : null; }
+  // chưa có tranh riêng thì mượn tranh cùng vai (thầy thuốc, thương nhân…)
+  const NPC_ALT = { duocsu3: 'duocsu2', duocsu4: 'duocsu2', shop3: 'shop2', shop4: 'shop2', tieuphu: 'laoong', thodia: 'tho_dao' };
+  function npc(id, frame = 0, scale = 4, expr, art) { const A = (art && fromArt('npcs', art)) || fromArt('npcs', id) || fromArt('bosses', id) || (NPC_ALT[id] && fromArt('npcs', NPC_ALT[id])); if (A) return A; const o = NPCS[id]; return o ? get('npc:' + id, o.kind || 'hum', o, frame, scale, expr) : null; }
   function form(formId, element = 'tho', frame = 0, scale = 4, expr) {
     const A = fromArt('monsters', formId + '_' + element) || fromArt('monsters', formId); if (A) return A;
     const fn = FORMS[formId]; if (!fn) return null;

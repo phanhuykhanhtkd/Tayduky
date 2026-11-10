@@ -90,7 +90,7 @@ const UI = (() => {
     if (l.nar) return '';
     if (l.me && G.me) return Sprites.heroURL(G.me.race, G.me.gender, 0, G.me.gear);
     const k = l.art || l.look;
-    return (l.art && Sprites.npcSrc(l.art)) || Sprites.npcSrc(l.look) || Sprites.art('bosses', l.look) || Sprites.art('npcs', l.look)
+    return (l.art && (Sprites.npcSrc(l.art) || Sprites.art('bosses', l.art))) || Sprites.npcSrc(l.look) || Sprites.art('bosses', l.look) || Sprites.art('npcs', l.look)
       || (Art.npc(l.look, 0, 4, undefined, l.art) || Art.boss(l.look) || Art.human(l.look) || {}).url || '';
   }
   function scene(lines) {

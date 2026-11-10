@@ -567,9 +567,6 @@ OLD_CHAPTERS.forEach((old, oi) => {
       if (!def) throw new Error('Không tìm thấy NPC ' + n + ' cho bản đồ ' + id);
       const o = { ...(def[3] || {}) };
       if (ART_FIX[def[0]] && !o.art) o.art = ART_FIX[def[0]];
-      // thầy thuốc / thương nhân dọc đường dùng chung tranh đại phu, chưởng quầy
-      if (!o.art && /^heal_/.test(def[0])) o.art = 'duocsu2';
-      if (!o.art && /^shop_/.test(def[0])) o.art = 'shop2';
       return [def[0], def[1], def[2], o];
     });
     steps.forEach((s) => { if (s.t === 'talk' && !npcs.some((n) => n[0] === s.npc)) throw new Error('Nhiệm vụ "' + s.title + '" cần NPC ' + s.npc + ' trên bản đồ ' + id); });
