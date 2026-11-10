@@ -474,6 +474,7 @@ const GameMap = (() => {
   //  KHUNG HÌNH KIỂU TRANH VẼ: nền tranh + vật thể xếp theo chiều sâu
   // =====================================================================
   const artCache = {};
+  let livingNow = false;
   function artImg(src) { if (!src) return null; let im = artCache[src]; if (!im) { im = artCache[src] = new Image(); im.src = src; } return im.complete && im.naturalWidth ? im : null; }
   function framePaint(now) {
     const R = Math.min(2, dpr), PM = PaintMap.get(M, T, R);
@@ -487,6 +488,9 @@ const GameMap = (() => {
     ctx.imageSmoothingEnabled = true;
     const custom = artImg(Sprites.mapArt(mapId)), front = artImg(Sprites.mapFront(mapId));
     if (custom) ctx.drawImage(custom, 0, 0, COLS * T, ROWS * T);
+    livingNow = !!(custom && typeof Living !== 'undefined' && Living.has(mapId));
+    const view = { x: viewX, y: viewY, w: W, h: H };
+    if (livingNow) Living.ground(ctx, custom, mapId, T, COLS, ROWS, now, view);
     else { ctx.drawImage(PM.ground, 0, 0, COLS * T, ROWS * T); PaintMap.water(ctx, PM.water, T, now, PM.pal); }
     if (marker && now - marker.t < 800) {
       const k = (now - marker.t) / 800;
@@ -505,9 +509,10 @@ const GameMap = (() => {
     overlay = [];
     ents.sort((a, b) => a.z - b.z).forEach((e) => e.draw());
     if (front) ctx.drawImage(front, 0, 0, COLS * T, ROWS * T);
+    if (livingNow) Living.over(ctx, mapId, T, COLS, ROWS, now, view);
     overlay.forEach((f) => f());
     ctx.restore();
-    lights = PM.lights;
+    lights = (livingNow && Living.lights(mapId, T)) || PM.lights;
     lighting(now);
     if (now - miniT > 200) { miniT = now; drawMini(now); }
     joyStep(now);
@@ -705,7 +710,7 @@ const GameMap = (() => {
       ctx.restore();
     }
     if (M.theme === 'hell') { ctx.save(); const gr = ctx.createRadialGradient(W / 2, H, 0, W / 2, H, H); gr.addColorStop(0, 'rgba(255,40,30,.14)'); gr.addColorStop(1, 'rgba(255,40,30,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H); ctx.restore(); }
-    drawAmb(now, night);
+    if (livingNow) Living.screen(ctx, mapId, W, H, now, night); else drawAmb(now, night);
     drawWeather(now);
     const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.75);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, PAINT ? 'rgba(10,20,10,.22)' : 'rgba(0,0,0,.45)');
