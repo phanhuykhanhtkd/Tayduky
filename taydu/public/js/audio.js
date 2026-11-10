@@ -397,7 +397,7 @@ const Sound = (() => {
 
   // ---------- âm thanh môi trường từng vùng (gió, nước, chim, dế, lửa, giọt nước…) ----------
   let ambBus = null, ambNodes = [], ambTimers = [], ambTheme = null;
-  const isNight = () => { const h = new Date().getHours(); return h >= 19 || h < 5; };
+  const isNight = () => (typeof Prefs !== 'undefined' ? Prefs.isNight() : false);
   function bed(o) {
     const n = noise(); n.loop = true;
     const f = ctx.createBiquadFilter(); f.type = o.type || 'bandpass'; f.frequency.value = o.f; f.Q.value = o.q || 0.8;

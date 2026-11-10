@@ -278,6 +278,16 @@ $('#btn-menu').onclick = (e) => { e.stopPropagation(); $('.nav').classList.toggl
 document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.nav, #btn-menu')) $('.nav')?.classList.remove('open'); });
 $('#btn-quick').onclick = () => Panels.bag();
 $('#mm').onclick = () => Panels.act('travel');
+// gom các nút phụ vào nút "Tiện ích" (chế độ gọn)
+{
+  const wrap = $('#map-wrap'), tog = $('#evt-tog');
+  tog.onclick = (e) => { e.stopPropagation(); wrap.classList.toggle('evts-open'); Sound.sfx('click'); };
+  $$('.evts .evt').forEach((b) => b.addEventListener('click', () => wrap.classList.remove('evts-open')));
+  $('#map').addEventListener('pointerdown', () => wrap.classList.remove('evts-open'));
+  const sync = () => tog.classList.toggle('dot', !!$('.evts .evt.dot'));
+  new MutationObserver(sync).observe($('#map-wrap'), { subtree: true, attributes: true, attributeFilter: ['class'] });
+  sync();
+}
 $('#evt-daily').onclick = () => Panels.daily();
 $('#evt-act').onclick = () => { Tut.event('open_act'); Panels.act(); };
 $('#evt-welfare').onclick = () => Panels3.welfare();
@@ -296,12 +306,16 @@ function settings() {
       <div class="set-row"><span class="ic">${Sprites.ICONS.sound}</span><label style="margin:0">Nhạc nền<input type="range" id="s-music" min="0" max="100" value="${Math.round(st.music * 100)}"></label><output id="o-music">${Math.round(st.music * 100)}</output></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.skill}</span><label style="margin:0">Hiệu ứng âm thanh<input type="range" id="s-sfx" min="0" max="100" value="${Math.round(st.sfx * 100)}"></label><output id="o-sfx">${Math.round(st.sfx * 100)}</output></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.act}</span><div><b>Nhân vật kiểu tranh (chibi)</b><div class="muted">Tắt để dùng lại hình pixel cổ điển.</div></div><button class="toggle ${(() => { try { return localStorage.getItem('tdk_pixel') !== '1'; } catch { return true; } })() ? 'on' : ''}" id="s-vec" aria-label="Chibi"></button></div>
+      <div class="sec" style="margin-top:6px">Hiển thị</div>
+      <div class="set-row"><span class="ic">${Sprites.ICONS.act}</span><div><b>Sáng tối theo giờ thực</b><div class="muted">Tắt: bản đồ luôn ban ngày. Bật: chiều tà, đêm xuống theo đồng hồ máy.</div></div><button class="toggle ${Prefs.realtime ? 'on' : ''}" id="s-rt" aria-label="Sáng tối theo giờ thực"></button></div>
+      <div class="set-row"><span class="ic">${Sprites.ICONS.gear}</span><div><b>Giao diện gọn</b><div class="muted">Gom nút phụ vào nút “Tiện ích”, khung chat một dòng.</div></div><button class="toggle ${Prefs.compact ? 'on' : ''}" id="s-compact" aria-label="Giao diện gọn"></button></div>
+      <div class="set-row"><span class="ic">${Sprites.ICONS.char}</span><div style="flex:1;min-width:0"><b>Cỡ giao diện</b><div class="muted">Tự động theo màn hình, hoặc chọn cỡ cố định.</div><div class="seg" id="s-scale" style="margin-top:6px">${[['auto', 'Tự động'], ['sm', 'Nhỏ'], ['md', 'Vừa'], ['lg', 'Lớn']].map(([k, t]) => `<button data-k="${k}" class="seg-b ${Prefs.scale === k ? 'on' : ''}">${t}</button>`).join('')}</div></div></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.gear}</span><div><b>Hiệu ứng nhẹ</b><div class="muted">Bật trên iPhone đời cũ để mượt hơn.</div></div><button class="toggle ${FX.low ? 'on' : ''}" id="s-low" aria-label="Hiệu ứng nhẹ"></button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.gear}</span><div><b>Mã khôi phục</b><div class="muted">Tạo mã mới để lấy lại tài khoản khi quên mật khẩu.</div></div><button class="btn-seal sm ghost" id="s-rc">Tạo mã</button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.flee}</span><div><b>Tránh quái</b><div class="muted">Đi lại không gặp quái ngẫu nhiên.</div></div><button class="toggle ${G.me.peace ? 'on' : ''}" id="s-peace" aria-label="Tránh quái"></button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.sound}</span><div><b>Thử âm thanh</b><div class="muted" id="s-state">Trạng thái: ${Sound.state === 'running' ? 'đang phát' : Sound.state}</div></div><button class="btn-seal sm jade" id="s-test">Phát thử</button></div>
       <p class="muted" style="margin-top:10px">Không nghe thấy? Tăng âm lượng bằng nút bên hông iPhone khi đang ở trong game (âm lượng phương tiện), tắt chế độ Tập trung/Không làm phiền nếu có, rồi bấm Phát thử.</p>
-      <p class="muted" style="margin-top:14px">Bản đồ đổi sáng tối theo giờ thật trên máy. Một số nhiệm vụ ẩn chỉ xuất hiện vào giờ nhất định.</p>
+      <p class="muted" style="margin-top:14px">Một số nhiệm vụ ẩn chỉ xuất hiện vào giờ nhất định (theo giờ thật trên máy).</p>
       <div class="sec" style="margin-top:14px">Tài khoản</div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.char}</span><div><b>Đổi mật khẩu</b><div class="muted">Các thiết bị khác sẽ phải đăng nhập lại.</div></div><button class="btn-seal sm" id="s-pass">Đổi</button></div>
       <div class="set-row"><span class="ic">${Sprites.ICONS.flee}</span><div><b>Đăng xuất mọi thiết bị khác</b><div class="muted">Khi lỡ đăng nhập trên máy lạ.</div></div><button class="btn-seal sm ghost" id="s-all">Đăng xuất</button></div>
@@ -312,6 +326,9 @@ function settings() {
     $('#s-vec').onclick = () => { try { localStorage.setItem('tdk_pixel', localStorage.getItem('tdk_pixel') === '1' ? '0' : '1'); } catch {} location.reload(); };
     $('#s-low').onclick = () => { FX.setLow(!FX.low); GameMap.initAmb(); UI.refreshSheet(); };
     $('#s-peace').onclick = async () => { await G.call('char:peace'); UI.refreshSheet(); };
+    $('#s-rt').onclick = () => { Prefs.realtime = !Prefs.realtime; GameMap.initAmb(); UI.refreshSheet(); };
+    $('#s-compact').onclick = () => { Prefs.compact = !Prefs.compact; UI.refreshSheet(); };
+    $$('#s-scale button').forEach((b) => (b.onclick = () => { Prefs.scale = b.dataset.k; UI.refreshSheet(); }));
     $('#s-logout').onclick = async () => { if (await UI.confirm('<p>Đăng xuất khỏi thiết bị này?</p>', 'Đăng xuất')) { localStorage.removeItem('tdk_token'); location.reload(); } };
     $('#s-pass').onclick = async () => {
       const ok = await UI.modal(`<h3 style="font-size:20px">Đổi mật khẩu</h3><label>Mật khẩu hiện tại<input id="pw-old" type="password" autocomplete="current-password"></label><label>Mật khẩu mới<input id="pw-new" type="password" autocomplete="new-password"></label><label>Nhập lại mật khẩu mới<input id="pw-new2" type="password" autocomplete="new-password"></label>`,

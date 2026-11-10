@@ -115,6 +115,7 @@
       <div class="map-title" id="map-title"></div>
       <div class="pt-badge" id="pt-badge" hidden></div>
       <div class="mm" id="mm"><canvas id="mm-cv" width="208" height="208"></canvas><i class="mm-n">N</i></div>
+      <button class="evt-tog" id="evt-tog" aria-label="Tiện ích"><span>✦</span><b>Tiện ích</b></button>
       <div class="evts">
         <button class="evt r" id="evt-welfare"><span class="ic">🧧</span><b>Phúc Lợi</b></button>
         <button class="evt" id="evt-daily"><span class="ic">📜</span><b>Điểm danh</b></button>
@@ -157,6 +158,7 @@
   <!-- ===== Chiến đấu ===== -->
   <section id="battle" hidden>
     <div class="b-bg" id="b-bg"></div>
+    <canvas class="b-amb" id="b-amb"></canvas>
     <canvas class="b-3d" id="b-3d"></canvas>
     <div class="b-shade" aria-hidden="true"></div>
     <div class="b-sbanner" id="b-sbanner" aria-hidden="true"><b>Chiến Đấu</b><span></span></div>
@@ -219,6 +221,7 @@
   <div id="netbar" class="netbar" hidden>Mất kết nối máy chủ – đang kết nối lại…</div>
 </div>
 
+<script src="js/prefs.js"></script>
 <script src="js/net.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/chibi.js"></script>

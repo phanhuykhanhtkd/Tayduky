@@ -316,5 +316,73 @@ const Living = (() => {
     }
   }
 
-  return { has, lights, ground, over, screen, LIVE };
+  // ---------- vùng có quái (ô cỏ ',') trên tranh vẽ: yêu khí tím lững lờ để người chơi biết chỗ gặp quái ----------
+  function haunt(ctx, tiles, T, now, view) {
+    if (!tiles) return;
+    const x0 = Math.max(0, Math.floor(view.x / T) - 1), x1 = Math.min(tiles[0].length - 1, Math.ceil((view.x + view.w) / T) + 1);
+    const y0 = Math.max(0, Math.floor(view.y / T) - 1), y1 = Math.min(tiles.length - 1, Math.ceil((view.y + view.h) / T) + 1);
+    ctx.save();
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      if (tiles[y][x] !== ',') continue;
+      const h = ((x * 73856093) ^ (y * 19349663)) >>> 0, ph = (h % 1000) / 159;
+      const cx = (x + 0.5) * T + Math.sin(now / 1900 + ph) * T * 0.12, cy = (y + 0.72) * T, a = 0.13 + 0.08 * Math.sin(now / 1300 + ph);
+      const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, T * 0.62);
+      gr.addColorStop(0, `rgba(120,60,170,${a})`); gr.addColorStop(0.6, `rgba(90,40,140,${a * 0.5})`); gr.addColorStop(1, 'rgba(90,40,140,0)');
+      ctx.fillStyle = gr; ctx.save(); ctx.translate(cx, cy); ctx.scale(1, 0.45); ctx.beginPath(); ctx.arc(0, 0, T * 0.62, 0, 7); ctx.restore(); ctx.fill();
+      // sợi khói tím bốc lên
+      if (h % 3 === 0) { const k = ((now / 2400 + ph) % 1), wy = cy - k * T * 0.9, wx = cx + Math.sin(now / 500 + ph) * 3; ctx.globalAlpha = Math.sin(k * Math.PI) * 0.35; ctx.fillStyle = '#b48ae0'; ctx.beginPath(); ctx.arc(wx, wy, 2.2 + k * 3, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+    }
+    ctx.restore();
+  }
+
+  // ---------- phông trận sống động: hạt bay theo cảnh + phông thở nhẹ ----------
+  const BATTLE = {
+    mountain: { k: 'leaf', c: ['#e8c060', '#c8803a', '#a8c070'], mist: 1 }, temple: { k: 'petal', c: ['#ffc4d6', '#ffe0ea'], smoke: 1 },
+    village: { k: 'petal', c: ['#ffc4d6', '#ffb0c8', '#fff0f4'] }, heaven: { k: 'spark', mist: 1 }, sandriver: { k: 'sand' }, desert: { k: 'sand' },
+    palace: { k: 'petal', c: ['#ffd4e0', '#ffe8a8'] }, city: { k: 'leaf', c: ['#e8c060', '#f0a050'] }, cave: { k: 'ember' }, firemountain: { k: 'ember', heat: 1 },
+    frozenriver: { k: 'snow' }, forest: { k: 'leaf', c: ['#9ac25a', '#c8d060'] }, water: { k: 'bubble' }, snow: { k: 'snow' },
+  };
+  let bcv = null, bctx = null, braf = 0, bp = [], bcfg = null, blast = 0;
+  function battleStart(cv, key) {
+    battleStop(); if (!cv) return;
+    bcfg = key && (BATTLE[key] || BATTLE[{ ch1: 'heaven' }[key]] || null);
+    cv.hidden = !bcfg; if (!bcfg) return;
+    bcv = cv; bctx = cv.getContext('2d'); bp = []; blast = performance.now();
+    const loop = (now) => { braf = requestAnimationFrame(loop); battleFrame(now); };
+    braf = requestAnimationFrame(loop);
+  }
+  function battleStop() { if (braf) cancelAnimationFrame(braf); braf = 0; bp = []; if (bctx && bcv) bctx.clearRect(0, 0, bcv.width, bcv.height); }
+  function battleFrame(now) {
+    const dpr = Math.min(2, devicePixelRatio || 1), W = bcv.clientWidth, H = bcv.clientHeight; if (!W) return;
+    if (bcv.width !== Math.round(W * dpr)) { bcv.width = Math.round(W * dpr); bcv.height = Math.round(H * dpr); }
+    const c = bctx, dt = Math.min(3, (now - blast) / 16.7), wd = wind(now), cap = low() ? 30 : 90; blast = now;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+    const k = bcfg.k;
+    if (bp.length < cap && Math.random() < (k === 'sand' ? 0.5 : k === 'snow' ? 0.45 : 0.28) * dt) {
+      const p = { life: 0, max: rnd(220, 420), sd: Math.random() * 6, rot: Math.random() * 6 };
+      if (k === 'ember') Object.assign(p, { x: rnd(0, W), y: H + 6, vx: rnd(-0.2, 0.3), vy: -rnd(0.4, 1.0), r: rnd(1, 2.2), max: rnd(160, 300) });
+      else if (k === 'spark') Object.assign(p, { x: rnd(0, W), y: rnd(0, H), vx: 0.05, vy: -0.1, r: rnd(1.2, 2.6), max: rnd(90, 160) });
+      else if (k === 'sand') Object.assign(p, { x: -10, y: rnd(H * 0.3, H), vx: rnd(1.2, 2.6), vy: rnd(-0.15, 0.15), r: rnd(0.8, 1.8) });
+      else if (k === 'bubble') Object.assign(p, { x: rnd(0, W), y: H + 6, vx: 0, vy: -rnd(0.3, 0.7), r: rnd(1.5, 4) });
+      else Object.assign(p, { x: rnd(-W * 0.2, W), y: -8, vx: rnd(0.2, 0.6), vy: rnd(0.35, 0.8) * (k === 'snow' ? 0.8 : 1), r: rnd(2.2, 4) * (k === 'snow' ? 0.7 : 1), col: (bcfg.c || ['#fff'])[Math.floor(Math.random() * (bcfg.c || [1]).length)] });
+      bp.push(p);
+    }
+    for (let i = bp.length - 1; i >= 0; i--) {
+      const p = bp[i]; p.life += dt; const q = p.life / p.max;
+      if (q >= 1 || p.y > H + 20 || p.x > W + 20) { bp.splice(i, 1); continue; }
+      p.x += (p.vx * (k === 'leaf' || k === 'petal' || k === 'snow' ? wd : 1) + Math.sin(p.life / 24 + p.sd) * 0.35) * dt; p.y += p.vy * dt; p.rot += 0.05 * dt;
+      const a = Math.min(1, Math.sin(q * Math.PI) * 2);
+      if (k === 'ember' || k === 'spark') {
+        c.globalCompositeOperation = 'lighter'; const col = k === 'spark' ? '255,240,180' : '255,150,50';
+        const g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`); c.fillStyle = g; c.beginPath(); c.arc(p.x, p.y, p.r * 3, 0, 7); c.fill(); c.globalCompositeOperation = 'source-over';
+      } else if (k === 'sand') { c.globalAlpha = a * 0.5; c.fillStyle = '#f0d8a0'; c.fillRect(p.x, p.y, p.r * 5, p.r * 0.6); c.globalAlpha = 1; }
+      else if (k === 'snow' || k === 'bubble') { c.globalAlpha = a * 0.85; c.strokeStyle = c.fillStyle = '#ffffff'; c.beginPath(); c.arc(p.x, p.y, p.r, 0, 7); k === 'bubble' ? c.stroke() : c.fill(); c.globalAlpha = 1; }
+      else { c.globalAlpha = a * 0.9; c.fillStyle = p.col; c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.scale(1, Math.abs(Math.sin(p.life / 9 + p.sd)) * 0.7 + 0.3); c.beginPath(); c.ellipse(0, 0, p.r, p.r * 0.5, 0, 0, 7); c.fill(); c.restore(); c.globalAlpha = 1; }
+    }
+    // sương mỏng trôi ngang, hơi nóng bốc lên
+    if (bcfg.mist && !low()) for (let i = 0; i < 2; i++) { const px = ((now / (70 + i * 30) + i * W * 0.6) % (W * 1.6)) - W * 0.3, py = H * (0.32 + i * 0.12), r = W * 0.42; const g = c.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, 'rgba(255,255,255,.14)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.save(); c.translate(px, py); c.scale(1, 0.3); c.beginPath(); c.arc(0, 0, r, 0, 7); c.restore(); c.fill(); }
+    if (bcfg.heat && !low()) { const g = c.createLinearGradient(0, H, 0, H * 0.6); g.addColorStop(0, `rgba(255,120,40,${0.12 + 0.05 * Math.sin(now / 400)})`); g.addColorStop(1, 'rgba(255,120,40,0)'); c.fillStyle = g; c.fillRect(0, H * 0.6, W, H * 0.4); }
+  }
+
+  return { has, lights, ground, over, screen, haunt, battleStart, battleStop, LIVE };
 })();

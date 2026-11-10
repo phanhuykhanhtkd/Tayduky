@@ -1972,3 +1972,51 @@ img[src^="data:image/svg"] { image-rendering: auto !important; }
 #create-bg.artbg { transition: background-image .4s; }
 .scene.dim.artbg::after { background: linear-gradient(rgba(20, 10, 8, 0) 40%, rgba(20, 10, 8, .55)); }
 img[src*="assets/"] { image-rendering: auto !important; }
+
+/* =====================================================================
+   GIAO DIỆN CO GIÃN + CHẾ ĐỘ GỌN
+   --ui: tỉ lệ theo màn hình (prefs.js), .ui-compact: thu nút phụ, chat 1 dòng
+   ===================================================================== */
+:root { --ui: 1; }
+.paint-ui .hud { transform: scale(var(--ui)); transform-origin: 0 0; }
+.paint-ui .hud-sub { width: calc(100% / var(--ui)); right: auto; transform: scale(var(--ui)); transform-origin: 0 0; }
+.paint-ui .mm { transform: scale(var(--ui)); transform-origin: 100% 0; }
+.evts { transform: scale(var(--ui)); transform-origin: 0 0; top: calc(var(--sat) + 138px * var(--ui)); }
+.evts.rt { transform-origin: 100% 0; top: calc(var(--sat) + 142px * var(--ui)); }
+.dbtns { transform: scale(var(--ui)); transform-origin: 0 100%; }
+.joy { transform: scale(var(--ui)); transform-origin: 100% 100%; }
+.wev { top: calc(var(--sat) + 134px * var(--ui)); transform: translateX(-50%) scale(var(--ui)); transform-origin: 50% 0; }
+.paint-ui #party-bar { top: calc(var(--sat) + 270px * var(--ui)); transform: scale(var(--ui)); transform-origin: 0 0; }
+.ctabs { transform: scale(var(--ui)); transform-origin: 100% 100%; }
+
+/* nút gom tiện ích */
+.evt-tog { display: none; position: absolute; left: calc(var(--sal) + 8px); top: calc(var(--sat) + 136px * var(--ui)); z-index: 5; align-items: center; gap: 5px;
+  height: 30px; padding: 0 11px 0 7px; border-radius: 15px; border: 0; color: #fff3d0; font-size: 12px; transform: scale(var(--ui)); transform-origin: 0 0;
+  background: linear-gradient(#5a3418, #2a160a); box-shadow: 0 0 0 1.5px #e8c060, 0 3px 8px rgba(0, 0, 0, .45); }
+.evt-tog span { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; color: #3a1a00; background: radial-gradient(circle at 40% 30%, #fff4c0, #e8b040 60%, #8a5a10); transition: transform .25s; }
+.evt-tog b { font-weight: 700; letter-spacing: .2px; }
+.evt-tog.dot::after { content: ''; position: absolute; right: -3px; top: -3px; width: 10px; height: 10px; border-radius: 50%; background: #e8201a; box-shadow: 0 0 0 1.5px #fff; }
+.ui-compact .evt-tog { display: flex; }
+.ui-compact .evts { opacity: 0; pointer-events: none; transition: opacity .2s, translate .25s; translate: -24px 0; }
+.ui-compact .evts.rt { translate: 24px 0; }
+.ui-compact .evts { top: calc(var(--sat) + 176px * var(--ui)); }
+.ui-compact .evts.rt { top: calc(var(--sat) + 176px * var(--ui)); }
+.ui-compact .map-wrap.evts-open .evts { opacity: 1; pointer-events: auto; translate: 0 0; }
+.ui-compact .map-wrap.evts-open .evt-tog span { transform: rotate(135deg); }
+/* chat gọn: 1 dòng tin mới nhất, thấp hơn để bản đồ rộng hơn */
+.ui-compact.paint-ui .chatp, .ui-compact .paint-ui .chatp { height: calc(64px + var(--sab)); }
+.ui-compact .paint-ui .chatp .ticker { top: 14px; gap: 0; padding: 4px 10px 4px; }
+.ui-compact .paint-ui .chatp .ticker > .cm:not(:last-child) { display: none; }
+.ui-compact .paint-ui .chatp .cav { width: 28px; height: 28px; }
+.ui-compact .paint-ui .chatp .ct small { display: none; }
+.ui-compact .paint-ui .chatp .cb { font-size: 12.5px; padding: 3px 9px; }
+.ui-compact .paint-ui .nav { bottom: calc(80px + var(--sab) + 76px * var(--ui)); }
+.ui-compact .dbtns { bottom: 22px; }
+.ui-compact .joy { bottom: 26px; }
+.set-row .seg { flex: none; gap: 3px; padding: 3px; }
+.set-row .seg .seg-b { min-height: 30px; padding: 0 7px; font-size: 12px; }
+/* phông trận sống động */
+.b-amb { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+#battle.artbg .b-bg { animation: bgBreath 22s ease-in-out infinite alternate; }
+@keyframes bgBreath { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.06) translate(-1%, -0.6%); } }
+.b-cmds.hex { transform: scale(min(1, var(--ui))); transform-origin: 50% 100%; }

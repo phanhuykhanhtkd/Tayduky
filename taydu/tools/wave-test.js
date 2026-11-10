@@ -50,6 +50,16 @@ async function player(tag, race = 'tien') {
   ok(sp && sp.than === 'nata' && sp.grade === 5 && sp.chan && sp.skills.includes('ts_nata2') && sp.look === 'nata', 'Loài Thần sủng ảo than.<mã>.<Chân>');
   ok(!D.getSpecies('than.khong.0') && !D.getSpecies('than.__proto__.0'), 'Mã Thần sủng lạ bị từ chối');
   ok(Object.keys(D.SKILLS).filter((k) => k.startsWith('ts_')).length === 24, '24 tuyệt kỹ Thần sủng');
+  { // bản đồ có nhiệm vụ đánh quái phải có đủ ô cỏ (gặp quái) đi tới được
+    const bad = [];
+    for (const m of [...new Set(D.QUESTS.filter((q) => q.type === 'kill').map((q) => q.map))]) {
+      const M = D.MAPS[m], npc = new Set(M.npcs.map((n) => n.x + ',' + n.y)), W = (x, y) => M.tiles[y] && '.,P'.includes(M.tiles[y][x]) && !npc.has(x + ',' + y);
+      const seen = new Set([M.spawn + '']), st = [M.spawn]; let g = 0;
+      while (st.length) { const [x, y] = st.pop(); if (M.tiles[y][x] === ',') g++; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy); if (!seen.has(k) && W(x + dx, y + dy)) { seen.add(k); st.push([x + dx, y + dy]); } } }
+      if (g < 8) bad.push(m + ':' + g);
+    }
+    ok(!bad.length, 'Bản đồ có nhiệm vụ đánh quái đều có ≥ 8 ô gặp quái đi tới được' + (bad.length ? ' – thiếu: ' + bad.join(', ') : ''));
+  }
   { const BS = require('../game/bossskills'); ok(Object.keys(BS.BOSS).every((b) => D.BOSSES[b] && BS.BOSS[b].sig.every((k) => D.SKILLS[k] && D.BOSSES[b].skills.includes(k))), 'Mọi boss chính truyện có chiêu đặc trưng'); ok(Object.values(D.BOSSES).filter((b) => b.map).every((b) => b.tier >= 0 && b.tier <= 4), 'Boss được xếp ải độ khó'); }
 
   // ------------------------------------------------------------------

@@ -491,6 +491,7 @@ const GameMap = (() => {
     livingNow = !!(custom && typeof Living !== 'undefined' && Living.has(mapId));
     const view = { x: viewX, y: viewY, w: W, h: H };
     if (livingNow) Living.ground(ctx, custom, mapId, T, COLS, ROWS, now, view);
+    if (livingNow) Living.haunt(ctx, M.tiles, T, now, view);
     else { ctx.drawImage(PM.ground, 0, 0, COLS * T, ROWS * T); PaintMap.water(ctx, PM.water, T, now, PM.pal); }
     if (marker && now - marker.t < 800) {
       const k = (now - marker.t) / 800;
@@ -584,7 +585,7 @@ const GameMap = (() => {
   }
   function frameHD(now) {
     const k = 1 / T, th = TH[M.theme];
-    const h = new Date().getHours() + new Date().getMinutes() / 60;
+    const h = Prefs.hour();
     const night = h >= 19 || h < 5, dusk = (h >= 17 && h < 19) || (h >= 5 && h < 6.5);
     const sprites = [], glows = [];
     // thế giới 3D thật (địa hình, nhà, cây, núi, nước) — dựng 1 lần mỗi bản đồ
@@ -685,7 +686,7 @@ const GameMap = (() => {
   }
 
   function lighting(now) {
-    const h = new Date().getHours() + new Date().getMinutes() / 60;
+    const h = Prefs.hour();
     const night = h >= 19 || h < 5 || !!TH[M.theme].dark, dusk = (h >= 17 && h < 19) || (h >= 5 && h < 6.5);
     if (night || dusk) {
       ctx.save();
@@ -790,12 +791,12 @@ const GameMap = (() => {
   }
 
   function label(text, cx, y, color, bg = 'rgba(15,9,6,.72)', below = false) {
-    ctx.font = `600 ${Math.max(8.5, T * 0.27)}px "Lora VN", Georgia, serif`;
+    ctx.font = `600 ${Math.max(9, Math.min(13, T * 0.22))}px "Lora VN", Georgia, serif`;
     const max = T * 2.7;
     let t = text;
     while (ctx.measureText(t).width > max && t.length > 3) t = t.slice(0, -2);
     if (t !== text) t = t.trimEnd() + '…';
-    const w = ctx.measureText(t).width + 10, h = Math.max(11, T * 0.36);
+    const w = ctx.measureText(t).width + 9, h = Math.max(12, Math.min(18, T * 0.3));
     const top = below ? y : y - h;
     ctx.fillStyle = bg; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(cx - w / 2, top, w, h, h / 2) : ctx.rect(cx - w / 2, top, w, h); ctx.fill();
     ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

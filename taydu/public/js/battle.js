@@ -25,7 +25,7 @@ const BattleUI = (() => {
     $('#b-bg').style.backgroundImage = `url("${Sprites.battleBG(theme)}")`;
     const bd = $('.b-board', root); if (bd && typeof Tiles !== 'undefined') bd.style.setProperty('--tex', `url("${Tiles.boardTex(theme)}")`);
     root.hidden = false;
-    if (typeof PaintMap !== 'undefined') { root.classList.remove('has3d'); root.classList.add('painted'); const bgKey = s.bg || (s.theme ? null : G.meta.MAPS[G.me.map]?.bg); const artBg = (bgKey && Sprites.battleArt(bgKey)) || Sprites.battleArt(theme) || (theme === 'city' && Sprites.battleArt('village')); root.classList.toggle('artbg', !!artBg); $('#b-bg').style.backgroundImage = `url("${artBg || PaintMap.battleURL(theme, root.clientWidth || innerWidth, root.clientHeight || innerHeight)}")`; }
+    if (typeof PaintMap !== 'undefined') { root.classList.remove('has3d'); root.classList.add('painted'); const bgKey = s.bg || (s.theme ? null : G.meta.MAPS[G.me.map]?.bg); const artBg = (bgKey && Sprites.battleArt(bgKey)) || Sprites.battleArt(theme) || (theme === 'city' && Sprites.battleArt('village')); root.classList.toggle('artbg', !!artBg); if (typeof Living !== 'undefined') Living.battleStart($('#b-amb'), artBg ? (bgKey || theme) : null); $('#b-bg').style.backgroundImage = `url("${artBg || PaintMap.battleURL(theme, root.clientWidth || innerWidth, root.clientHeight || innerHeight)}")`; }
     else root.classList.toggle('has3d', typeof Arena !== 'undefined' && Arena.show(theme));
     closePick();
     $('#b-log').textContent = s.kind === 'boss' ? 'Trận chiến với boss – không thể bỏ chạy!' : s.kind === 'arena' ? 'Tam Giới Đấu bắt đầu!' : s.kind === 'world' ? `Đánh ${s.maxRounds} hiệp, sát thương cộng dồn vào boss chung.` : s.kind === 'tower' ? 'Trấn Yêu Tháp – vượt tầng này để đi tiếp!' : 'Yêu quái xuất hiện!';
@@ -697,6 +697,7 @@ const BattleUI = (() => {
     if (res.quest) html += `<p class="v-note">📜 Hoàn thành «${esc(res.quest.title)}» · vượt ${res.quest.nan} kiếp nạn</p>`;
     if (res.outcome === 'lose' && res.respawn) html += `<p class="muted center">Bạn được đưa về điểm hồi sinh.</p>`;
     await UI.modal(html, [{ id: 'ok', label: 'Tiếp tục' }]);
+    if (typeof Living !== 'undefined') Living.battleStop();
     root.hidden = true;
     if (typeof Arena !== 'undefined') Arena.hide(); pushOut();
     closePick(); FX.clear(); root.classList.remove('dim', 'defeat');
