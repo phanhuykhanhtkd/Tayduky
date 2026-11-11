@@ -98,7 +98,7 @@ const GameMap = (() => {
     const art = f.art && Art.npc(f.art, 0, 4, undefined, f.art);
     const useArt = art && art.art;
     ctx.save(); ctx.translate(cx, 0); if (face < 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    if (useArt) { const h = T * 2.3, w = h * art.cv.width / art.cv.height; ctx.drawImage(art.cv, -w / 2, by - h + T * 0.06 - bob, w, h); }
+    if (useArt) { const h = T * 2.3, w = h * art.cv.width / art.cv.height; ctx.restore(); Puppet.draw2d(ctx, art.cv, cx, by + T * 0.06, w, h, 'f:' + f.art, { id: f.art, unit: T, moving, face: face < 0 ? -1 : 1, flip: face < 0 ? -1 : 1 }); return; }
     else {
       let lift = 0;
       if (f.horse && Art.mount) { const mc = Art.mount('bachma'); if (mc) { const h = T * 1.25, w = h * mc.cv.width / mc.cv.height; ctx.drawImage(mc.cv, -w / 2, by - h + T * 0.08 - bob * 0.5, w, h); lift = T * 0.55; } }
@@ -820,8 +820,9 @@ const GameMap = (() => {
     if (pix) {
       const hum = pix.cv.width / pix.cv.height < 0.9;
       const hgt = T * (hum ? (n.boss ? 2.35 : 2.0) : 1.3), wid = hgt * pix.cv.width / pix.cv.height;
-      ctx.imageSmoothingEnabled = PAINT; ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(pix.cv, cx - wid / 2, by - hgt + T * 0.06 + bob, wid, hgt);
+      ctx.imageSmoothingEnabled = PAINT || !!pix.cv._art; ctx.imageSmoothingQuality = 'high';
+      if (pix.cv._art) Puppet.draw2d(ctx, pix.cv, cx, by + T * 0.06, wid, hgt, 'n:' + n.id, { id: pix.cv._id || n.look || n.id, unit: T, moving: false, giant: n.boss && Puppet.GIANT.has(n.id) });
+      else ctx.drawImage(pix.cv, cx - wid / 2, by - hgt + T * 0.06 + bob, wid, hgt);
       ctx.imageSmoothingEnabled = true;
     } else if (src) {
       if (!npcImgs[n.id]) { npcImgs[n.id] = new Image(); npcImgs[n.id].src = src; }
@@ -846,8 +847,9 @@ const GameMap = (() => {
       ctx.beginPath(); ctx.ellipse(cx, by - T * 0.1, T * 0.36, T * 0.12, 0, 0, 7); ctx.stroke();
     }
     if (im.width) {
-      ctx.save(); ctx.imageSmoothingEnabled = PAINT; ctx.imageSmoothingQuality = 'high'; ctx.translate(cx, 0); ctx.scale(face < 0 ? -1 : 1, 1);
-      ctx.drawImage(im, -w / 2, by - h + T * 0.06, w, h); ctx.restore();
+      if (im._art) { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; Puppet.draw2d(ctx, im, cx, by + T * 0.06, w, h, 'h:' + (self ? 'me' : name), { unit: T, moving, face: face < 0 ? -1 : 1, flip: face < 0 ? -1 : 1 }); }
+      else { ctx.save(); ctx.imageSmoothingEnabled = PAINT; ctx.imageSmoothingQuality = 'high'; ctx.translate(cx, 0); ctx.scale(face < 0 ? -1 : 1, 1);
+      ctx.drawImage(im, -w / 2, by - h + T * 0.06, w, h); ctx.restore(); }
     }
     const ttl = info && info.title, stall = info && (self ? info.stall && info.stall.title : info.stall);
     overlay.push(() => {

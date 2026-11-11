@@ -116,6 +116,7 @@ const BattleUI = (() => {
       els[u.id] = el;
     }
     sync(snap);
+    for (const u of snap.units) if (els[u.id]) Puppet.attach(els[u.id], u);
     blinkLoop();
   }
 
@@ -402,6 +403,7 @@ const BattleUI = (() => {
     if (kind === 'thunder') A3.flash('#cfe6ff', 0.55, 320);
     num(h.t, '-' + fmt(h.d), h.crit ? 'crit' : (h.adv > 0 ? 'adv' : ''));
     els[h.t].classList.remove('hurt'); void els[h.t].offsetWidth; els[h.t].classList.add('hurt');
+    Puppet.bPose(els[h.t], 'hurt', 1);
     u.hp = Math.max(0, u.hp - h.d); setExpr(h.t, 'hurt', h.dead ? 0 : 560); u.hp += h.d;
     setBars(h.t, Math.max(0, u.hp - h.d), u.maxHp, u.mp, u.maxMp);
     if (h.dead) { u.dead = true; setTimeout(() => { els[h.t]?.classList.add('dead'); turnBar(); if (p) FX.death(p, u.side === 1 ? '#ffc8a0' : '#c8e8ff', !!u.boss); Sound.sfx(u.boss ? 'bossdeath' : 'death'); }, 330); }
@@ -455,16 +457,21 @@ const BattleUI = (() => {
         }
         const ranged = ev.k === 'skill' && RANGED.has(ev.fx) && sk?.type === 'magic';
         if (ranged && me) {
-          a?.classList.add('cast');
+          a?.classList.add('cast'); Puppet.bPose(a, 'cast', 1);
           Sound.sfx('throw');
           await Promise.all(ev.hits.map((h) => { const p = rectOf(h.t); return p ? FX.projectile(ev.fx, me, p) : null; }));
           a?.classList.remove('cast');
         } else if (a && t0 && me && !ev.aoe) {
           const dx = t0.x - me.x, dy = t0.y - me.y; setExpr(ev.a, 'angry', 900);
-          a.style.transition = 'transform .12s ease-out'; a.style.transform = `translate(${-dx * 0.06}px, ${-dy * 0.06 + 4}px) scale(.96)`; await sleep(120);
+          const au = unit(ev.a), heavy = au && Puppet.GIANT.has(au.bossId), beast = au && ['beast', 'fly', 'snake'].includes(Puppet.kindOf(au.bossId ? au.art || au.bossId : au.form));
+          Puppet.bPose(a, 'wind', 1, heavy ? 0.34 : 0.22);
+          a.style.transition = `transform ${heavy ? '.2s' : '.12s'} ease-out`; a.style.transform = `translate(${-dx * 0.06}px, ${-dy * 0.06 + 4}px) scale(.96)`; await sleep(heavy ? 200 : 120);
           Sound.sfx('swing');
           a.style.transition = 'transform .15s cubic-bezier(.5,0,.9,.4)'; ghosts(a, dx * 0.66, dy * 0.66);
+          Puppet.bPose(a, beast ? 'pounce' : 'dash', 1);
           a.style.transform = `translate(${dx * 0.66}px, ${dy * 0.66}px) scale(1.06)`; await sleep(150);
+          // chạm đòn: khựng hình + rung màn hình cho có lực
+          Puppet.bPose(a, 'strike', 1); Puppet.freeze(heavy ? 120 : 75); if (!FX.low) FX.shake(heavy ? 10 : ev.hits.some((h) => h.crit) ? 7 : 4, heavy ? 260 : 160); await sleep(heavy ? 90 : 55);
         } else if (a) { a.style.transform = 'scale(1.14) translateY(-8px)'; await sleep(160); }
         Sound.sfx(ev.hits.some((h) => h.crit) ? 'crit' : ev.k === 'atk' ? 'hit' : (FX_SOUND[ev.fx] || 'hit'));
         if (ev.hits.some((h) => !h.miss)) comboHit(unit(ev.a)?.side); else combo = 0;
@@ -622,7 +629,7 @@ const BattleUI = (() => {
     if (FX.low) return;
     const spr = a.querySelector('.spr'); if (!spr) return;
     for (let i = 1; i <= 3; i++) {
-      const gh = spr.cloneNode(true); gh.className = 'spr ghost';
+      const gh = spr.cloneNode(true); gh.className = 'spr ghost'; gh.querySelectorAll('canvas.pup').forEach((c) => c.remove()); gh.querySelectorAll('.pup-on').forEach((m) => m.classList.remove('pup-on'));
       gh.style.cssText = `position:absolute;left:0;right:0;top:0;opacity:${0.45 - i * 0.1};transform:translate(${-dx * i * 0.08}px,${-dy * i * 0.08}px);`;
       a.appendChild(gh); setTimeout(() => gh.remove(), 200 + i * 40);
     }
@@ -698,6 +705,7 @@ const BattleUI = (() => {
     if (res.outcome === 'lose' && res.respawn) html += `<p class="muted center">Bạn được đưa về điểm hồi sinh.</p>`;
     await UI.modal(html, [{ id: 'ok', label: 'Tiếp tục' }]);
     if (typeof Living !== 'undefined') Living.battleStop();
+    Puppet.clear();
     root.hidden = true;
     if (typeof Arena !== 'undefined') Arena.hide(); pushOut();
     closePick(); FX.clear(); root.classList.remove('dim', 'defeat');

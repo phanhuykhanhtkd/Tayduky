@@ -2020,3 +2020,9 @@ img[src*="assets/"] { image-rendering: auto !important; }
 #battle.artbg .b-bg { animation: bgBreath 22s ease-in-out infinite alternate; }
 @keyframes bgBreath { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.06) translate(-1%, -0.6%); } }
 .b-cmds.hex { transform: scale(min(1, var(--ui))); transform-origin: 50% 100%; }
+/* nhân vật uốn mềm (puppet.js) */
+.spr img.pup-on { visibility: hidden; }
+.spr canvas.pup { image-rendering: auto; filter: drop-shadow(0 6px 4px rgba(0, 0, 0, .45)); }
+.unit.side0 .spr canvas.pup { transform: scaleX(-1); }
+.unit.enraged .spr canvas.pup { filter: drop-shadow(0 0 8px #ff2a1a) saturate(1.3); }
+.unit.aura .spr canvas.pup { z-index: 1; }

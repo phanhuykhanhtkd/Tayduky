@@ -1208,7 +1208,7 @@ const Art = (() => {
   function setOverride(fn) { OVR = fn; }
   function fromArt(k, id) {
     const url = OVR && OVR(k, id); if (!url) return null;
-    if (!imgRec.has(url)) { const cv = document.createElement('canvas'); cv.width = 200; cv.height = 260; const im = new Image(); im.onload = () => { cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.getContext('2d').drawImage(im, 0, 0); cv._ready = true; }; im.src = url; imgRec.set(url, { cv, url, art: true }); }
+    if (!imgRec.has(url)) { const cv = document.createElement('canvas'); cv.width = 200; cv.height = 260; const im = new Image(); im.onload = () => { cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.getContext('2d').drawImage(im, 0, 0); cv._ready = true; }; cv._art = true; cv._id = id; im.src = url; imgRec.set(url, { cv, url, art: true }); }
     return imgRec.get(url);
   }
   let VEC_ON = true; try { VEC_ON = localStorage.getItem('tdk_pixel') !== '1'; } catch {}
